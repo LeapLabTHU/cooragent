@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Run make lint
+echo "Running linting..."
+make lint
+LINT_RESULT=$?
+
+if [ $LINT_RESULT -ne 0 ]; then
+    echo "❌ Linting failed. Please fix the issues and try committing again."
+    exit 1
+fi
+
+# Run make format
+echo "Running formatting..."
+make format
+FORMAT_RESULT=$?
+
+if [ $FORMAT_RESULT -ne 0 ]; then
+    echo "❌ Formatting failed. Please fix the issues and try committing again."
+    exit 1
+fi
+
+# If any files were reformatted, add them back to staging
+git diff --name-only | xargs -I {} git add "{}"
+
+echo "✅ Pre-commit checks passed!"
+exit 0
