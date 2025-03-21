@@ -107,11 +107,7 @@ def create_agent_node(state: State) -> Command[Literal["__end__"]]:
     logger.info(f"Available agents: {available_agents}")
     logger.info(f" agents created as, {json.dumps(response, ensure_ascii=False)}")
     state.AGENT_MEMBERS.append(available_agents[response["agent_name"]])
-    
-    def save_agent():
-        agent_manager = AgentManager(tools_dir, agents_dir, prompts_dir)
-        agent_manager._save_agent(available_agents[response["agent_name"]], flush=True)
-    
+
     goto = "__end__"
 
     return Command(

@@ -42,7 +42,7 @@ class AgentManager:
         self.agents = self._load_agents()
         self.prompts = self._load_prompts()
 
-    def _create_agent(self, name: str, llm_type: str, tools: list[tool], state: State=None, prompt: Prompt=None):
+    def _create_agent(self, name: str, llm_type: str, tools: list[tool], prompt: Prompt=None):
         langchain_agent = create_react_agent(
             llm_type=llm_type,
             tools=tools,
