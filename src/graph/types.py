@@ -1,7 +1,7 @@
 from typing import Literal
 from typing_extensions import TypedDict
 from langgraph.graph import MessagesState
-
+from src.interface.agent_types import Agent
 from src.config import TEAM_MEMBERS
 
 # Define routing options
@@ -21,6 +21,7 @@ class State(MessagesState):
     TEAM_MEMBERS: list[str]
 
     # Runtime Variables
+    AGENT_MEMBERS: list[Agent]
     next: str
     full_plan: str
     deep_thinking_mode: bool

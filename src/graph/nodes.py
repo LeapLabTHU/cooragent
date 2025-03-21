@@ -9,7 +9,7 @@ from langgraph.prebuilt import create_react_agent
 
 
 from src.agents import research_agent, coder_agent, browser_agent, available_agents
-from src.agents.llm import get_llm_by_type
+from src.llm import get_llm_by_type
 from src.config import TEAM_MEMBERS
 from src.config.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
@@ -106,6 +106,11 @@ def create_agent_node(state: State) -> Command[Literal["__end__"]]:
     logger.info("Create agent agent completed task")
     logger.info(f"Available agents: {available_agents}")
     logger.info(f" agents created as, {json.dumps(response, ensure_ascii=False)}")
+    state.AGENT_MEMBERS.append(available_agents[response["agent_name"]])
+    
+    def save_agent():
+        agent_manager = AgentManager(tools_dir, agents_dir, prompts_dir)
+        agent_manager._save_agent(available_agents[response["agent_name"]], flush=True)
     
     goto = "__end__"
 
@@ -113,6 +118,16 @@ def create_agent_node(state: State) -> Command[Literal["__end__"]]:
         goto=goto,
     )
 
+def save_agents_node(state: State) -> Command[Literal["__end__"]]:
+    """Node for the save agent agent that saves a new agent."""
+    logger.info("Save agent agent starting task")
+    logger.info(f"Available agents: {state.AGENT_MEMBERS}")
+    goto = "__end__"
+    
+    for agent in state.AGENT_MEMBERS:
+        agent.save()
+    
+    return Command(goto=goto)
 
 def supervisor_node(state: State) -> Command[Literal[*TEAM_MEMBERS, "__end__"]]:
     """Supervisor node that decides which agent should act next."""
