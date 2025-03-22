@@ -4,7 +4,7 @@ from datetime import datetime
 
 from langchain_core.prompts import PromptTemplate
 from langgraph.prebuilt.chat_agent_executor import AgentState
-from src.interface.agent_types import Prompt, PromptArgument
+from src.interface.agent_types import Prompt
 
 def get_prompt_template(prompt_name: str) -> str:
     template = open(os.path.join(os.path.dirname(__file__), f"{prompt_name}.md")).read()
@@ -31,13 +31,11 @@ def apply_prompt_template(prompt_name: str, state: AgentState, template:str=None
 
 def get_structured_prompt(prompt_name: str) -> str:
     _template, _variables = get_prompt_template(prompt_name)
-    
-    vars = [PromptArgument(name=v, description="", required=True) for v in _variables]
-    
+        
     return Prompt(
         name=prompt_name,
         description="",
-        arguments=vars,
+        arguments=_variables,
         content=_template
     )
     

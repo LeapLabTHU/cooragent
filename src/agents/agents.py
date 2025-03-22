@@ -20,13 +20,28 @@ from src.interface.agent_types import Agent, Prompt
 from langgraph.graph.graph import CompiledGraph
 from src.graph.types import State
 
+research_agent = create_react_agent(
+    get_llm_by_type(AGENT_LLM_MAP["researcher"]),
+    tools=[tavily_tool, crawl_tool],
+    prompt=lambda state: apply_prompt_template("researcher", state),
+)
 
-available_tools = {
-    "bash_tool": bash_tool,
-    "crawl_tool": crawl_tool,
-    "tavily_tool": tavily_tool,
-    "python_repl_tool": python_repl_tool,
-    "browser_tool": browser_tool,
+coder_agent = create_react_agent(
+    get_llm_by_type(AGENT_LLM_MAP["coder"]),
+    tools=[python_repl_tool, bash_tool],
+    prompt=lambda state: apply_prompt_template("coder", state),
+)
+
+browser_agent = create_react_agent(
+    get_llm_by_type(AGENT_LLM_MAP["browser"]),
+    tools=[browser_tool],
+    prompt=lambda state: apply_prompt_template("browser", state),
+)
+
+available_agents = {
+    "researcher": research_agent,
+    "coder": coder_agent,
+    "browser": browser_agent,
 }
 
 class AgentManager:
@@ -38,9 +53,24 @@ class AgentManager:
         if not self.tools_dir.exists() or not self.agents_dir.exists() or not self.prompt_dir.exists():
             raise FileNotFoundError("One or more provided directories do not exist.")
 
+        self.available_agents = {
+            "researcher": research_agent,
+            "coder": coder_agent,
+            "browser": browser_agent,
+        }
+
+        self.available_tools = {
+            "bash_tool": bash_tool,
+            "browser_tool": browser_tool,
+            "crawl_tool": crawl_tool,
+            "python_repl_tool": python_repl_tool,
+            "tavily_tool": tavily_tool,
+        }
+        
         self.tools = self._load_tools()
         self.agents = self._load_agents()
         self.prompts = self._load_prompts()
+        
 
     def _create_agent(self, name: str, llm_type: str, tools: list[tool], prompt: Prompt=None):
         langchain_agent = create_react_agent(
@@ -62,7 +92,7 @@ class AgentManager:
                 
         return langchain_agent, agent
 
-    def _save_tool(self, tool: tool, flush=False):
+    def _save_tool(self, tool: Tool, flush=False):
         tool_path = self.tools_dir / f"{tool.name}.json"
         if not flush and tool_path.exists():
             print(f"工具 {tool.name} 已经存在，不需要保存。")
@@ -96,15 +126,22 @@ class AgentManager:
             json_str = f.read()
             return Agent.model_validate_json(json_str)
         
+    def _list_agents(self, user_id: str, match: str):
+        agents = self.agents
+        if user_id:
+            agents = [agent for agent in agents if agent.user_id == user_id]
+        if match:
+            agents = [agent for agent in agents if match in agent.agent_name]
+        return agents
+        
     def _save_tools(self, tools: list[tool], flush=False):
         for tool in tools:
             self._save_tool(tool, flush)
 
     def _load_tools(self):
-        tools = []
         for tool_path in self.tools_dir.glob("*.json"):
-            tools.append(self._load_tool(tool_path.stem))
-        return tools
+            self.tools.append(self._load_tool(tool_path.stem))
+
     
     def _save_agents(self, agents: list[Agent], flush=False):
         for agent in agents:
@@ -167,31 +204,6 @@ class AgentManager:
         self._save_prompt(prompt)
 
 
-research_agent = create_react_agent(
-    get_llm_by_type(AGENT_LLM_MAP["researcher"]),
-    tools=[tavily_tool, crawl_tool],
-    prompt=lambda state: apply_prompt_template("researcher", state),
-)
-
-coder_agent = create_react_agent(
-    get_llm_by_type(AGENT_LLM_MAP["coder"]),
-    tools=[python_repl_tool, bash_tool],
-    prompt=lambda state: apply_prompt_template("coder", state),
-)
-
-browser_agent = create_react_agent(
-    get_llm_by_type(AGENT_LLM_MAP["browser"]),
-    tools=[browser_tool],
-    prompt=lambda state: apply_prompt_template("browser", state),
-)
-
-
-available_agents = {
-    "researcher": research_agent,
-    "coder": coder_agent,
-    "browser": browser_agent,
-}
-
 from src.utils.path_utils import get_project_root
 
 tools_dir = get_project_root() / "store" / "tools"
@@ -200,6 +212,7 @@ prompts_dir = get_project_root() / "store" / "prompts"
 
 agent_manager = AgentManager(tools_dir, agents_dir, prompts_dir)
 
+    
 if __name__ == "__main__":
 
     _tavily_tool = Tool(
@@ -219,8 +232,8 @@ if __name__ == "__main__":
         agent_id="researcher",
         llm_type=AGENT_LLM_MAP["researcher"],
         selected_tools=[_tavily_tool, _crawl_tool],
-        prompt= "",
+        prompt=get_structured_prompt("researcher") ,
     )
-    # agent_manager._save_agent(_research_agent, flush=True)
+    agent_manager._save_agent(_research_agent, flush=True)
     agent = agent_manager._load_agent("researcher")
     
