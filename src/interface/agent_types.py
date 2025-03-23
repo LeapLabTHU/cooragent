@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
-from .mcp_types import Tool, Prompt
+from .mcp_types import Tool
 from enum import Enum, unique
 
 
@@ -12,19 +12,6 @@ class Lang(str, Enum):
     SP = 'sp'
     DE = 'de'
 
-class Prompt(BaseModel):
-    """Definition for a prompt the client can call."""
-    name: str
-    """The name of the prompt."""
-    description: str
-    """The description of the prompt."""
-    arguments: List[str]
-    """The arguments of the prompt."""
-    content: str
-    """The content of the prompt."""
-    model_config = ConfigDict(extra="allow")    
-
-@unique
 class LLMType(str, Enum):
     BASIC = "basic"
     REASONING = "reasoning"
@@ -41,7 +28,7 @@ class Agent(BaseModel):
     """The type of LLM to use for the agent."""
     selected_tools: List[Tool]
     """The tools that the agent can use."""
-    prompt: Prompt
+    prompt: str
     """The prompt to use for the agent."""
     model_config = ConfigDict(extra="allow")
 

@@ -5,17 +5,15 @@ from typing import Literal
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from langgraph.graph import END
-from langgraph.prebuilt import create_react_agent
 
 
-from src.agents import research_agent, coder_agent, browser_agent, available_agents
 from src.llm import get_llm_by_type
 from src.config import TEAM_MEMBERS
 from src.config.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
 from .types import State, Router
-from src.tools import available_tools
+from src.agents import agent_manager
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please e
 def research_node(state: State) -> Command[Literal["supervisor"]]:
     """Node for the researcher agent that performs research tasks."""
     logger.info("Research agent starting task")
-    result = research_agent.invoke(state)
+    result = agent_manager.available_agents["researcher"].invoke(state)
     logger.info("Research agent completed task")
     logger.debug(f"Research agent response: {result['messages'][-1].content}")
     return Command(
@@ -46,7 +44,7 @@ def research_node(state: State) -> Command[Literal["supervisor"]]:
 def code_node(state: State) -> Command[Literal["supervisor"]]:
     """Node for the coder agent that executes Python code."""
     logger.info("Code agent starting task")
-    result = coder_agent.invoke(state)
+    result = agent_manager.available_agents["coder"].invoke(state)
     logger.info("Code agent completed task")
     logger.debug(f"Code agent response: {result['messages'][-1].content}")
     return Command(
@@ -67,7 +65,7 @@ def code_node(state: State) -> Command[Literal["supervisor"]]:
 def browser_node(state: State) -> Command[Literal["supervisor"]]:
     """Node for the browser agent that performs web browsing tasks."""
     logger.info("Browser agent starting task")
-    result = browser_agent.invoke(state)
+    result = agent_manager.available_agents["browser"].invoke(state)
     logger.info("Browser agent completed task")
     logger.debug(f"Browser agent response: {result['messages'][-1].content}")
     return Command(
@@ -94,19 +92,18 @@ def create_agent_node(state: State) -> Command[Literal["__end__"]]:
         .invoke(messages)
     )
     
-    tools = [available_tools[tool["name"]] for tool in response["selected_tools"]]
+    tools = [agent_manager.available_tools[tool["name"]] for tool in response["selected_tools"]]
 
-    _agent = create_react_agent(
+    agent_manager._create_agent_by_prebuilt(
         get_llm_by_type(response["llm_type"]),
         tools=tools,
         prompt=response["prompt"],
     )
     
-    available_agents[response["agent_name"]] = _agent
     logger.info("Create agent agent completed task")
-    logger.info(f"Available agents: {available_agents}")
+    logger.info(f"Available agents: {agent_manager.available_agents}")
     logger.info(f" agents created as, {json.dumps(response, ensure_ascii=False)}")
-    state.AGENT_MEMBERS.append(available_agents[response["agent_name"]])
+    state.AGENT_MEMBERS.append(agent_manager.available_agents[response["agent_name"]])
 
     goto = "__end__"
 
@@ -114,16 +111,6 @@ def create_agent_node(state: State) -> Command[Literal["__end__"]]:
         goto=goto,
     )
 
-def save_agents_node(state: State) -> Command[Literal["__end__"]]:
-    """Node for the save agent agent that saves a new agent."""
-    logger.info("Save agent agent starting task")
-    logger.info(f"Available agents: {state.AGENT_MEMBERS}")
-    goto = "__end__"
-    
-    for agent in state.AGENT_MEMBERS:
-        agent.save()
-    
-    return Command(goto=goto)
 
 def supervisor_node(state: State) -> Command[Literal[*TEAM_MEMBERS, "__end__"]]:
     """Supervisor node that decides which agent should act next."""

@@ -1,7 +1,6 @@
-from .template import apply_prompt_template, get_prompt_template, get_structured_prompt
+from .template import apply_prompt_template, get_prompt_template
 
 __all__ = [
     "apply_prompt_template",
     "get_prompt_template",
-    "get_structured_prompt",
 ]

@@ -1,3 +1,3 @@
-from .agents import research_agent, coder_agent, browser_agent, agent_manager, available_agents
+from .agents import agent_manager
 
-__all__ = ["research_agent", "coder_agent", "browser_agent", "agent_manager", "available_agents"]
+__all__ = ["agent_manager"]

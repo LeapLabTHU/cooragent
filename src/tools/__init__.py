@@ -15,11 +15,3 @@ __all__ = [
     "write_file_tool",
     "browser_tool"
 ]
-
-available_tools = {
-    "bash_tool": bash_tool,
-    "browser_tool": browser_tool,
-    "crawl_tool": crawl_tool,
-    "python_repl_tool": python_repl_tool,
-    "tavily_tool": tavily_tool,
-}
