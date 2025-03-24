@@ -10,6 +10,7 @@ from .nodes import (
     reporter_node,
     planner_node,
     create_agent_node,
+    agent_proxy_node,
 )
 
 
@@ -21,10 +22,10 @@ def build_graph():
     builder.add_node("planner", planner_node)
     builder.add_node("create_agent", create_agent_node)
     builder.add_node("supervisor", supervisor_node)
-    builder.add_node("researcher", research_node)
-    builder.add_node("coder", code_node)
-    builder.add_node("browser", browser_node)
-    builder.add_node("reporter", reporter_node)
+    builder.add_node("agent_proxy", agent_proxy_node)
+    # builder.add_node("coder", code_node)
+    # builder.add_node("browser", browser_node)
+    # builder.add_node("reporter", reporter_node)
     return builder.compile()
 
 def build_agent_graph():

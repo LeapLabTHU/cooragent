@@ -15,3 +15,5 @@ agent_history.gif
 .env
 
 .idea/
+store
+.vscode

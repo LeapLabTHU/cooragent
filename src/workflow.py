@@ -1,6 +1,6 @@
 import logging
-from src.config import TEAM_MEMBERS
 from src.graph import build_graph, build_agent_graph
+from src.agents import agent_manager
 
 # Configure logging
 logging.basicConfig(
@@ -38,6 +38,11 @@ def run_agent_workflow(user_input: str, debug: bool = False):
         enable_debug_logging()
 
     logger.info(f"Starting workflow with user input: {user_input}")
+    
+    TEAM_MEMBERS = [member for member in agent_manager.available_agents.keys()]
+    
+    logger.info(f"TEAM_MEMBERS: {TEAM_MEMBERS}")
+    
     result = graph.invoke(
         {
             # Constants
@@ -80,3 +85,4 @@ def run_create_agent_workflow(user_input: str, debug: bool = False):
 
 if __name__ == "__main__":
     print(graph.get_graph().draw_mermaid())
+    graph.get_graph().draw_png(output_file_path="workflow.png")

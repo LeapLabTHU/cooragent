@@ -112,7 +112,7 @@ def create_agent_node(state: State) -> Command[Literal["__end__"]]:
     )
 
 
-def supervisor_node(state: State) -> Command[Literal[*TEAM_MEMBERS, "__end__"]]:
+def supervisor_node(state: State) -> Command[Literal["agent_proxy", "__end__"]]:
     """Supervisor node that decides which agent should act next."""
     logger.info("Supervisor evaluating next action")
     messages = apply_prompt_template("supervisor", state)
@@ -121,17 +121,41 @@ def supervisor_node(state: State) -> Command[Literal[*TEAM_MEMBERS, "__end__"]]:
         .with_structured_output(Router)
         .invoke(messages)
     )
-    goto = response["next"]
+    agent = response["next"]
     logger.debug(f"Current state messages: {state['messages']}")
     logger.debug(f"Supervisor response: {response}")
-
-    if goto == "FINISH":
+    
+    if agent == "FINISH":
         goto = "__end__"
         logger.info("Workflow completed")
+        return Command(goto=goto, update={"next": goto})
     else:
-        logger.info(f"Supervisor delegating to: {goto}")
+        goto = "agent_proxy"
+        logger.info(f"Supervisor delegating to: {agent}")
+        return Command(goto=goto, update={"next": agent})
 
-    return Command(goto=goto, update={"next": goto})
+
+def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
+    """Agent proxy node that acts as a proxy for the agent."""
+    logger.info("Agent proxy agent starting task")
+    response = agent_manager.available_agents[state["next"]].invoke(state)
+    logger.info(f"{state['next']} agent completed task")
+    logger.debug(f"{state['next']} agent response: {response['messages'][-1].content}")
+    
+    return Command(
+        update={
+            "messages": [
+                HumanMessage(
+                    content=RESPONSE_FORMAT.format(
+                        state["next"], response["messages"][-1].content
+                    ),
+                    name=state["next"],
+                )
+            ]
+        },
+        goto="supervisor",
+    )
+
 
 
 def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
@@ -175,6 +199,7 @@ def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
         },
         goto=goto,
     )
+    
 
 
 def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:

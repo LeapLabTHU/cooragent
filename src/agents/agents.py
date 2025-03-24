@@ -53,6 +53,11 @@ class AgentManager:
                             tools=[browser_tool],
                             prompt=lambda state: apply_prompt_template("browser", state),
                         ),
+            "reporter": create_react_agent(
+                            get_llm_by_type(AGENT_LLM_MAP["reporter"]),
+                            tools=[],
+                            prompt=lambda state: apply_prompt_template("reporter", state),
+                        ),
         }
         self.available_mcp_agents = {}
         self.available_mcp_agents["researcher"] = self._create_mcp_agent("researcher", AGENT_LLM_MAP["researcher"], [tavily_tool, crawl_tool], 
@@ -61,7 +66,8 @@ class AgentManager:
                                             get_prompt_template("coder"))
         self.available_mcp_agents["browser"] = self._create_mcp_agent("browser", AGENT_LLM_MAP["browser"], [browser_tool], 
                                               get_prompt_template("browser"))
-        
+        self.available_mcp_agents["reporter"] = self._create_mcp_agent("reporter", AGENT_LLM_MAP["reporter"], [], 
+                                            get_prompt_template("reporter"))
         self.available_tools = {
             "bash_tool": bash_tool,
             "browser_tool": browser_tool,
