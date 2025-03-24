@@ -123,9 +123,9 @@ class AgentManager:
 
     def _create_agent_by_prebuilt(self, name: str, llm_type: str, tools: list[tool], prompt: str):
         langchain_agent = create_react_agent(
-            llm_type=llm_type,
+            get_llm_by_type(llm_type),
             tools=tools,
-            prompt=lambda state: apply_prompt_template(name, state),
+            prompt=prompt,
         )
         self.available_agents[name] = langchain_agent
         self._create_mcp_agent(name, llm_type, tools, prompt)                

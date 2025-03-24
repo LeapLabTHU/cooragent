@@ -72,10 +72,15 @@ def get_llm_by_type(llm_type: LLMType) -> ChatOpenAI | ChatDeepSeek:
         return _llm_cache[llm_type]
 
     if llm_type == "reasoning":
-        llm = create_deepseek_llm(
-            model=REASONING_MODEL,
-            base_url=REASONING_BASE_URL,
-            api_key=REASONING_API_KEY,
+        # llm = create_deepseek_llm(
+        #     model=REASONING_MODEL,
+        #     base_url=REASONING_BASE_URL,
+        #     api_key=REASONING_API_KEY,
+        # )
+        llm = create_openai_llm(
+            model=BASIC_MODEL,
+            base_url=BASIC_BASE_URL,
+            api_key=BASIC_API_KEY,
         )
     elif llm_type == "basic":
         llm = create_openai_llm(

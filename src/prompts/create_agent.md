@@ -14,7 +14,6 @@ You need to analyze user requirements, select appropriate tools from the availab
 - **`crawl_tool`**: Crawls web pages and extracts information. Capable of accessing and analyzing structured data from web pages.
 - **`tavily_tool`**: Uses the Tavily search engine to perform web searches and retrieve up-to-date and relevant information.
 - **`python_repl_tool`**: Executes Python code for data analysis, calculations, and programming tasks.
-- **`write_file_tool`**: Creates and writes to files, saving processing results or generating reports.
 - **`browser_tool`**: Directly interacts with web pages, performing complex operations and interactions. Can be used for in-domain searches on platforms like Facebook, Instagram, GitHub, etc.
 
 ## LLM Types
@@ -39,6 +38,7 @@ You need to analyze user requirements, select appropriate tools from the availab
    - Output format requirements
    - Any special execution rules or considerations
 6. Ensure the prompt is clear, specific, and meets the user's requirements.
+7. The agent name should be unique in **English** and not already in the list of available agents.
 
 # Output Format
 

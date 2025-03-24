@@ -20,69 +20,7 @@ logger = logging.getLogger(__name__)
 RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please execute the next step.*"
 
 
-def research_node(state: State) -> Command[Literal["supervisor"]]:
-    """Node for the researcher agent that performs research tasks."""
-    logger.info("Research agent starting task")
-    result = agent_manager.available_agents["researcher"].invoke(state)
-    logger.info("Research agent completed task")
-    logger.debug(f"Research agent response: {result['messages'][-1].content}")
-    return Command(
-        update={
-            "messages": [
-                HumanMessage(
-                    content=RESPONSE_FORMAT.format(
-                        "researcher", result["messages"][-1].content
-                    ),
-                    name="researcher",
-                )
-            ]
-        },
-        goto="supervisor",
-    )
-
-
-def code_node(state: State) -> Command[Literal["supervisor"]]:
-    """Node for the coder agent that executes Python code."""
-    logger.info("Code agent starting task")
-    result = agent_manager.available_agents["coder"].invoke(state)
-    logger.info("Code agent completed task")
-    logger.debug(f"Code agent response: {result['messages'][-1].content}")
-    return Command(
-        update={
-            "messages": [
-                HumanMessage(
-                    content=RESPONSE_FORMAT.format(
-                        "coder", result["messages"][-1].content
-                    ),
-                    name="coder",
-                )
-            ]
-        },
-        goto="supervisor",
-    )
-
-
-def browser_node(state: State) -> Command[Literal["supervisor"]]:
-    """Node for the browser agent that performs web browsing tasks."""
-    logger.info("Browser agent starting task")
-    result = agent_manager.available_agents["browser"].invoke(state)
-    logger.info("Browser agent completed task")
-    logger.debug(f"Browser agent response: {result['messages'][-1].content}")
-    return Command(
-        update={
-            "messages": [
-                HumanMessage(
-                    content=RESPONSE_FORMAT.format(
-                        "browser", result["messages"][-1].content
-                    ),
-                    name="browser",
-                )
-            ]
-        },
-        goto="supervisor",
-    )
-
-def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
+def create_agent_node(state: State) -> Command[Literal["__end__"]]:
     """Node for the create agent agent that creates a new agent."""
     logger.info("Create agent agent starting task")
     messages = apply_prompt_template("create_agent", state)
@@ -95,33 +33,24 @@ def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
     tools = [agent_manager.available_tools[tool["name"]] for tool in response["selected_tools"]]
 
     agent_manager._create_agent_by_prebuilt(
-        name=response["agent_name"],
-        llm_type=response["llm_type"],
+        get_llm_by_type(response["llm_type"]),
         tools=tools,
         prompt=response["prompt"],
     )
     
     logger.info("Create agent agent completed task")
-    logger.info(f"Available agents: {agent_manager.available_agents.keys()}")
+    logger.info(f"Available agents: {agent_manager.available_agents}")
     logger.info(f" agents created as, {json.dumps(response, ensure_ascii=False)}")
-    state["TEAM_MEMBERS"].append(agent_manager.available_agents[response["agent_name"]])
+    state.AGENT_MEMBERS.append(agent_manager.available_agents[response["agent_name"]])
+
+    goto = "__end__"
 
     return Command(
-        update={
-            "messages": [
-                HumanMessage(
-                    content=RESPONSE_FORMAT.format(
-                        state["next"], f'New agent {response["agent_name"]} created.'
-                    ),
-                    name=state["next"],
-                )
-            ]
-        },
-        goto="supervisor",
+        goto=goto,
     )
 
 
-def supervisor_node(state: State) -> Command[Literal["agent_proxy", "create_agent", "__end__"]]:
+def supervisor_node(state: State) -> Command[Literal["agent_proxy", "__end__"]]:
     """Supervisor node that decides which agent should act next."""
     logger.info("Supervisor evaluating next action")
     messages = apply_prompt_template("supervisor", state)
@@ -138,12 +67,8 @@ def supervisor_node(state: State) -> Command[Literal["agent_proxy", "create_agen
         goto = "__end__"
         logger.info("Workflow completed")
         return Command(goto=goto, update={"next": goto})
-    elif agent != "create_agent":
-        goto = "agent_proxy"
-        logger.info(f"Supervisor delegating to: {agent}")
-        return Command(goto=goto, update={"next": agent})
     else:
-        goto = "create_agent"
+        goto = "agent_proxy"
         logger.info(f"Supervisor delegating to: {agent}")
         return Command(goto=goto, update={"next": agent})
 
@@ -174,7 +99,7 @@ def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
 def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
     """Planner node that generate the full plan."""
     logger.info("Planner generating full plan")
-    messages = apply_prompt_template("planner2", state)
+    messages = apply_prompt_template("planner", state)
     # whether to enable deep thinking mode
     llm = get_llm_by_type("basic")
     if state.get("deep_thinking_mode"):
@@ -229,25 +154,4 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
 
     return Command(
         goto=goto,
-    )
-
-
-def reporter_node(state: State) -> Command[Literal["supervisor"]]:
-    """Reporter node that write a final report."""
-    logger.info("Reporter write final report")
-    messages = apply_prompt_template("reporter", state)
-    response = get_llm_by_type(AGENT_LLM_MAP["reporter"]).invoke(messages)
-    logger.debug(f"Current state messages: {state['messages']}")
-    logger.debug(f"reporter response: {response}")
-
-    return Command(
-        update={
-            "messages": [
-                HumanMessage(
-                    content=RESPONSE_FORMAT.format("reporter", response.content),
-                    name="reporter",
-                )
-            ]
-        },
-        goto="supervisor",
     )
