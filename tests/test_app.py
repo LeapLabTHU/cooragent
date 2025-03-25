@@ -179,7 +179,11 @@ def test_edit_agent_api(agent_data: Dict[str, Any]) -> None:
                 for line in response.iter_lines():
                     if line:
                         decoded_line = line.decode('utf-8')
-                        print(f"收到: {decoded_line}")
+                        print("\n=== tool 详情 ===")
+                        print(f"名称: {decoded_line.get('name', 'Unknown')}")
+                        print(f"描述: {decoded_line.get('description', 'Unknown')}")
+                        print(f"输入参数: {decoded_line.get('inputSchema', 'Unknown')}")
+                        print("=" * 50)
             else:
                 print(f"请求失败: {response.status_code}")
                 print(response.text)

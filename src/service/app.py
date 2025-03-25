@@ -70,7 +70,7 @@ class Server:
     async def _list_default_tools() -> AsyncGenerator[str, None]:
         tools = agent_manager._list_default_tools()
         for tool in tools:
-            yield tool + "\n"
+            yield tool.model_dump_json() + "\n"
 
     @staticmethod
     async def _edit_agent(
