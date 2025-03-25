@@ -21,7 +21,7 @@ class State(MessagesState):
     TEAM_MEMBERS: list[str]
 
     # Runtime Variables
-    AGENT_MEMBERS: list[Agent]
+    user_id: str
     next: str
     full_plan: str
     deep_thinking_mode: bool

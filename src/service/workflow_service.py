@@ -28,6 +28,7 @@ MAX_CACHE_SIZE = 2
 
 
 async def run_agent_workflow(
+    user_id: str,
     user_input_messages: list,
     debug: bool = False,
     deep_thinking_mode: bool = False,
@@ -63,9 +64,10 @@ async def run_agent_workflow(
     # TODO: extract message content from object, specifically for on_chat_model_stream
     async for event in graph.astream_events(
         {
+            "user_id": user_id,
             # Constants
             "TEAM_MEMBERS": TEAM_MEMBERS,
-            # Runtime Variables
+            
             "messages": user_input_messages,
             "deep_thinking_mode": deep_thinking_mode,
             "search_before_planning": search_before_planning,

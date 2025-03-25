@@ -19,69 +19,6 @@ logger = logging.getLogger(__name__)
 
 RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please execute the next step.*"
 
-
-def research_node(state: State) -> Command[Literal["supervisor"]]:
-    """Node for the researcher agent that performs research tasks."""
-    logger.info("Research agent starting task")
-    result = agent_manager.available_agents["researcher"].invoke(state)
-    logger.info("Research agent completed task")
-    logger.debug(f"Research agent response: {result['messages'][-1].content}")
-    return Command(
-        update={
-            "messages": [
-                HumanMessage(
-                    content=RESPONSE_FORMAT.format(
-                        "researcher", result["messages"][-1].content
-                    ),
-                    name="researcher",
-                )
-            ]
-        },
-        goto="supervisor",
-    )
-
-
-def code_node(state: State) -> Command[Literal["supervisor"]]:
-    """Node for the coder agent that executes Python code."""
-    logger.info("Code agent starting task")
-    result = agent_manager.available_agents["coder"].invoke(state)
-    logger.info("Code agent completed task")
-    logger.debug(f"Code agent response: {result['messages'][-1].content}")
-    return Command(
-        update={
-            "messages": [
-                HumanMessage(
-                    content=RESPONSE_FORMAT.format(
-                        "coder", result["messages"][-1].content
-                    ),
-                    name="coder",
-                )
-            ]
-        },
-        goto="supervisor",
-    )
-
-
-def browser_node(state: State) -> Command[Literal["supervisor"]]:
-    """Node for the browser agent that performs web browsing tasks."""
-    logger.info("Browser agent starting task")
-    result = agent_manager.available_agents["browser"].invoke(state)
-    logger.info("Browser agent completed task")
-    logger.debug(f"Browser agent response: {result['messages'][-1].content}")
-    return Command(
-        update={
-            "messages": [
-                HumanMessage(
-                    content=RESPONSE_FORMAT.format(
-                        "browser", result["messages"][-1].content
-                    ),
-                    name="browser",
-                )
-            ]
-        },
-        goto="supervisor",
-    )
-
 def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
     """Node for the create agent agent that creates a new agent."""
     logger.info("Create agent agent starting task")
@@ -95,6 +32,7 @@ def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
     tools = [agent_manager.available_tools[tool["name"]] for tool in response["selected_tools"]]
 
     agent_manager._create_agent_by_prebuilt(
+        user_id=state["user_id"],
         name=response["agent_name"],
         llm_type=response["llm_type"],
         tools=tools,
@@ -102,9 +40,10 @@ def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
     )
     
     logger.info("Create agent agent completed task")
-    logger.info(f"Available agents: {agent_manager.available_agents.keys()}")
+    user_available_agents = [agent["mcp_obj"] for agent in agent_manager.available_agents if agent["mcp_obj"].user_id == "share" or agent["mcp_obj"].user_id == state["user_id"]]
+    logger.info(f"Available agents: {user_available_agents}")
     logger.info(f" agents created as, {json.dumps(response, ensure_ascii=False)}")
-    state["TEAM_MEMBERS"].append(agent_manager.available_agents[response["agent_name"]])
+    state["TEAM_MEMBERS"].append(response["agent_name"])
 
     return Command(
         update={
@@ -151,7 +90,8 @@ def supervisor_node(state: State) -> Command[Literal["agent_proxy", "create_agen
 def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
     """Agent proxy node that acts as a proxy for the agent."""
     logger.info("Agent proxy agent starting task")
-    response = agent_manager.available_agents[state["next"]].invoke(state)
+    _agent = [agent["runtime"] for agent in agent_manager.available_agents if agent["mcp_obj"].agent_name == state["next"]][0]
+    response = _agent.invoke(state)
     logger.info(f"{state['next']} agent completed task")
     logger.debug(f"{state['next']} agent response: {response['messages'][-1].content}")
     
@@ -231,23 +171,3 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
         goto=goto,
     )
 
-
-def reporter_node(state: State) -> Command[Literal["supervisor"]]:
-    """Reporter node that write a final report."""
-    logger.info("Reporter write final report")
-    messages = apply_prompt_template("reporter", state)
-    response = get_llm_by_type(AGENT_LLM_MAP["reporter"]).invoke(messages)
-    logger.debug(f"Current state messages: {state['messages']}")
-    logger.debug(f"reporter response: {response}")
-
-    return Command(
-        update={
-            "messages": [
-                HumanMessage(
-                    content=RESPONSE_FORMAT.format("reporter", response.content),
-                    name="reporter",
-                )
-            ]
-        },
-        goto="supervisor",
-    )

@@ -20,9 +20,11 @@ class LLMType(str, Enum):
     
 class Agent(BaseModel):
     """Definition for an agent the client can call."""
+    user_id: str
+    """The id of the user."""
     agent_name: str
     """The name of the agent."""
-    agent_id: str
+    nick_name: str
     """The id of the agent."""
     llm_type: LLMType
     """The type of LLM to use for the agent."""

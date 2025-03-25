@@ -19,9 +19,8 @@ logger = logging.getLogger(__name__)
 # Create the graph
 graph = build_graph()
 
-# create_agent_graph = build_agent_graph()
 
-def run_agent_workflow(user_input: str, debug: bool = False):
+def run_agent_workflow(user_id: str, user_input: str, debug: bool = False):
     """Run the agent workflow with the given user input.
 
     Args:
@@ -39,15 +38,17 @@ def run_agent_workflow(user_input: str, debug: bool = False):
 
     logger.info(f"Starting workflow with user input: {user_input}")
     
-    TEAM_MEMBERS = [member for member in agent_manager.available_agents.keys()] + ["create_agent"]
+    TEAM_MEMBERS = ["create_agent"]
+    for agent in agent_manager.available_agents:
+        if agent["mcp_obj"].user_id == user_id or agent["mcp_obj"].user_id == "share":
+            TEAM_MEMBERS.append(agent["mcp_obj"].agent_name)
     
     logger.info(f"TEAM_MEMBERS: {TEAM_MEMBERS}")
     
     result = graph.invoke(
         {
-            # Constants
             "TEAM_MEMBERS": TEAM_MEMBERS,
-            # Runtime Variables
+            "user_id": user_id,
             "messages": [{"role": "user", "content": user_input}],
             "deep_thinking_mode": True,
             "search_before_planning": True,
@@ -57,31 +58,6 @@ def run_agent_workflow(user_input: str, debug: bool = False):
     logger.info("Workflow completed successfully")
     return result
 
-# def run_create_agent_workflow(user_input: str, debug: bool = False):
-#     """Run the create agent workflow with the given user input.
-
-#     Args:
-#         user_input: The user's query or request
-#         debug: If True, enables debug level logging
-
-#     Returns:
-#         The final state after the workflow completes
-#     """
-#     if not user_input:
-#         raise ValueError("Input could not be empty")        
-
-#     if debug:
-#         enable_debug_logging()
-
-#     logger.info(f"Starting create agent workflow with user input: {user_input}")
-#     result = create_agent_graph.invoke(
-#         {
-#             "messages": [{"role": "user", "content": user_input}],
-#         }
-#     )
-#     logger.debug(f"Final workflow state: {result}")
-#     logger.info("Workflow completed successfully")
-#     return result   
 
 if __name__ == "__main__":
     print(graph.get_graph().draw_mermaid())

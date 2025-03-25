@@ -9,8 +9,11 @@ from dotenv import load_dotenv
 load_dotenv()
 import logging
 from src.interface.agent_types import *
-from src.workflow import create_agent_graph
+from src.service.workflow_service import run_agent_workflow
 from src.agents import agent_manager
+from src.service.session import UserSession
+
+
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
 
@@ -27,59 +30,45 @@ class Server:
         return [{"role": message.role, "content": message.content} for message in request.messages]
 
     @staticmethod
-    def _create_agents(
-            messages: Sequence[Dict[str, str]]
-    ) -> List[Agent]:
-        # result = create_agent_graph.invoke(
-        #     {
-        #         "messages": messages,
-        #     }
-        # )
-        tool = Tool(
-            name="test_tool",
-            description="test",
-            inputSchema={'description': 'Input for the Tavily tool.', 'properties': {'query': {'type': 'string'}}, 'required': ['query'], 'title': 'TavilyInput', 'type': 'object'}
-        )
-        
-        agent = Agent(
-            agent_name="test_agent",
-            agent_id="test_id",
-            llm_type=LLMType.BASIC,
-            selected_tools=[tool],
-            prompt=Prompt(
-                name="test_prompt",
-                description="test",
-                arguments=["query"],
-                content="test"
-            )
-        )
-        agents = [agent]
-        return agents
+    async def _run_agent_workflow(
+            request: "AgentRequest"
+    ) -> AsyncGenerator[str, None]:
+        session = UserSession(request.user_id)
+        for message in request.messages:
+            session.add_message(message.role, message.content)
+        session_messages = session.history[-3:]
+
+        response = await run_agent_workflow(session_messages)
+        for res in response:
+            yield res
 
     @staticmethod
-    def _list_agents(
+    async def _list_agents(
          request: "listAgentRequest"
     ) -> List[Agent]:
-        # return agent_manager.list_agents(request.user_id, request.match)
-        tool = Tool(
-            name="test_tool",
-            description="test",
-            inputSchema={'description': 'Input for the Tavily tool.', 'properties': {'query': {'type': 'string'}}, 'required': ['query'], 'title': 'TavilyInput', 'type': 'object'}
-        )
-        
-        agent = Agent(
-            agent_name="test_agent",
-            agent_id="test_id",
-            llm_type=LLMType.BASIC,
-            selected_tools=[tool],
-            prompt=Prompt(
-                name="test_prompt",
-                description="test",
-                arguments=["query"],
-                content="test"
-            )
-        )
-        return [agent]
+        try:
+            return agent_manager.list_agents(request.user_id, request.match)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    
+    @staticmethod
+    async def _edit_agent(
+        request: "AgentRequest"
+    ) -> str:
+        try:
+            return agent_manager.edit_agent(request.agent)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @staticmethod
+    async def _list_default_agents() -> List[Agent]:
+        return agent_manager.list_default_agents()
+    
+    @staticmethod
+    async def _list_default_tools() -> List[Tool]:
+        return agent_manager.list_default_tools()
+
 
     @staticmethod
     async def _stream_agents(agents: List[Agent]) -> AsyncGenerator[bytes, None]:
@@ -89,23 +78,41 @@ class Server:
             yield (agent.model_dump_json() + "\n").encode("utf-8")
 
     def launch(self):
-        @self.app.post("/v1/create_agents", status_code=status.HTTP_200_OK)
-        async def create_agents(request: AgentRequest):
-            messages = self._process_request(request)
-            agents = self._create_agents(messages)
+        @self.app.post("/v1/workflow", status_code=status.HTTP_200_OK)
+        async def agent_workflow(request: AgentRequest):
             return StreamingResponse(
-                self._stream_agents(agents),
+                self._run_agent_workflow(request),
                 media_type="application/x-ndjson"
             )
 
         @self.app.post("/v1/list_agents", status_code=status.HTTP_200_OK)
         async def list_agents(request: listAgentRequest):
-            agents = self._list_agents(request)
             return StreamingResponse(
-                self._stream_agents(agents),
+                self._list_agents(request),
                 media_type="application/x-ndjson"
             )
-            
+
+        @self.app.get("/v1/list_default_agents", status_code=status.HTTP_200_OK)
+        async def list_default_agents():
+            return StreamingResponse(
+                self._list_default_agents(),
+                media_type="application/x-ndjson"
+            )
+        
+        @self.app.get("/v1/list_default_tools", status_code=status.HTTP_200_OK)
+        async def list_default_tools():
+            return StreamingResponse(
+                self._list_default_tools(),
+                media_type="application/x-ndjson"
+            )
+        
+        @self.app.post("/v1/edit_agent", status_code=status.HTTP_200_OK)
+        async def edit_agent(request: AgentRequest):
+            return StreamingResponse(
+                self._edit_agent(request),
+                media_type="application/x-ndjson"
+            )
+        
         uvicorn.run(
             self.app,
             host=self.host,
