@@ -193,7 +193,14 @@ class AgentManager:
         return    
     
     def _list_default_tools(self):
-        return list(self.available_tools.keys())
+        mcp_tools = []
+        for tool in self.available_tools.values():
+            mcp_tools.append(Tool(
+                name=tool.name,
+                description=tool.description,
+                inputSchema=eval(tool.args_schema.schema_json()),
+            ))
+        return mcp_tools
     
     def _list_default_agents(self):
         agents = [agent["mcp_obj"] for agent in self.available_agents if agent["mcp_obj"].user_id == "share"]
