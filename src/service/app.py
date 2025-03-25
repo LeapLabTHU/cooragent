@@ -54,30 +54,30 @@ class Server:
          request: "listAgentRequest"
     ) -> AsyncGenerator[str, None]:
         try:
-            agents = agent_manager.list_agents(request.user_id, request.match)
+            agents = agent_manager._list_agents(request.user_id, request.match)
             for agent in agents:
-                yield json.dumps(agent) + "\n"
+                yield agent.model_dump_json() + "\n"
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
     async def _list_default_agents() -> AsyncGenerator[str, None]:
-        agents = agent_manager.list_default_agents()
+        agents = agent_manager._list_default_agents()
         for agent in agents:
-            yield json.dumps(agent) + "\n"
+            yield agent.model_dump_json() + "\n"
     
     @staticmethod
     async def _list_default_tools() -> AsyncGenerator[str, None]:
-        tools = agent_manager.list_default_tools()
+        tools = agent_manager._list_default_tools()
         for tool in tools:
-            yield json.dumps(tool) + "\n"
+            yield tool + "\n"
 
     @staticmethod
     async def _edit_agent(
         request: "AgentRequest"
     ) -> AsyncGenerator[str, None]:
         try:
-            result = agent_manager.edit_agent(request.agent)
+            result = agent_manager._edit_agent(request.agent)
             yield json.dumps({"result": result}) + "\n"
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
