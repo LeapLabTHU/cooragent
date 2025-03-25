@@ -76,7 +76,7 @@ def test_list_agents_api(user_id: str, match: str = "") -> None:
     url = f"{BASE_URL}/v1/list_agents"
     
     payload = {
-        "user_id": user_id,
+        "user_id": "",
         "match": match
     }
     
@@ -87,7 +87,25 @@ def test_list_agents_api(user_id: str, match: str = "") -> None:
                 for line in response.iter_lines():
                     if line:
                         agent = json.loads(line.decode('utf-8'))
-                        print(f"代理: {agent.get('name', 'Unknown')}")
+                        print("\n=== 代理详情 ===")
+                        print(f"名称: {agent.get('agent_name', 'Unknown')}")
+                        print(f"昵称: {agent.get('nick_name', 'Unknown')}")
+                        print(f"用户ID: {agent.get('user_id', 'Unknown')}")
+                        print(f"LLM类型: {agent.get('llm_type', 'Unknown')}")
+                        
+                        # 打印工具列表
+                        tools = agent.get('selected_tools', [])
+                        if tools:
+                            print("\n已选择的工具:")
+                            for tool in tools:
+                                print(f"- {tool}")
+                        
+                        # 打印提示词（只显示前200个字符）
+                        # prompt = agent.get('prompt', '')
+                        # if prompt:
+                        #     print("\n提示词预览:")
+                        #     print(f"{prompt[:200]}...")
+                        print("=" * 50)
             else:
                 print(f"请求失败: {response.status_code}")
                 print(response.text)
@@ -106,7 +124,20 @@ def test_list_default_agents_api() -> None:
                 for line in response.iter_lines():
                     if line:
                         agent = json.loads(line.decode('utf-8'))
-                        print(f"默认代理: {agent.get('name', 'Unknown')}")
+                        print("\n=== 代理详情 ===")
+                        print(f"名称: {agent.get('agent_name', 'Unknown')}")
+                        print(f"昵称: {agent.get('nick_name', 'Unknown')}")
+                        print(f"用户ID: {agent.get('user_id', 'Unknown')}")
+                        print(f"LLM类型: {agent.get('llm_type', 'Unknown')}")
+                        
+                        # 打印工具列表
+                        tools = agent.get('selected_tools', [])
+                        if tools:
+                            print("\n已选择的工具:")
+                            for tool in tools:
+                                print(f"- {tool}")
+                        print("=" * 50)
+                        
             else:
                 print(f"请求失败: {response.status_code}")
                 print(response.text)
@@ -125,7 +156,7 @@ def test_list_default_tools_api() -> None:
                 for line in response.iter_lines():
                     if line:
                         tool = json.loads(line.decode('utf-8'))
-                        print(f"默认工具: {tool.get('name', 'Unknown')}")
+                        print(f"默认工具: {tool}")
             else:
                 print(f"请求失败: {response.status_code}")
                 print(response.text)
@@ -160,7 +191,7 @@ if __name__ == "__main__":
     USER_ID = "test_user_123"
     
     # 测试 workflow API
-    test_workflow_api(USER_ID, "查询北京今天天气")
+    # test_workflow_api(USER_ID, "查询北京今天天气")
     
     # 测试 list_agents API
     # test_list_agents_api(USER_ID)
@@ -169,7 +200,7 @@ if __name__ == "__main__":
     # test_list_default_agents_api()
     
     # 测试 list_default_tools API
-    # test_list_default_tools_api()
+    test_list_default_tools_api()
     
     # 测试 edit_agent API，需要提供一个Agent对象
     # 注意：这里使用了一个简单的示例，实际使用时需要根据您的Agent模型结构修改
