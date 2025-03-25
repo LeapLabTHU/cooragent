@@ -19,3 +19,4 @@ def build_graph():
     builder.add_node("supervisor", supervisor_node)
     builder.add_node("create_agent", create_agent_node)
     builder.add_node("agent_proxy", agent_proxy_node)
+    return builder.compile()

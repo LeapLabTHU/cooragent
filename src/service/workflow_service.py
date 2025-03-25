@@ -1,8 +1,9 @@
 import logging
 
-from src.config import TEAM_MEMBERS
+# from src.config import TEAM_MEMBERS
 from src.graph import build_graph
 from langchain_community.adapters.openai import convert_message_to_dict
+from src.agents import agent_manager
 import uuid
 
 # Configure logging
@@ -53,9 +54,12 @@ async def run_agent_workflow(
 
     workflow_id = str(uuid.uuid4())
 
-    streaming_llm_agents = [*TEAM_MEMBERS, "planner", "coordinator"]
+    TEAM_MEMBERS = ["create_agent"]
+    for agent in agent_manager.available_agents:
+        if agent["mcp_obj"].user_id == user_id or agent["mcp_obj"].user_id == "share":
+            TEAM_MEMBERS.append(agent["mcp_obj"].agent_name)
+    streaming_llm_agents = [*TEAM_MEMBERS, "agent_proxy", "coordinator", "planner", "supervisor"]
 
-    # Reset coordinator cache at the start of each workflow
     global coordinator_cache
     coordinator_cache = []
     global is_handoff_case

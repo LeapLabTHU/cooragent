@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 import logging
@@ -38,50 +39,58 @@ class Server:
             session.add_message(message.role, message.content)
         session_messages = session.history[-3:]
 
-        response = await run_agent_workflow(session_messages)
-        for res in response:
+        response = run_agent_workflow(
+            request.user_id,
+            session_messages,
+            request.debug,
+            request.deep_thinking_mode,
+            request.search_before_planning
+        )
+        async for res in response:
             yield res
 
     @staticmethod
     async def _list_agents(
          request: "listAgentRequest"
-    ) -> List[Agent]:
+    ) -> AsyncGenerator[str, None]:
         try:
-            return agent_manager.list_agents(request.user_id, request.match)
+            agents = agent_manager.list_agents(request.user_id, request.match)
+            for agent in agents:
+                yield json.dumps(agent) + "\n"
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
+    @staticmethod
+    async def _list_default_agents() -> AsyncGenerator[str, None]:
+        agents = agent_manager.list_default_agents()
+        for agent in agents:
+            yield json.dumps(agent) + "\n"
     
+    @staticmethod
+    async def _list_default_tools() -> AsyncGenerator[str, None]:
+        tools = agent_manager.list_default_tools()
+        for tool in tools:
+            yield json.dumps(tool) + "\n"
+
     @staticmethod
     async def _edit_agent(
         request: "AgentRequest"
-    ) -> str:
+    ) -> AsyncGenerator[str, None]:
         try:
-            return agent_manager.edit_agent(request.agent)
+            result = agent_manager.edit_agent(request.agent)
+            yield json.dumps({"result": result}) + "\n"
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
-    @staticmethod
-    async def _list_default_agents() -> List[Agent]:
-        return agent_manager.list_default_agents()
-    
-    @staticmethod
-    async def _list_default_tools() -> List[Tool]:
-        return agent_manager.list_default_tools()
-
-
-    @staticmethod
-    async def _stream_agents(agents: List[Agent]) -> AsyncGenerator[bytes, None]:
-        """将代理列表转换为可流式传输的格式"""
-        for agent in agents:
-            # 将每个代理对象转换为JSON字符串，并添加换行符
-            yield (agent.model_dump_json() + "\n").encode("utf-8")
 
     def launch(self):
         @self.app.post("/v1/workflow", status_code=status.HTTP_200_OK)
         async def agent_workflow(request: AgentRequest):
+            async def response_generator():
+                async for chunk in self._run_agent_workflow(request):
+                    yield json.dumps(chunk) + "\n"
+                    
             return StreamingResponse(
-                self._run_agent_workflow(request),
+                response_generator(),
                 media_type="application/x-ndjson"
             )
 
