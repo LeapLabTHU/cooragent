@@ -1,96 +1,183 @@
-import pytest
-from fastapi.testclient import TestClient
-from src.service.app import Server
-from src.interface.agent_types import AgentRequest, listAgentRequest
-import requests
 import json
+import requests
+from typing import Dict, List, Any
 
-@pytest.fixture
-def client():
-    server = Server()
-    return TestClient(server.app)
+BASE_URL = "http://localhost:8001"
 
-def test_create_agents():
-    """测试创建代理 API"""
-    url = f"http://localhost:8001/v1/create_agents"
+def test_workflow_api(user_id: str, message_content: str) -> None:
+    """测试 workflow API"""
+    print("\n=== 测试 workflow API ===")
+    url = f"{BASE_URL}/v1/workflow"
     
-    # 构建请求数据
     payload = {
+        "user_id": user_id,
+        "lang": "zh",
         "messages": [
-            {
-                "role": "user",
-                "content": "我需要一个能够搜索网络的助手"
-            }
-        ]
+            {"role": "user", "content": message_content}
+        ],
+        "debug": True,
+        "deep_thinking_mode": False,
+        "search_before_planning": False
     }
     
-    # 发送请求
-    response = requests.post(url, json=payload, stream=True)
-    
-    # 打印状态码
-    print(f"状态码: {response.status_code}")
-    
-    # 读取流式响应
-    if response.status_code == 200:
-        for line in response.iter_lines():
-            if line:
-                decoded_line = line.decode('utf-8')
-                print(f"收到数据: {decoded_line}")
-                # 尝试解析 JSON
-                try:
-                    agent_data = json.loads(decoded_line)
-                    print(f"代理名称: {agent_data.get('agent_name', 'N/A')}")
-                except json.JSONDecodeError:
-                    print("无法解析为 JSON")
+    try:
+        with requests.post(url, json=payload, stream=True) as response:
+            if response.status_code == 200:
+                print("请求成功，接收流式响应：")
+                for line in response.iter_lines():
+                    if line:
+                        data = json.loads(line.decode('utf-8'))
+                        event_type = data.get("event")
+                        
+                        if event_type == "message":
+                            message_data = data.get("data", {})
+                            if "delta" in message_data:
+                                content = message_data["delta"].get("content", "")
+                                reasoning = message_data["delta"].get("reasoning_content", "")
+                                
+                                if content:
+                                    print(f"内容: {content}")
+                                if reasoning:
+                                    print(f"推理过程: {reasoning}")
+                        
+                        elif event_type == "start_of_agent":
+                            agent_name = data.get("data", {}).get("agent_name", "未知代理")
+                            print(f"\n--- {agent_name} 开始工作 ---")
+                        
+                        elif event_type == "end_of_agent":
+                            agent_name = data.get("data", {}).get("agent_name", "未知代理")
+                            print(f"--- {agent_name} 工作结束 ---\n")
+                        
+                        elif event_type == "tool_call":
+                            tool_data = data.get("data", {})
+                            tool_name = tool_data.get("tool_name", "未知工具")
+                            tool_input = tool_data.get("tool_input", "")
+                            print(f"\n调用工具: {tool_name}")
+                            print(f"工具输入: {tool_input}")
+                        
+                        elif event_type == "tool_call_result":
+                            tool_data = data.get("data", {})
+                            tool_name = tool_data.get("tool_name", "未知工具")
+                            tool_result = tool_data.get("tool_result", "")
+                            print(f"工具 {tool_name} 返回结果: {tool_result}\n")
+                        
+                        elif event_type in ["start_of_workflow", "end_of_workflow"]:
+                            workflow_status = "开始" if event_type == "start_of_workflow" else "结束"
+                            print(f"\n=== 工作流 {workflow_status} ===\n")
+            else:
+                print(f"请求失败: {response.status_code}")
+                print(response.text)
+    except Exception as e:
+        print(f"发生错误: {str(e)}")
 
-def test_list_agents():
-    """测试列出代理 API"""
-    url = f"http://localhost:8001/v1/list_agents"
+def test_list_agents_api(user_id: str, match: str = "") -> None:
+    """测试 list_agents API"""
+    print("\n=== 测试 list_agents API ===")
+    url = f"{BASE_URL}/v1/list_agents"
     
-    # 构建请求数据
     payload = {
-        "user_id": "test_user",
-        "match": "test"
+        "user_id": user_id,
+        "match": match
     }
     
-    # 发送请求
-    response = requests.post(url, json=payload, stream=True)
-    
-    # 打印状态码
-    print(f"状态码: {response.status_code}")
-    
-    # 读取流式响应
-    if response.status_code == 200:
-        for line in response.iter_lines():
-            if line:
-                decoded_line = line.decode('utf-8')
-                print(f"收到数据: {decoded_line}")
-                # 尝试解析 JSON
-                try:
-                    agent_data = json.loads(decoded_line)
-                    print(f"代理名称: {agent_data.get('agent_name', 'N/A')}")
-                except json.JSONDecodeError:
-                    print("无法解析为 JSON")
+    try:
+        with requests.post(url, json=payload, stream=True) as response:
+            if response.status_code == 200:
+                print("请求成功，接收代理列表：")
+                for line in response.iter_lines():
+                    if line:
+                        agent = json.loads(line.decode('utf-8'))
+                        print(f"代理: {agent.get('name', 'Unknown')}")
+            else:
+                print(f"请求失败: {response.status_code}")
+                print(response.text)
+    except Exception as e:
+        print(f"发生错误: {str(e)}")
 
-def test_invalid_create_agents_request():
-    """测试无效的创建代理请求"""
-    client = TestClient(Server().app)
+def test_list_default_agents_api() -> None:
+    """测试 list_default_agents API"""
+    print("\n=== 测试 list_default_agents API ===")
+    url = f"{BASE_URL}/v1/list_default_agents"
     
-    # 发送空请求
-    response = client.post("/v1/create_agents", json={})
-    assert response.status_code == 422
+    try:
+        with requests.get(url, stream=True) as response:
+            if response.status_code == 200:
+                print("请求成功，接收默认代理列表：")
+                for line in response.iter_lines():
+                    if line:
+                        agent = json.loads(line.decode('utf-8'))
+                        print(f"默认代理: {agent.get('name', 'Unknown')}")
+            else:
+                print(f"请求失败: {response.status_code}")
+                print(response.text)
+    except Exception as e:
+        print(f"发生错误: {str(e)}")
 
-def test_invalid_list_agents_request():
-    """测试无效的列出代理请求"""
-    client = TestClient(Server().app)
+def test_list_default_tools_api() -> None:
+    """测试 list_default_tools API"""
+    print("\n=== 测试 list_default_tools API ===")
+    url = f"{BASE_URL}/v1/list_default_tools"
     
-    # 发送空请求
-    response = client.post("/v1/list_agents", json={})
-    assert response.status_code == 422
+    try:
+        with requests.get(url, stream=True) as response:
+            if response.status_code == 200:
+                print("请求成功，接收默认工具列表：")
+                for line in response.iter_lines():
+                    if line:
+                        tool = json.loads(line.decode('utf-8'))
+                        print(f"默认工具: {tool.get('name', 'Unknown')}")
+            else:
+                print(f"请求失败: {response.status_code}")
+                print(response.text)
+    except Exception as e:
+        print(f"发生错误: {str(e)}")
+
+def test_edit_agent_api(agent_data: Dict[str, Any]) -> None:
+    """测试 edit_agent API"""
+    print("\n=== 测试 edit_agent API ===")
+    url = f"{BASE_URL}/v1/edit_agent"
+    
+    payload = {
+        "agent": agent_data
+    }
+    
+    try:
+        with requests.post(url, json=payload, stream=True) as response:
+            if response.status_code == 200:
+                print("请求成功，编辑代理响应：")
+                for line in response.iter_lines():
+                    if line:
+                        decoded_line = line.decode('utf-8')
+                        print(f"收到: {decoded_line}")
+            else:
+                print(f"请求失败: {response.status_code}")
+                print(response.text)
+    except Exception as e:
+        print(f"发生错误: {str(e)}")
 
 if __name__ == "__main__":
-    print("测试创建代理 API...")
-    test_create_agents()
+    # 用户ID，实际使用时替换为真实ID
+    USER_ID = "test_user_123"
     
-    print("\n测试列出代理 API...")
-    test_list_agents() 
+    # 测试 workflow API
+    test_workflow_api(USER_ID, "查询北京今天天气")
+    
+    # 测试 list_agents API
+    # test_list_agents_api(USER_ID)
+    
+    # 测试 list_default_agents API
+    # test_list_default_agents_api()
+    
+    # 测试 list_default_tools API
+    # test_list_default_tools_api()
+    
+    # 测试 edit_agent API，需要提供一个Agent对象
+    # 注意：这里使用了一个简单的示例，实际使用时需要根据您的Agent模型结构修改
+    # agent_data = {
+    #     "id": "some_agent_id",
+    #     "name": "测试代理",
+    #     "description": "这是一个测试代理",
+    #     "user_id": USER_ID,
+    #     # 根据您的Agent类型添加其他必要字段
+    # }
+    # test_edit_agent_api(agent_data)

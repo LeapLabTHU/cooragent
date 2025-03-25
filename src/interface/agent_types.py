@@ -43,6 +43,9 @@ class AgentRequest(BaseModel):
     user_id: str
     lang: Lang
     messages: List[AgentMessage]
+    debug: bool
+    deep_thinking_mode: bool
+    search_before_planning: bool
     
 class listAgentRequest(BaseModel):
     user_id: Optional[str]
