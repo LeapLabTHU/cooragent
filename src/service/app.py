@@ -12,6 +12,7 @@ import logging
 from src.interface.agent_types import *
 from src.service.workflow_service import run_agent_workflow
 from src.agents import agent_manager
+from src.agents.agents import NotFoundAgentError, NotFoundToolError
 from src.service.session import UserSession
 
 
@@ -74,11 +75,13 @@ class Server:
 
     @staticmethod
     async def _edit_agent(
-        request: "AgentRequest"
+        request: "Agent"
     ) -> AsyncGenerator[str, None]:
         try:
-            result = agent_manager._edit_agent(request.agent)
+            result = agent_manager._edit_agent(request)
             yield json.dumps({"result": result}) + "\n"
+        except NotFoundAgentError as e:
+            yield json.dumps({"result": "agent not found"}) + "\n"
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -116,7 +119,7 @@ class Server:
             )
         
         @self.app.post("/v1/edit_agent", status_code=status.HTTP_200_OK)
-        async def edit_agent(request: AgentRequest):
+        async def edit_agent(request: Agent):
             return StreamingResponse(
                 self._edit_agent(request),
                 media_type="application/x-ndjson"
