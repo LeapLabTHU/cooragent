@@ -168,22 +168,12 @@ def test_edit_agent_api(agent_data: Dict[str, Any]) -> None:
     print("\n=== 测试 edit_agent API ===")
     url = f"{BASE_URL}/v1/edit_agent"
     
-    payload = {
-        "agent": agent_data
-    }
     
     try:
-        with requests.post(url, json=payload, stream=True) as response:
+        with requests.post(url, json=agent_data, stream=True) as response:
             if response.status_code == 200:
                 print("请求成功，编辑代理响应：")
-                for line in response.iter_lines():
-                    if line:
-                        decoded_line = line.decode('utf-8')
-                        print("\n=== tool 详情 ===")
-                        print(f"名称: {decoded_line.get('name', 'Unknown')}")
-                        print(f"描述: {decoded_line.get('description', 'Unknown')}")
-                        print(f"输入参数: {decoded_line.get('inputSchema', 'Unknown')}")
-                        print("=" * 50)
+                print(response.text)
             else:
                 print(f"请求失败: {response.status_code}")
                 print(response.text)
@@ -204,15 +194,35 @@ if __name__ == "__main__":
     # test_list_default_agents_api()
     
     # 测试 list_default_tools API
-    test_list_default_tools_api()
+    # test_list_default_tools_api()
     
     # 测试 edit_agent API，需要提供一个Agent对象
     # 注意：这里使用了一个简单的示例，实际使用时需要根据您的Agent模型结构修改
-    # agent_data = {
-    #     "id": "some_agent_id",
-    #     "name": "测试代理",
-    #     "description": "这是一个测试代理",
-    #     "user_id": USER_ID,
-    #     # 根据您的Agent类型添加其他必要字段
-    # }
-    # test_edit_agent_api(agent_data)
+    tool_input_schema = {
+        'description': 'Input for the Tavily tool.',
+        'properties': {
+            'query': {
+                'type': 'string',
+                'description': 'The search query'
+            }
+        },
+        'required': ['query'],
+        'title': 'TavilyInput',
+        'type': 'object'
+    }
+
+    tool = {
+        "name": "tavily",
+        "description": "Tavily tool",
+        "inputSchema": tool_input_schema
+    }
+
+    agent_data = {
+        "user_id": "test_user_123",
+        "agent_name": "stock_analyst",
+        "nick_name": "stock_analyst",
+        "llm_type": "basic",
+        "selected_tools": [tool],
+        "prompt": "这是一个测试代理"
+    }
+    test_edit_agent_api(agent_data)

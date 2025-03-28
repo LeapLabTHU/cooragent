@@ -20,6 +20,13 @@ import re
 
 logger = logging.getLogger(__name__)
 
+class NotFoundAgentError(Exception):
+    """when agent not found"""
+    pass
+
+class NotFoundToolError(Exception):
+    """when tool not found"""
+    pass
 
 class AgentManager:
     def __init__(self, tools_dir, agents_dir, prompt_dir):
@@ -82,6 +89,7 @@ class AgentManager:
             "tavily_tool": tavily_tool,
         }
         
+        self._load_agents()
         
     def _create_mcp_agent(self, user_id: str, name: str, llm_type: str, tools: list[tool], prompt: str):
         mcp_tools = []
@@ -109,9 +117,12 @@ class AgentManager:
         _tools = []
         try:
             for tool in mcp_agent.selected_tools:
-                _tools.append(self.available_tools[tool.name])
+                if tool.name in self.available_tools:
+                    _tools.append(self.available_tools[tool.name])
+                else:
+                    logger.error(f"Tool {tool.name} not found in available tools.")
         except Exception as e:
-            logger.error(f"Tool {tool.name} not found in available tools.")
+            logger.error(f"Tool {tool.name} load to langchain tool failed.")
         
         try:
             _prompt = lambda state: apply_prompt_template(mcp_agent.name, state)
@@ -120,7 +131,7 @@ class AgentManager:
             _prompt = get_prompt_template(mcp_agent.prompt)
             
         langchain_agent = create_react_agent(
-            llm_type=mcp_agent.llm_type,
+            get_llm_by_type(mcp_agent.llm_type),
             tools=_tools,
             prompt=_prompt,
         )
@@ -178,9 +189,9 @@ class AgentManager:
                 _agent["mcp_obj"] = agent
                 del _agent["runtime"]
                 _agent["runtime"] = self._convert_mcp_agent_to_langchain_agent(agent)
-                self._save_agent(_agent)
+                self._save_agent(_agent["mcp_obj"])
                 return "agent updated successfully"
-        raise ValueError(f"agent {agent.agent_name} not found.")
+        raise NotFoundAgentError(f"agent {agent.agent_name} not found.")
     
     def _save_agents(self, agents: list[Agent], flush=False):
         for agent in agents:
@@ -189,7 +200,8 @@ class AgentManager:
         
     def _load_agents(self):
         for agent_path in self.agents_dir.glob("*.json"):
-            self._load_agent(agent_path.stem)
+            if agent_path.stem not in [agent["mcp_obj"].agent_name for agent in self.available_agents]:
+                self._load_agent(agent_path.stem)
         return    
     
     def _list_default_tools(self):
