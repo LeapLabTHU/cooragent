@@ -39,10 +39,10 @@ def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
         prompt=response["prompt"],
     )
     
-    logger.info("Create agent agent completed task")
-    user_available_agents = [agent["mcp_obj"] for agent in agent_manager.available_agents if agent["mcp_obj"].user_id == "share" or agent["mcp_obj"].user_id == state["user_id"]]
-    logger.info(f"Available agents: {user_available_agents}")
-    logger.info(f" agents created as, {json.dumps(response, ensure_ascii=False)}")
+    # logger.info("Create agent agent completed task")
+    # user_available_agents = [agent["mcp_obj"] for agent in agent_manager.available_agents if agent["mcp_obj"].user_id == "share" or agent["mcp_obj"].user_id == state["user_id"]]
+    # logger.info(f"Available agents: {user_available_agents}")
+    # logger.info(f" agents created as, {json.dumps(response, ensure_ascii=False)}")
     state["TEAM_MEMBERS"].append(response["agent_name"])
 
     return Command(
@@ -54,7 +54,8 @@ def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
                     ),
                     name=state["next"],
                 )
-            ]
+            ],
+            # "new_agent": json.dumps(response, ensure_ascii=False)
         },
         goto="supervisor",
     )
@@ -70,8 +71,8 @@ def supervisor_node(state: State) -> Command[Literal["agent_proxy", "create_agen
         .invoke(messages)
     )
     agent = response["next"]
-    logger.debug(f"Current state messages: {state['messages']}")
-    logger.debug(f"Supervisor response: {response}")
+    # logger.debug(f"Current state messages: {state['messages']}")
+    # logger.debug(f"Supervisor response: {response}")
     
     if agent == "FINISH":
         goto = "__end__"
@@ -92,8 +93,8 @@ def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
     logger.info("Agent proxy agent starting task")
     _agent = [agent["runtime"] for agent in agent_manager.available_agents if agent["mcp_obj"].agent_name == state["next"]][0]
     response = _agent.invoke(state)
-    logger.info(f"{state['next']} agent completed task")
-    logger.debug(f"{state['next']} agent response: {response['messages'][-1].content}")
+    # logger.info(f"{state['next']} agent completed task")
+    # logger.debug(f"{state['next']} agent response: {response['messages'][-1].content}")
     
     return Command(
         update={
@@ -104,7 +105,8 @@ def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
                     ),
                     name=state["next"],
                 )
-            ]
+            ],
+            "agent_name": state["next"]
         },
         goto="supervisor",
     )
@@ -129,8 +131,8 @@ def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
     full_response = ""
     for chunk in stream:
         full_response += chunk.content
-    logger.debug(f"Current state messages: {state['messages']}")
-    logger.debug(f"Planner response: {full_response}")
+    # logger.debug(f"Current state messages: {state['messages']}")
+    # logger.debug(f"Planner response: {full_response}")
 
     if full_response.startswith("```json"):
         full_response = full_response.removeprefix("```json")
@@ -160,8 +162,8 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
     logger.info("Coordinator talking.")
     messages = apply_prompt_template("coordinator", state)
     response = get_llm_by_type(AGENT_LLM_MAP["coordinator"]).invoke(messages)
-    logger.debug(f"Current state messages: {state['messages']}")
-    logger.debug(f"reporter response: {response}")
+    # logger.debug(f"Current state messages: {state['messages']}")
+    # logger.debug(f"reporter response: {response}")
 
     goto = "__end__"
     if "handoff_to_planner" in response.content:

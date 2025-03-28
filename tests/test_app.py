@@ -27,43 +27,46 @@ def test_workflow_api(user_id: str, message_content: str) -> None:
                 for line in response.iter_lines():
                     if line:
                         data = json.loads(line.decode('utf-8'))
-                        event_type = data.get("event")
+                        # print("---------------origin data-----------------")
+                        print(data)
+                        # print("\n---------------nice print data-----------------\n")
+                        # event_type = data.get("event")
                         
-                        if event_type == "message":
-                            message_data = data.get("data", {})
-                            if "delta" in message_data:
-                                content = message_data["delta"].get("content", "")
-                                reasoning = message_data["delta"].get("reasoning_content", "")
+                        # if event_type == "message":
+                        #     message_data = data.get("data", {})
+                        #     if "delta" in message_data:
+                        #         content = message_data["delta"].get("content", "")
+                        #         reasoning = message_data["delta"].get("reasoning_content", "")
                                 
-                                if content:
-                                    print(f"内容: {content}")
-                                if reasoning:
-                                    print(f"推理过程: {reasoning}")
+                        #         if content:
+                        #             print(f"内容: {content}")
+                        #         if reasoning:
+                        #             print(f"推理过程: {reasoning}")
                         
-                        elif event_type == "start_of_agent":
-                            agent_name = data.get("data", {}).get("agent_name", "未知代理")
-                            print(f"\n--- {agent_name} 开始工作 ---")
+                        # elif event_type == "start_of_agent":
+                        #     agent_name = data.get("data", {}).get("agent_name", "未知代理")
+                        #     print(f"\n--- {agent_name} 开始工作 ---")
                         
-                        elif event_type == "end_of_agent":
-                            agent_name = data.get("data", {}).get("agent_name", "未知代理")
-                            print(f"--- {agent_name} 工作结束 ---\n")
+                        # elif event_type == "end_of_agent":
+                        #     agent_name = data.get("data", {}).get("agent_name", "未知代理")
+                        #     print(f"--- {agent_name} 工作结束 ---\n")
                         
-                        elif event_type == "tool_call":
-                            tool_data = data.get("data", {})
-                            tool_name = tool_data.get("tool_name", "未知工具")
-                            tool_input = tool_data.get("tool_input", "")
-                            print(f"\n调用工具: {tool_name}")
-                            print(f"工具输入: {tool_input}")
+                        # elif event_type == "tool_call":
+                        #     tool_data = data.get("data", {})
+                        #     tool_name = tool_data.get("tool_name", "未知工具")
+                        #     tool_input = tool_data.get("tool_input", "")
+                        #     print(f"\n调用工具: {tool_name}")
+                        #     print(f"工具输入: {tool_input}")
                         
-                        elif event_type == "tool_call_result":
-                            tool_data = data.get("data", {})
-                            tool_name = tool_data.get("tool_name", "未知工具")
-                            tool_result = tool_data.get("tool_result", "")
-                            print(f"工具 {tool_name} 返回结果: {tool_result}\n")
+                        # elif event_type == "tool_call_result":
+                        #     tool_data = data.get("data", {})
+                        #     tool_name = tool_data.get("tool_name", "未知工具")
+                        #     tool_result = tool_data.get("tool_result", "")
+                        #     print(f"工具 {tool_name} 返回结果: {tool_result}\n")
                         
-                        elif event_type in ["start_of_workflow", "end_of_workflow"]:
-                            workflow_status = "开始" if event_type == "start_of_workflow" else "结束"
-                            print(f"\n=== 工作流 {workflow_status} ===\n")
+                        # elif event_type in ["start_of_workflow", "end_of_workflow"]:
+                        #     workflow_status = "开始" if event_type == "start_of_workflow" else "结束"
+                        #     print(f"\n=== 工作流 {workflow_status} ===\n")
             else:
                 print(f"请求失败: {response.status_code}")
                 print(response.text)
@@ -185,7 +188,7 @@ if __name__ == "__main__":
     USER_ID = "test_user_123"
     
     # 测试 workflow API
-    # test_workflow_api(USER_ID, "查询北京今天天气")
+    test_workflow_api(USER_ID, "创建一个股票分析 agent，并查询今天英伟达股票价格")
     
     # 测试 list_agents API
     # test_list_agents_api(USER_ID)
@@ -198,31 +201,31 @@ if __name__ == "__main__":
     
     # 测试 edit_agent API，需要提供一个Agent对象
     # 注意：这里使用了一个简单的示例，实际使用时需要根据您的Agent模型结构修改
-    tool_input_schema = {
-        'description': 'Input for the Tavily tool.',
-        'properties': {
-            'query': {
-                'type': 'string',
-                'description': 'The search query'
-            }
-        },
-        'required': ['query'],
-        'title': 'TavilyInput',
-        'type': 'object'
-    }
+    # tool_input_schema = {
+    #     'description': 'Input for the Tavily tool.',
+    #     'properties': {
+    #         'query': {
+    #             'type': 'string',
+    #             'description': 'The search query'
+    #         }
+    #     },
+    #     'required': ['query'],
+    #     'title': 'TavilyInput',
+    #     'type': 'object'
+    # }
 
-    tool = {
-        "name": "tavily",
-        "description": "Tavily tool",
-        "inputSchema": tool_input_schema
-    }
+    # tool = {
+    #     "name": "tavily",
+    #     "description": "Tavily tool",
+    #     "inputSchema": tool_input_schema
+    # }
 
-    agent_data = {
-        "user_id": "test_user_123",
-        "agent_name": "stock_analyst",
-        "nick_name": "stock_analyst",
-        "llm_type": "basic",
-        "selected_tools": [tool],
-        "prompt": "这是一个测试代理"
-    }
-    test_edit_agent_api(agent_data)
+    # agent_data = {
+    #     "user_id": "test_user_123",
+    #     "agent_name": "stock_analyst",
+    #     "nick_name": "stock_analyst",
+    #     "llm_type": "basic",
+    #     "selected_tools": [tool],
+    #     "prompt": "这是一个测试代理"
+    # }
+    # test_edit_agent_api(agent_data)

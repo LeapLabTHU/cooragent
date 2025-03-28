@@ -125,9 +125,9 @@ class AgentManager:
             logger.error(f"Tool {tool.name} load to langchain tool failed.")
         
         try:
-            _prompt = lambda state: apply_prompt_template(mcp_agent.name, state)
+            _prompt = lambda state: apply_prompt_template(mcp_agent.agent_name, state)
         except Exception as e:
-            logger.info(f"Prompt {mcp_agent.name} not found in available prompts.")
+            logger.info(f"Prompt {mcp_agent.agent_name} not found in available prompts.")
             _prompt = get_prompt_template(mcp_agent.prompt)
             
         langchain_agent = create_react_agent(
