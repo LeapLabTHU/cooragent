@@ -117,9 +117,12 @@ class AgentManager:
         _tools = []
         try:
             for tool in mcp_agent.selected_tools:
-                _tools.append(self.available_tools[tool.name])
+                if tool.name in self.available_tools:
+                    _tools.append(self.available_tools[tool.name])
+                else:
+                    logger.error(f"Tool {tool.name} not found in available tools.")
         except Exception as e:
-            logger.error(f"Tool {tool.name} not found in available tools.")
+            logger.error(f"Tool {tool.name} load to langchain tool failed.")
         
         try:
             _prompt = lambda state: apply_prompt_template(mcp_agent.name, state)
@@ -186,7 +189,7 @@ class AgentManager:
                 _agent["mcp_obj"] = agent
                 del _agent["runtime"]
                 _agent["runtime"] = self._convert_mcp_agent_to_langchain_agent(agent)
-                self._save_agent(_agent)
+                self._save_agent(_agent["mcp_obj"])
                 return "agent updated successfully"
         raise NotFoundAgentError(f"agent {agent.agent_name} not found.")
     
