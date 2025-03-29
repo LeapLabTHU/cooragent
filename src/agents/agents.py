@@ -91,7 +91,7 @@ class AgentManager:
         
         self._load_agents()
         
-    def _create_mcp_agent(self, user_id: str, name: str, llm_type: str, tools: list[tool], prompt: str):
+    def _create_mcp_agent(self, user_id: str, name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
         mcp_tools = []
         for tool in tools:
             mcp_tools.append(Tool(
@@ -103,10 +103,11 @@ class AgentManager:
         mcp_agent = Agent(
             agent_name=name,
             nick_name=name,
+            description=description,
             user_id=user_id,
             llm_type=llm_type,
             selected_tools=mcp_tools,
-            prompt=str(prompt),
+            prompt=str(prompt)
         )
         
         self._save_agent(mcp_agent)
@@ -138,7 +139,7 @@ class AgentManager:
         return langchain_agent
         
 
-    def _create_agent_by_prebuilt(self, user_id: str, name: str, llm_type: str, tools: list[tool], prompt: str):
+    def _create_agent_by_prebuilt(self, user_id: str, name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
         langchain_agent = create_react_agent(
             get_llm_by_type(llm_type),
             tools=tools,
@@ -146,7 +147,7 @@ class AgentManager:
         )
         _agent = {
             "runtime": langchain_agent,
-            "mcp_obj": self._create_mcp_agent(user_id, name, llm_type, tools, prompt)
+            "mcp_obj": self._create_mcp_agent(user_id, name, llm_type, tools, prompt, description)
         }
         self.available_agents.append(_agent)
         return langchain_agent

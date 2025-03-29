@@ -26,6 +26,8 @@ class Agent(BaseModel):
     """The name of the agent."""
     nick_name: str
     """The id of the agent."""
+    description: str
+    """The description of the agent."""
     llm_type: LLMType
     """The type of LLM to use for the agent."""
     selected_tools: List[Tool]
