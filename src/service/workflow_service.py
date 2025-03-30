@@ -3,7 +3,7 @@ import logging
 # from src.config import TEAM_MEMBERS
 from src.graph import build_graph
 from langchain_community.adapters.openai import convert_message_to_dict
-from src.agents import agent_manager
+from src.manager import agent_manager
 import uuid
 
 # Configure logging
@@ -212,3 +212,6 @@ async def run_agent_workflow(
                 ],
             },
         }
+
+
+

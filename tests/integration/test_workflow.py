@@ -1,5 +1,5 @@
 import pytest
-from src.workflow import run_agent_workflow, enable_debug_logging
+from src.manager.workflow import run_agent_workflow, enable_debug_logging
 import logging
 
 

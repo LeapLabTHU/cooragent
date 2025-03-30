@@ -13,7 +13,7 @@ from src.config.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
 from .types import State, Router
-from src.agents import agent_manager
+from src.manager import agent_manager
 
 logger = logging.getLogger(__name__)
 

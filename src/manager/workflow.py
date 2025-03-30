@@ -1,6 +1,6 @@
 import logging
 from src.graph import build_graph
-from src.agents import agent_manager
+from src.manager import agent_manager
 
 # Configure logging
 logging.basicConfig(
