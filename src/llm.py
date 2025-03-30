@@ -12,6 +12,9 @@ from src.config import (
     VL_MODEL,
     VL_BASE_URL,
     VL_API_KEY,
+    CODE_MODEL,
+    CODE_BASE_URL,
+    CODE_API_KEY,
 )
 from src.config.agents import LLMType
 
@@ -78,9 +81,15 @@ def get_llm_by_type(llm_type: LLMType) -> ChatOpenAI | ChatDeepSeek:
         #     api_key=REASONING_API_KEY,
         # )
         llm = create_openai_llm(
-            model=BASIC_MODEL,
-            base_url=BASIC_BASE_URL,
-            api_key=BASIC_API_KEY,
+            model=REASONING_MODEL,
+            base_url=REASONING_BASE_URL,
+            api_key=REASONING_API_KEY,
+        )
+    elif llm_type == "code":
+        llm = create_openai_llm(
+            model=CODE_MODEL,
+            base_url=CODE_BASE_URL,
+            api_key=CODE_API_KEY,
         )
     elif llm_type == "basic":
         llm = create_openai_llm(

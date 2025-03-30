@@ -21,7 +21,7 @@ def get_prompt_template(prompt_name: str) -> str:
 
 
 def apply_prompt_template(prompt_name: str, state: AgentState, template:str=None) -> list:
-    _template, _ = get_prompt_template(prompt_name)  if not template else template
+    _template, _ = get_prompt_template(prompt_name) if not template else template
     system_prompt = PromptTemplate(
         input_variables=["CURRENT_TIME"],
         template=_template,

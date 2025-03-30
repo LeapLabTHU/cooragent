@@ -50,7 +50,7 @@ class AgentManager:
                             prompt=lambda state: apply_prompt_template("researcher", state),
                         ),
             "mcp_obj": self._create_mcp_agent("share", "researcher", AGENT_LLM_MAP["researcher"], [tavily_tool, crawl_tool], 
-                                                 get_prompt_template("researcher"))
+                                                 get_prompt_template("researcher"),description = '')
             },           
             {
             "runtime": create_react_agent(
@@ -59,7 +59,7 @@ class AgentManager:
                             prompt=lambda state: apply_prompt_template("coder", state),
                         ),
             "mcp_obj": self._create_mcp_agent("share", "coder", AGENT_LLM_MAP["coder"], [python_repl_tool, bash_tool], 
-                                                 get_prompt_template("coder"))
+                                                 get_prompt_template("coder"),description = '')
             },
             {
             "runtime": create_react_agent(
@@ -68,7 +68,7 @@ class AgentManager:
                             prompt=lambda state: apply_prompt_template("browser", state),
                         ),
             "mcp_obj": self._create_mcp_agent("share", "browser", AGENT_LLM_MAP["browser"], [browser_tool], 
-                                                 get_prompt_template("browser"))
+                                                 get_prompt_template("browser"),description = '')
             },
             {
             "runtime": create_react_agent(
@@ -77,7 +77,7 @@ class AgentManager:
                             prompt=lambda state: apply_prompt_template("reporter", state),
                         ),
             "mcp_obj": self._create_mcp_agent("share", "reporter", AGENT_LLM_MAP["reporter"], [], 
-                                                 get_prompt_template("reporter"))
+                                                 get_prompt_template("reporter"),description = '')
             }
         ]
         

@@ -16,6 +16,7 @@ class LLMType(str, Enum):
     BASIC = "basic"
     REASONING = "reasoning"
     VISION = "vision"
+    CODE = 'code'
     
     
 class Agent(BaseModel):
