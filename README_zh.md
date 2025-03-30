@@ -69,7 +69,7 @@ uv run main.py
 
 cooragent 实现了一个分层的多智能体系统，其中有一个主管智能体协调专门的智能体来完成复杂任务：
 
-![cooragent 架构](./assets/workflow.png)
+![cooragent 架构](./assets/cooragent.png)
 
 ## 创建智能体
 ### 通过命令行创建智能体
@@ -143,24 +143,6 @@ API 服务器提供以下端点：
     ```
     - 返回包含智能体响应的服务器发送事件（SSE）流
 
-
-#### 初始智能体角色
-
-- **主管（[`src/prompts/supervisor.md`](src/prompts/supervisor.md)）**：通过分析请求并确定由哪个专家处理来协调团队并分配任务。负责决定任务完成情况和工作流转换。
-
-- **研究员（[`src/prompts/researcher.md`](src/prompts/researcher.md)）**：专门通过网络搜索和数据收集来收集信息。使用 Tavily 搜索和网络爬取功能，避免数学计算或文件操作。
-
-- **程序员（[`src/prompts/coder.md`](src/prompts/coder.md)）**：专业软件工程师角色，专注于 Python 和 bash 脚本。处理：
-    - Python 代码执行和分析
-    - Shell 命令执行
-    - 技术问题解决和实现
-
-- **文件管理员（[`src/prompts/file_manager.md`](src/prompts/file_manager.md)）**：处理所有文件系统操作，重点是正确格式化和保存 markdown 格式的内容。
-
-- **浏览器（[`src/prompts/browser.md`](src/prompts/browser.md)）**：网络交互专家，处理：
-    - 网站导航
-    - 页面交互（点击、输入、滚动）
-    - 从网页提取内容
 
 
 ## web 端
