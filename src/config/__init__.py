@@ -13,6 +13,9 @@ from .env import (
     VL_API_KEY,
     # Other configurations
     CHROME_INSTANCE_PATH,
+    CODE_API_KEY,
+    CODE_BASE_URL,
+    CODE_MODEL
 )
 from .tools import TAVILY_MAX_RESULTS
 
@@ -36,4 +39,7 @@ __all__ = [
     "TEAM_MEMBERS",
     "TAVILY_MAX_RESULTS",
     "CHROME_INSTANCE_PATH",
+    "CODE_MODEL",
+    "CODE_API_KEY",
+    "CODE_BASE_URL"
 ]

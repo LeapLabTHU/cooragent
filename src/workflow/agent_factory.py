@@ -114,7 +114,7 @@ def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
     """Planner node that generate the full plan."""
     logger.info("Planner generating full plan")
     messages = apply_prompt_template("planner2", state)
-    llm = get_llm_by_type("basic")
+    llm = get_llm_by_type(AGENT_LLM_MAP["planner"])
     if state.get("deep_thinking_mode"):
         llm = get_llm_by_type("reasoning")
     if state.get("search_before_planning"):

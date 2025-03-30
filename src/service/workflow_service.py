@@ -69,6 +69,17 @@ async def run_agent_workflow(
 
     workflow_id = str(uuid.uuid4())
 
+    DEFAULT_TEAM_MEMBERS_DESCRIPTION = """
+    - **`researcher`**: Uses search engines and web crawlers to gather information from the internet. Outputs a Markdown report summarizing findings. Researcher can not do math or programming.
+    - **`coder`**: Executes Python or Bash commands, performs mathematical calculations, and outputs a Markdown report. Must be used for all mathematical computations.
+    - **`browser`**: Directly interacts with web pages, performing complex operations and interactions. You can also leverage `browser` to perform in-domain search, like Facebook, Instagram, Github, etc.
+    - **`reporter`**: Write a professional report based on the result of each step.Please note that this agent is unable to perform any code or command-line operations.
+    - **`create_agent`**: Create a new agent based on the user's requirement.
+    """
+
+    TEAM_MEMBERS_DESCRIPTION_TEMPLATE = """
+    - **`{agent_name}`**: {agent_description}
+    """
     TEAM_MEMBERS_DESCRIPTION = DEFAULT_TEAM_MEMBERS_DESCRIPTION
     TEAM_MEMBERS = ["create_agent"]
     for agent in agent_manager.available_agents:
@@ -84,7 +95,6 @@ async def run_agent_workflow(
     global is_handoff_case
     is_handoff_case = False
 
-    # TODO: extract message content from object, specifically for on_chat_model_stream
     async for event in graph.astream_events(
         {
             "user_id": user_id,
