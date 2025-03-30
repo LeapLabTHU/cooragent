@@ -14,7 +14,7 @@ from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
 from .types import State, Router
 from src.manager import agent_manager
-
+from src.mcp import register_mcp_agents
 logger = logging.getLogger(__name__)
 
 RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please execute the next step.*"
@@ -39,6 +39,7 @@ def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
         prompt=response["prompt"],
         description=response["agent_description"],
     )
+    
 
     state["TEAM_MEMBERS"].append(response["agent_name"])
 
@@ -67,6 +68,7 @@ def supervisor_node(state: State) -> Command[Literal["agent_proxy", "create_agen
         .invoke(messages)
     )
     agent = response["next"]
+
     
     if agent == "FINISH":
         goto = "__end__"
@@ -86,7 +88,12 @@ def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
     """Agent proxy node that acts as a proxy for the agent."""
     logger.info("Agent proxy agent starting task")
     _agent = [agent["runtime"] for agent in agent_manager.available_agents if agent["mcp_obj"].agent_name == state["next"]][0]
-    response = _agent.invoke(state)
+    
+    if state["next"] not in register_mcp_agents.keys():
+        response = _agent.invoke(state)
+    else:
+        response = register_mcp_agents[state["next"]].send(state)
+
     
     return Command(
         update={
@@ -123,6 +130,7 @@ def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
     for chunk in stream:
         full_response += chunk.content
 
+
     if full_response.startswith("```json"):
         full_response = full_response.removeprefix("```json")
 
@@ -143,7 +151,6 @@ def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
         },
         goto=goto,
     )
-    
 
 
 def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
@@ -151,6 +158,7 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
     logger.info("Coordinator talking.")
     messages = apply_prompt_template("coordinator", state)
     response = get_llm_by_type(AGENT_LLM_MAP["coordinator"]).invoke(messages)
+
 
     goto = "__end__"
     if "handoff_to_planner" in response.content:

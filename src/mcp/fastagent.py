@@ -356,28 +356,8 @@ class FastAgent:
 
                 # Handle direct message sending if --agent and --message are provided
                 if self.args.agent and self.args.message:
-                    
-                    agent_name = self.args.agent
-                    message = self.args.message
-
-                    if agent_name not in active_agents:
-                        available_agents = ", ".join(active_agents.keys())
-                        print(f"\n\nError: Agent '{agent_name}' not found. Available agents: {available_agents}")
-                        raise SystemExit(1)
-
-                    try:
-                        # Get response
-                        response = await wrapper[agent_name].send(message)
-
-                        # Only print the response in quiet mode
-                        if self.args.quiet:
-                            # print(f"{response}")
-                            # pass
-                            yield response
-                        raise SystemExit(0)
-                    except Exception as e:
-                        print(f"\n\nError sending message to agent '{agent_name}': {str(e)}")
-                        raise SystemExit(1)
+                    # 将命令行处理移到单独的方法中，但仍然返回AgentApp对象
+                    await self._handle_cli_message(wrapper)
 
                 yield wrapper
 
@@ -529,3 +509,34 @@ class FastAgent:
                 server_task.cancel()
                 await asyncio.gather(server_task, return_exceptions=True)
                 raise
+
+    async def _handle_cli_message(self, agent_app):
+        """
+        处理命令行参数中的消息发送请求，但不影响上下文管理器的返回值。
+        
+        Args:
+            agent_app: 已初始化的AgentApp实例
+        """
+        agent_name = self.args.agent
+        message = self.args.message
+
+        if agent_name not in agent_app:
+            available_agents = ", ".join(agent_app.keys())
+            print(f"\n\nError: Agent '{agent_name}' not found. Available agents: {available_agents}")
+            raise SystemExit(1)
+
+        try:
+            # 获取响应
+            response = await agent_app[agent_name].send(message)
+
+            # 只在安静模式下打印响应
+            if self.args.quiet:
+                print(f"{response}")
+                
+            # 将响应存储在agent_app中，以便调用者可以访问
+            agent_app._cli_response = response
+            
+            # 注意：这里不再使用SystemExit，让上下文管理器正常返回
+        except Exception as e:
+            print(f"\n\nError sending message to agent '{agent_name}': {str(e)}")
+            raise SystemExit(1)

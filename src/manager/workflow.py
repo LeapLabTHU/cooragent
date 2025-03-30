@@ -1,7 +1,7 @@
 import logging
 from src.graph import build_graph
 from src.manager import agent_manager
-
+from src.mcp import register_mcp_agents
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,  # Default level is INFO
@@ -57,6 +57,9 @@ def run_agent_workflow(user_id: str, user_input: str, debug: bool = False):
                 MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent["mcp_obj"].agent_name, agent_description=agent["mcp_obj"].description)
                 TEAM_MEMBERS_DESCRIPTION += '\n' + MEMBER_DESCRIPTION
     
+    for agent in register_mcp_agents.keys():
+        TEAM_MEMBERS.append(agent)
+        
     logger.info(f"TEAM_MEMBERS: {TEAM_MEMBERS}")
     logger.info(f"TEAM_MEMBERS_DESCRIPTION: {TEAM_MEMBERS_DESCRIPTION}")
     result = graph.invoke(
