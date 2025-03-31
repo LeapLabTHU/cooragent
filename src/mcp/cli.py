@@ -1,9 +1,12 @@
 import asyncio
 from mcp_agent.core.fastagent import FastAgent
 
-# Create the application
-fast = FastAgent("FastAgent Example")
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
+
+fast = FastAgent("MCPAgent", config_path=os.getenv("MCP_CONFIG_PATH"))
 
 # Define the agent
 @fast.agent(instruction="You are a helpful AI Agent", servers=["fetch"])

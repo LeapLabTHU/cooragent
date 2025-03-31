@@ -13,31 +13,13 @@ Cooragent 是一个 AI 智能体协作社区，在这个社区中，你可以通
 
 ## 演示视频
 
-> **Task**: Calculate the influence index of DeepSeek R1 on HuggingFace. This index can be designed by considering a weighted sum of factors such as followers, downloads, and likes.
->
-> **任务**：创建一个股票分析 Agent，并分析明天的股票走势。
+> **Task**: Create a stock analysis agent that uses search tools to find Tencent's stock price information for the last seven days and Tencent's financial status. Then use the browser to find a couple of investor analyses about Tencent's recent stock performance (one or two entries). Based on this information, conduct a very detailed textual analysis, and finally generate a Chinese analysis report containing line charts and text, saved in a docx file.
 
-[![Demo](./assets/demo.gif)](./assets/demo.mp4)
+> **任务**：创建一个股票分析 agent，用搜索工具搜索腾讯最近七天的股价信息和腾讯公司财经状况，然后使用浏览器简单查找股民对腾讯近期的股票分析（一到两条），凭借这些信息进行非常详细的文字分析，最后形成一个含有折线图和文字的中文分析报告，保存在docx文件中。
 
-- [在 YouTube 上观看](https://youtu.be/sZCHqrQBUGk)
-- [下载视频](https://github.com/cooragent/cooragent/blob/main/assets/demo.mp4)
+> **Task**: Create an agent that searches for and learns about recently released OpenAI models and their characteristics, then use the created agent to write an article, and use the browser to publish it to the Xiaohongshu (RED) community.
 
-## 目录
-- [快速开始](#快速开始)
-- [架构](#架构)
-- [功能特性](#功能特性)
-- [为什么选择 cooragent？](#为什么选择-cooragent)
-- [安装设置](#安装设置)
-    - [前置要求](#前置要求)
-    - [安装步骤](#安装步骤)
-    - [配置](#配置)
-- [使用方法](#使用方法)
-- [网页界面](#网页界面)
-- [开发](#开发)
-- [贡献](#贡献)
-- [许可证](#许可证)
-- [致谢](#致谢)
-- [API 服务器](#api-服务器)
+> **任务**：创建一个智能体，等节開架第马米货书风指的安留：蒸后搜來最近何里于问新发布了哪些模型，这些模型有什么特点，然后用创建的智能休写个文章，并用浏览歸发布到小红书社区。
 
 ## 快速安装
 
@@ -62,7 +44,68 @@ cp .env.example .env
 # 运行项目
 uv run main.py
 ```
+
 ## Cooragent 有什么不同
+
+## 功能比较
+<table style="width: 100%;">
+  <tr>
+    <th align="center">功能</th>
+    <th align="center">cooragent</th>
+    <th align="center">open-manus</th>
+    <th align="center">langmanus</th>
+    <th align="center">OpenAI Assistant Operator</th>
+  </tr>
+  <tr>
+    <td align="center">实现原理</td>
+    <td align="center">基于 Agent 自主创建实现不同 Agent 之间的协作完成复杂功能</td>
+    <td align="center">基于工具调用实现复杂功能</td>
+    <td align="center">基于工具调用实现复杂功能</td>
+    <td align="center">基于工具调用实现复杂功能</td>
+  </tr>
+  <tr>
+    <td align="center">支持的 LLMs</td>
+    <td align="center">丰富多样</td>
+    <td align="center">丰富多样</td>
+    <td align="center">丰富多样</td>
+    <td align="center">仅限 OpenAI</td>
+  </tr>
+  <tr>
+    <td align="center">MCP 支持</td>
+    <td align="center">✅</td>
+    <td align="center">❌</td>
+    <td align="center">❌</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td align="center">Agent 协作</td>
+    <td align="center">✅</td>
+    <td align="center">❌</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+  </tr>
+  <tr>
+    <td align="center">多 Agent Runtime 支持</td>
+    <td align="center">✅</td>
+    <td align="center">❌</td>
+    <td align="center">❌</td>
+    <td align="center">❌</td>
+  </tr>
+  <tr>
+    <td align="center">可观测性</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">❌</td>
+    <td align="center">❌</td>
+  </tr>
+  <tr>
+    <td align="center">本地部署</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">✅</td>
+    <td align="center">❌</td>
+  </tr>
+</table>
 
 
 ## 架构
@@ -71,20 +114,17 @@ cooragent 实现了一个分层的多智能体系统，其中有一个主管智�
 
 ![cooragent 架构](./assets/cooragent.png)
 
-## 创建智能体
-### 通过命令行创建智能体
-
-### 通过网页创建智能体
+## 一句话创建智能体
 
 ## 编辑智能体
 
-## 【发布/共享】智能体
+## 通过 MCP 方式创建智能体
+
+##【发布/共享】智能体
 
 ## 使用一组智能体完成复杂任务
 
-
-
-
+基于工具调用实现复杂功能
 
 ### 配置
 
@@ -119,30 +159,6 @@ CHROME_INSTANCE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrom
 ```bash
 cp .env.example .env
 ```
-
-### API 服务器
-
-cooragent 提供基于 FastAPI 的 API 服务器，支持流式响应：
-
-```bash
-# 启动 API 服务器
-uv run server/app.py
-```
-
-API 服务器提供以下端点：
-
-- `POST /api/chat/stream`：用于 LangGraph 调用的聊天端点，流式响应
-    - 请求体：
-    ```json
-    {
-      "messages": [
-        {"role": "user", "content": "在此输入您的查询"}
-      ],
-      "debug": false
-    }
-    ```
-    - 返回包含智能体响应的服务器发送事件（SSE）流
-
 
 
 ## web 端

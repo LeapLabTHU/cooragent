@@ -2,8 +2,12 @@ import asyncio
 
 from src.mcp.fastagent import FastAgent
 from src.mcp import register_mcp
+from dotenv import load_dotenv
+import os
 
-MCPAgent = FastAgent("MCPAgent")
+load_dotenv()
+
+MCPAgent = FastAgent("MCPAgent", config_path=os.getenv("MCP_CONFIG_PATH"))
 
 @register_mcp
 @MCPAgent.agent(
@@ -26,15 +30,13 @@ MCPAgent = FastAgent("MCPAgent")
     name="post_writer",
     sequence=["url_fetcher", "social_media"],
 )
-
-
 async def test() -> None:
     async with MCPAgent.run() as agent:
         if isinstance(agent, str):
             return agent
         
-        result = agent.url_fetcher.send("https://github.com/evalstate/fast-agent")
-        return result
+        await agent.url_fetcher.send("https://github.com/evalstate/fast-agent")
+
 
 if __name__ == "__main__":
     result = asyncio.run(test())  
