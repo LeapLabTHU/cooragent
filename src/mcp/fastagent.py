@@ -21,7 +21,6 @@ import yaml
 from rich import print
 
 from mcp_agent.app import MCPApp
-from mcp_agent.config import Settings
 from mcp_agent.core.agent_app import AgentApp
 from mcp_agent.core.agent_types import AgentType
 from mcp_agent.core.decorators import (
@@ -57,6 +56,8 @@ from mcp_agent.core.validation import (
     validate_workflow_references,
 )
 from mcp_agent.mcp_server import AgentMCPServer
+from src.mcp.config import Settings
+
 
 T = TypeVar("T")  # For the wrapper classes
 
