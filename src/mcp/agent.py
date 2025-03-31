@@ -6,14 +6,14 @@ from src.mcp import register_mcp
 MCPAgent = FastAgent("MCPAgent")
 
 @register_mcp
-@fast.agent(
+@MCPAgent.agent(
     "url_fetcher",
     instruction="Given a URL, provide a complete and comprehensive summary",
     servers=["fetch"],
 )
 
 @register_mcp
-@fast.agent(
+@MCPAgent.agent(
     "social_media",
     instruction="""
     Write a 280 character social media post for any given text. 
@@ -22,14 +22,14 @@ MCPAgent = FastAgent("MCPAgent")
 )
 
 @register_mcp
-@fast.chain(
+@MCPAgent.chain(
     name="post_writer",
     sequence=["url_fetcher", "social_media"],
 )
 
 
 async def test() -> None:
-    async with fast.run() as agent:
+    async with MCPAgent.run() as agent:
         if isinstance(agent, str):
             return agent
         
