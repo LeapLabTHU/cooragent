@@ -1,9 +1,10 @@
 import logging
 
 # from src.config import TEAM_MEMBERS
-from src.graph import build_graph
+from src.workflow import build_graph, agent_factory_graph
 from langchain_community.adapters.openai import convert_message_to_dict
 from src.manager import agent_manager
+from src.interface.agent_types import TaskType
 import uuid
 
 # Configure logging
@@ -20,8 +21,6 @@ def enable_debug_logging():
 
 logger = logging.getLogger(__name__)
 
-# Create the graph
-graph = build_graph()
 
 DEFAULT_TEAM_MEMBERS_DESCRIPTION = """
 - **`researcher`**: Uses search engines and web crawlers to gather information from the internet. Outputs a Markdown report summarizing findings. Researcher can not do math or programming.
@@ -41,6 +40,7 @@ MAX_CACHE_SIZE = 2
 
 async def run_agent_workflow(
     user_id: str,
+    task_type: str,
     user_input_messages: list,
     debug: bool = False,
     deep_thinking_mode: bool = False,
@@ -55,6 +55,10 @@ async def run_agent_workflow(
     Returns:
         The final state after the workflow completes
     """
+    if task_type == TaskType.AGENT_FACTORY:
+        graph = agent_factory_graph()
+    else:
+        graph = build_graph()
     if not user_input_messages:
         raise ValueError("Input could not be empty")
 

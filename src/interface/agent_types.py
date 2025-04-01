@@ -16,7 +16,10 @@ class LLMType(str, Enum):
     BASIC = "basic"
     REASONING = "reasoning"
     VISION = "vision"
-    
+  
+class TaskType(str, Enum):
+    AGENT_FACTORY = "agent_factory"
+    AGENT_WORKFLOW = "agent_workflow"
     
 class Agent(BaseModel):
     """Definition for an agent the client can call."""
@@ -48,6 +51,7 @@ class AgentRequest(BaseModel):
     debug: bool
     deep_thinking_mode: bool
     search_before_planning: bool
+    task_type: TaskType
     
 class listAgentRequest(BaseModel):
     user_id: Optional[str]

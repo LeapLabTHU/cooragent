@@ -14,7 +14,9 @@ from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
 from .types import State, Router
 from src.manager import agent_manager
-from src.mcp import register_mcp_agents
+from langgraph.graph import StateGraph, START, END
+
+from .types import State
 logger = logging.getLogger(__name__)
 
 RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please execute the next step.*"
@@ -54,7 +56,7 @@ def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
                 )
             ],
         },
-        goto="supervisor",
+        goto="__end__",
     )
 
 
@@ -89,12 +91,8 @@ def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
     logger.info("Agent proxy agent starting task")
     _agent = [agent["runtime"] for agent in agent_manager.available_agents if agent["mcp_obj"].agent_name == state["next"]][0]
     
-    if state["next"] not in register_mcp_agents.keys():
-        response = _agent.invoke(state)
-    else:
-        response = register_mcp_agents[state["next"]].send(state)
+    response = _agent.invoke(state)
 
-    
     return Command(
         update={
             "messages": [
@@ -168,3 +166,11 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
         goto=goto,
     )
 
+def agent_factory_graph():
+    builder = StateGraph(State)
+    builder.add_edge(START, "coordinator")
+    builder.add_node("coordinator", coordinator_node)
+    builder.add_node("planner", planner_node)
+    builder.add_node("supervisor", supervisor_node)
+    builder.add_node("create_agent", create_agent_node)
+    return builder.compile()

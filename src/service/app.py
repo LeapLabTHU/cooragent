@@ -42,6 +42,7 @@ class Server:
 
         response = run_agent_workflow(
             request.user_id,
+            request.task_type,
             session_messages,
             request.debug,
             request.deep_thinking_mode,
