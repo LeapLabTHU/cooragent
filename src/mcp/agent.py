@@ -1,54 +1,40 @@
 import asyncio
-from typing import AsyncGenerator
-
-from src.mcp.fastagent import FastAgent
-from src.mcp import register_mcp
-from dotenv import load_dotenv
 import os
 
+from dotenv import load_dotenv
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+from beeai_framework.adapters.ollama.backend.chat import OllamaChatModel
+from beeai_framework.agents.react import ReActAgent
+from beeai_framework.memory import UnconstrainedMemory
+from beeai_framework.tools.mcp_tools import MCPTool
+from src.mcp.register import MCPManager
 load_dotenv()
 
-MCPAgent = FastAgent("MCPAgent", config_path=os.getenv("MCP_CONFIG_PATH"))
-
-@register_mcp
-@MCPAgent.agent(
-    "url_fetcher",
-    instruction="Given a URL, provide a complete and comprehensive summary",
-    servers=["fetch"],
+print(os.environ["SLACK_BOT_TOKEN"])
+print(os.environ["SLACK_TEAM_ID"])
+# Create server parameters for stdio connection
+server_params = StdioServerParameters(
+    command="npx",
+    args=["-y", "@modelcontextprotocol/server-slack"],
+    env={
+        "SLACK_BOT_TOKEN": os.environ["SLACK_BOT_TOKEN"],
+        "SLACK_TEAM_ID": os.environ["SLACK_TEAM_ID"],
+        "PATH": os.getenv("PATH", default=""),
+    },
 )
 
-@register_mcp
-@MCPAgent.agent(
-    "social_media",
-    instruction="""
-    Write a 280 character social media post for any given text. 
-    Respond only with the post, never use hashtags.
-    """,
-)
 
-@register_mcp
-@MCPAgent.chain(
-    name="post_writer",
-    sequence=["url_fetcher", "social_media"],
-)
-async def test():
-    async with MCPAgent.run() as agent:
-        if isinstance(agent, str):
-            return agent
-        
-        result = await agent.url_fetcher.send("https://github.com/evalstate/fast-agent")
-        return result
+async def slack_tool() -> MCPTool:
+    async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
+        await session.initialize()
+        # Discover Slack tools via MCP client
+        slacktools = await MCPTool.from_client(session)
+        filter_tool = filter(lambda tool: tool.name == "slack_post_message", slacktools)
+        slack = list(filter_tool)
+        return slack[0]
 
 
-if __name__ == "__main__":
-    async def run_test():
-        try:
-            # 直接等待test()的结果，而不是使用async for
-            result = await test()
-            return result
-        except Exception as e:
-            print(f"错误: {e}")
-            return str(e)
-    
-    final_result = asyncio.run(run_test())  
-    print(f"最终结果: {final_result}")
+agent = ReActAgent(llm=OllamaChatModel("o3-mini.low"), tools=[asyncio.run(slack_tool())], memory=UnconstrainedMemory())
+MCPManager.register_agent("mcp_react_agent", agent)

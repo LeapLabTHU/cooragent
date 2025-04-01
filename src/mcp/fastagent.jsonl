@@ -1,3 +1,0 @@
-{"level":"ERROR","timestamp":"2025-03-30T16:46:41.606864","namespace":"mcp_agent.workflows.llm.augmented_llm_openai.url_fetcher","message":"Error: Connection error."}
-{"level":"ERROR","timestamp":"2025-03-30T16:48:04.466374","namespace":"mcp_agent.workflows.llm.augmented_llm_openai.url_fetcher","message":"Error: Connection error."}
-{"level":"ERROR","timestamp":"2025-03-30T16:52:27.218359","namespace":"mcp_agent.workflows.llm.augmented_llm_openai.url_fetcher","message":"Error: Connection error."}
