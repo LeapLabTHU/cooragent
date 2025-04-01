@@ -53,7 +53,7 @@ uv run main.py
     <th align="center">功能</th>
     <th align="center">cooragent</th>
     <th align="center">open-manus</th>
-    <th align="center">langmanus</th>
+    <th align="center">cooragent</th>
     <th align="center">OpenAI Assistant Operator</th>
   </tr>
   <tr>
