@@ -1,10 +1,10 @@
-# Contributing to LangManus
+# Contributing to cooragent
 
-Thank you for your interest in contributing to LangManus! We welcome contributions of all kinds from the community.
+Thank you for your interest in contributing to cooragent! We welcome contributions of all kinds from the community.
 
 ## Ways to Contribute
 
-There are many ways you can contribute to LangManus:
+There are many ways you can contribute to cooragent:
 
 - **Code Contributions**: Add new features, fix bugs, or improve performance
 - **Documentation**: Improve README, add code comments, or create examples
@@ -18,8 +18,8 @@ There are many ways you can contribute to LangManus:
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/your-username/langmanus.git
-   cd langmanus
+   git clone https://github.com/your-username/cooragent.git
+   cd cooragent
    ```
 3. Set up your development environment:
    ```bash
@@ -98,4 +98,4 @@ If you need help with anything:
 - Join our community channels
 - Ask questions in discussions
 
-We appreciate your contributions to making LangManus better!
+We appreciate your contributions to making cooragent better!

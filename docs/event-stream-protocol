@@ -1,6 +1,6 @@
 # Event Stream Protocol
 
-LangManus uses the standard [Event Stream Protocol](https://www.w3.org/TR/eventsource/) to stream events to the client.
+cooragent uses the standard [Event Stream Protocol](https://www.w3.org/TR/eventsource/) to stream events to the client.
 
 ## Generic Events
 

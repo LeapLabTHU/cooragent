@@ -1,15 +1,15 @@
-# LangManus
+# cooragent
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Wechat](https://img.shields.io/badge/WeChat-Langmanus-brightgreen?logo=wechat&logoColor=white)](./assets/wechat_community.jpg)
+[![Wechat](https://img.shields.io/badge/WeChat-cooragent-brightgreen?logo=wechat&logoColor=white)](./assets/wechat_community.jpg)
 [![Discord Follow](https://dcbadge.vercel.app/api/server/m3MszDcn?style=flat)](https://discord.gg/m3MszDcn)
 
 [English](./README.md) | [简体中文](./README_zh.md)
 
 > Come From Open Source, Back to Open Source
 
-LangManus is a community-driven AI automation framework that builds upon the incredible work of the open source community. Our goal is to combine language models with specialized tools for tasks like web search, crawling, and Python code execution, while giving back to the community that made this possible.
+cooragent is a community-driven AI automation framework that builds upon the incredible work of the open source community. Our goal is to combine language models with specialized tools for tasks like web search, crawling, and Python code execution, while giving back to the community that made this possible.
 
 ## Demo Video
 
@@ -18,13 +18,13 @@ LangManus is a community-driven AI automation framework that builds upon the inc
 [![Demo](./assets/demo.gif)](./assets/demo.mp4)
 
 - [View on YouTube](https://youtu.be/sZCHqrQBUGk)
-- [Download Video](https://github.com/langmanus/langmanus/blob/main/assets/demo.mp4)
+- [Download Video](https://github.com/cooragent/cooragent/blob/main/assets/demo.mp4)
 
 ## Table of Contents
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
 - [Features](#features)
-- [Why LangManus?](#why-langmanus)
+- [Why cooragent?](#why-cooragent)
 - [Setup](#setup)
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
@@ -40,8 +40,8 @@ LangManus is a community-driven AI automation framework that builds upon the inc
 
 ```bash
 # Clone the repository
-git clone https://github.com/langmanus/langmanus.git
-cd langmanus
+git clone https://github.com/cooragent/cooragent.git
+cd cooragent
 
 # Create and activate virtual environment through uv
 uv python install 3.12
@@ -62,9 +62,9 @@ uv run main.py
 
 ## Architecture
 
-LangManus implements a hierarchical multi-agent system where a supervisor coordinates specialized agents to accomplish complex tasks:
+cooragent implements a hierarchical multi-agent system where a supervisor coordinates specialized agents to accomplish complex tasks:
 
-![LangManus Architecture](./assets/architecture.png)
+![cooragent Architecture](./assets/architecture.png)
 
 The system consists of the following agents working together:
 
@@ -102,7 +102,7 @@ The system consists of the following agents working together:
     - Multi-agent orchestration
     - Task delegation and monitoring
 
-## Why LangManus?
+## Why cooragent?
 
 We believe in the power of open source collaboration. This project wouldn't be possible without the amazing work of projects like:
 - [Qwen](https://github.com/QwenLM/Qwen) for their open source LLMs
@@ -120,7 +120,7 @@ We're committed to giving back to the community and welcome contributions of all
 
 ### Installation
 
-LangManus leverages [uv](https://github.com/astral-sh/uv) as its package manager to streamline dependency management.
+cooragent leverages [uv](https://github.com/astral-sh/uv) as its package manager to streamline dependency management.
 Follow the steps below to set up a virtual environment and install the necessary dependencies:
 
 ```bash
@@ -138,7 +138,7 @@ By completing these steps, you'll ensure your environment is properly configured
 
 ### Configuration
 
-LangManus uses a three-tier LLM system with separate configurations for reasoning, basic tasks, and vision-language tasks. Create a `.env` file in the project root and configure the following environment variables:
+cooragent uses a three-tier LLM system with separate configurations for reasoning, basic tasks, and vision-language tasks. Create a `.env` file in the project root and configure the following environment variables:
 
 ```ini
 # Reasoning LLM Configuration (for complex reasoning tasks)
@@ -182,7 +182,7 @@ cp .env.example .env
 ```
 
 ### Configure Pre-commit Hook
-LangManus includes a pre-commit hook that runs linting and formatting checks before each commit. To set it up:
+cooragent includes a pre-commit hook that runs linting and formatting checks before each commit. To set it up:
 
 1. Make the pre-commit script executable:
 ```bash
@@ -204,7 +204,7 @@ The pre-commit hook will automatically:
 
 ### Basic Execution
 
-To run LangManus with default settings:
+To run cooragent with default settings:
 
 ```bash
 uv run main.py
@@ -212,7 +212,7 @@ uv run main.py
 
 ### API Server
 
-LangManus provides a FastAPI-based API server with streaming support:
+cooragent provides a FastAPI-based API server with streaming support:
 
 ```bash
 # Start the API server
@@ -238,14 +238,14 @@ The API server exposes the following endpoints:
 
 ### Advanced Configuration
 
-LangManus can be customized through various configuration files in the `src/config` directory:
+cooragent can be customized through various configuration files in the `src/config` directory:
 - `env.py`: Configure LLM models, API keys, and base URLs
 - `tools.py`: Adjust tool-specific settings (e.g., Tavily search results limit)
 - `agents.py`: Modify team composition and agent system prompts
 
 ### Agent Prompts System
 
-LangManus uses a sophisticated prompting system in the `src/prompts` directory to define agent behaviors and responsibilities:
+cooragent uses a sophisticated prompting system in the `src/prompts` directory to define agent behaviors and responsibilities:
 
 #### Core Agent Roles
 
@@ -276,9 +276,9 @@ Each agent's prompt is defined in a separate markdown file, making it easy to mo
 
 ## Web UI
 
-LangManus provides a default web UI.
+cooragent provides a default web UI.
 
-Please refer to the [langmanus/langmanus-web-ui](https://github.com/langmanus/langmanus-web) project for more details.
+Please refer to the [cooragent/cooragent-web-ui](https://github.com/cooragent/cooragent-web) project for more details.
 
 ## Development
 
@@ -317,4 +317,4 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## Acknowledgments
 
-Special thanks to all the open source projects and contributors that make LangManus possible. We stand on the shoulders of giants.
+Special thanks to all the open source projects and contributors that make cooragent possible. We stand on the shoulders of giants.
