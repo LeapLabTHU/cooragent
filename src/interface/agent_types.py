@@ -56,6 +56,7 @@ class AgentRequest(BaseModel):
     deep_thinking_mode: bool
     search_before_planning: bool
     task_type: TaskType
+    coor_agents: Optional[list[str]]
     
 class listAgentRequest(BaseModel):
     user_id: Optional[str]
