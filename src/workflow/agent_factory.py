@@ -14,14 +14,16 @@ from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
 from .types import State, Router
 from src.manager import agent_manager
+<<<<<<< HEAD:src/workflow/agent_factory.py
 from langgraph.graph import StateGraph, START, END
 
 from .types import State
+
 logger = logging.getLogger(__name__)
 
 RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please execute the next step.*"
 
-def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
+def create_agent_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Node for the create agent agent that creates a new agent."""
     logger.info("Create agent agent starting task")
     messages = apply_prompt_template("create_agent", state)
@@ -60,12 +62,12 @@ def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
     )
 
 
-def supervisor_node(state: State) -> Command[Literal["agent_proxy", "create_agent", "__end__"]]:
-    """Supervisor node that decides which agent should act next."""
-    logger.info("Supervisor evaluating next action")
-    messages = apply_prompt_template("supervisor", state)
+def publisher_node(state: State) -> Command[Literal["agent_factory", "create_agent", "__end__"]]:
+    """publisher node that decides which agent should act next."""
+    logger.info("publisher evaluating next action")
+    messages = apply_prompt_template("publisher", state)
     response = (
-        get_llm_by_type(AGENT_LLM_MAP["supervisor"])
+        get_llm_by_type(AGENT_LLM_MAP["publisher"])
         .with_structured_output(Router)
         .invoke(messages)
     )
@@ -77,20 +79,18 @@ def supervisor_node(state: State) -> Command[Literal["agent_proxy", "create_agen
         logger.info("Workflow completed")
         return Command(goto=goto, update={"next": goto})
     elif agent != "create_agent":
-        goto = "agent_proxy"
-        logger.info(f"Supervisor delegating to: {agent}")
+        goto = "agent_factory"
+        logger.info(f"publisher delegating to: {agent}")
         return Command(goto=goto, update={"next": agent})
     else:
         goto = "create_agent"
-        logger.info(f"Supervisor delegating to: {agent}")
+        logger.info(f"publisher delegating to: {agent}")
         return Command(goto=goto, update={"next": agent})
 
-
-def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
-    """Agent proxy node that acts as a proxy for the agent."""
-    logger.info("Agent proxy agent starting task")
+def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
+    """Agent Factory node that acts as a proxy for the agent."""
+    logger.info("Agent Factory starting task")
     _agent = [agent["runtime"] for agent in agent_manager.available_agents if agent["mcp_obj"].agent_name == state["next"]][0]
-    
     response = _agent.invoke(state)
 
     return Command(
@@ -105,16 +105,16 @@ def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
             ],
             "agent_name": state["next"]
         },
-        goto="supervisor",
+        goto="publisher",
     )
 
 
 
-def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
+def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
     """Planner node that generate the full plan."""
     logger.info("Planner generating full plan")
     messages = apply_prompt_template("planner2", state)
-    llm = get_llm_by_type("basic")
+    llm = get_llm_by_type(AGENT_LLM_MAP["planner"])
     if state.get("deep_thinking_mode"):
         llm = get_llm_by_type("reasoning")
     if state.get("search_before_planning"):
@@ -135,7 +135,7 @@ def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
     if full_response.endswith("```"):
         full_response = full_response.removesuffix("```")
 
-    goto = "supervisor"
+    goto = "publisher"
     try:
         json.loads(full_response)
     except json.JSONDecodeError:

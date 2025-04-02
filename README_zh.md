@@ -35,7 +35,7 @@ uv python install 3.12
 uv venv --python 3.12
 
 source .venv/bin/activate  # Windows系统使用: .venv\Scripts\activate
-
+uv run src/service/app.py   
 # 安装依赖
 uv sync
 

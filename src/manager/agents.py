@@ -155,11 +155,15 @@ class AgentManager:
 
     def _save_agent(self, agent: Agent, flush=False):
         agent_path = self.agents_dir / f"{agent.agent_name}.json"
+        agent_prompt_path = self.prompt_dir / f"{agent.agent_name}.md"
         if not flush and agent_path.exists():
             print(f"agent {agent.agent_name} already exists, skipping save.")
             return
         with open(agent_path, "w") as f:
             f.write(agent.model_dump_json())
+        with open(agent_prompt_path, "w") as f:
+            f.write(agent.prompt)
+
         print(f"agent {agent.agent_name} saved.")
     
     def _load_agent(self, agent_name: str):

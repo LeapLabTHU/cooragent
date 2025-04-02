@@ -28,6 +28,14 @@ dependencies = [
     "langchain-deepseek>=0.1.2",
     "dashscope>=1.22.2",
     "beeai-framework>=0.1.11",
+    "matplotlib>=3.10.1",
+    "python-docx>=1.1.2",
+    "seaborn>=0.13.2",
+    "tabulate>=0.9.0",
+    "mcp>=1.6.0",
+    "beeai-framework>=0.1.11",
+    "openpyxl>=3.1.5",
+    "dashscope>=1.22.2",
 ]
 
 [project.optional-dependencies]

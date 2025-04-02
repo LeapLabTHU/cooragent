@@ -21,3 +21,7 @@ VL_API_KEY = os.getenv("VL_API_KEY")
 
 # Chrome Instance configuration
 CHROME_INSTANCE_PATH = os.getenv("CHROME_INSTANCE_PATH")
+
+CODE_API_KEY = os.getenv("CODE_API_KEY")
+CODE_BASE_URL = os.getenv("CODE_BASE_URL")
+CODE_MODEL = os.getenv("CODE_MODEL")

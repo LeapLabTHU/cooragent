@@ -12,14 +12,18 @@ class Lang(str, Enum):
     SP = 'sp'
     DE = 'de'
 
+
 class LLMType(str, Enum):
     BASIC = "basic"
     REASONING = "reasoning"
     VISION = "vision"
-  
+    CODE = 'code'
+
+
 class TaskType(str, Enum):
     AGENT_FACTORY = "agent_factory"
     AGENT_WORKFLOW = "agent_workflow"
+    
     
 class Agent(BaseModel):
     """Definition for an agent the client can call."""
