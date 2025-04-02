@@ -1,9 +1,10 @@
 import logging
 
 # from src.config import TEAM_MEMBERS
-from src.graph import build_graph
+from src.workflow import build_graph, agent_factory_graph
 from langchain_community.adapters.openai import convert_message_to_dict
-from src.agents import agent_manager
+from src.manager import agent_manager
+from src.interface.agent_types import TaskType
 import uuid
 
 # Configure logging
@@ -20,9 +21,18 @@ def enable_debug_logging():
 
 logger = logging.getLogger(__name__)
 
-# Create the graph
-graph = build_graph()
 
+DEFAULT_TEAM_MEMBERS_DESCRIPTION = """
+- **`researcher`**: Uses search engines and web crawlers to gather information from the internet. Outputs a Markdown report summarizing findings. Researcher can not do math or programming.
+- **`coder`**: Executes Python or Bash commands, performs mathematical calculations, and outputs a Markdown report. Must be used for all mathematical computations.
+- **`browser`**: Directly interacts with web pages, performing complex operations and interactions. You can also leverage `browser` to perform in-domain search, like Facebook, Instagram, Github, etc.
+- **`reporter`**: Write a professional report based on the result of each step.
+- **`create_agent`**: Create a new agent based on the user's requirement.
+"""
+
+TEAM_MEMBERS_DESCRIPTION_TEMPLATE = """
+- **`{agent_name}`**: {agent_description}
+"""
 # Cache for coordinator messages
 coordinator_cache = []
 MAX_CACHE_SIZE = 2
@@ -30,6 +40,7 @@ MAX_CACHE_SIZE = 2
 
 async def run_agent_workflow(
     user_id: str,
+    task_type: str,
     user_input_messages: list,
     debug: bool = False,
     deep_thinking_mode: bool = False,
@@ -44,6 +55,10 @@ async def run_agent_workflow(
     Returns:
         The final state after the workflow completes
     """
+    if task_type == TaskType.AGENT_FACTORY:
+        graph = agent_factory_graph()
+    else:
+        graph = build_graph()
     if not user_input_messages:
         raise ValueError("Input could not be empty")
 
@@ -54,10 +69,14 @@ async def run_agent_workflow(
 
     workflow_id = str(uuid.uuid4())
 
+    TEAM_MEMBERS_DESCRIPTION = DEFAULT_TEAM_MEMBERS_DESCRIPTION
     TEAM_MEMBERS = ["create_agent"]
     for agent in agent_manager.available_agents:
         if agent["mcp_obj"].user_id == user_id or agent["mcp_obj"].user_id == "share":
             TEAM_MEMBERS.append(agent["mcp_obj"].agent_name)
+            if agent["mcp_obj"].user_id != "share":
+                MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent["mcp_obj"].agent_name, agent_description=agent["mcp_obj"].description)
+                TEAM_MEMBERS_DESCRIPTION += '\n' + MEMBER_DESCRIPTION
     streaming_llm_agents = [*TEAM_MEMBERS, "agent_proxy", "coordinator", "planner", "supervisor"]
 
     global coordinator_cache
@@ -71,7 +90,7 @@ async def run_agent_workflow(
             "user_id": user_id,
             # Constants
             "TEAM_MEMBERS": TEAM_MEMBERS,
-            
+            "TEAM_MEMBERS_DESCRIPTION": TEAM_MEMBERS_DESCRIPTION,
             "messages": user_input_messages,
             "deep_thinking_mode": deep_thinking_mode,
             "search_before_planning": search_before_planning,
@@ -212,3 +231,6 @@ async def run_agent_workflow(
                 ],
             },
         }
+
+
+

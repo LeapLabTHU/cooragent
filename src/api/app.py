@@ -1,5 +1,5 @@
 """
-FastAPI application for LangManus.
+FastAPI application for cooragent.
 """
 
 import json
@@ -13,7 +13,7 @@ from sse_starlette.sse import EventSourceResponse
 import asyncio
 from typing import AsyncGenerator, Dict, List, Any
 
-from src.graph import build_graph
+from src.workflow import build_graph
 from src.config import TEAM_MEMBERS
 from src.service.workflow_service import run_agent_workflow
 
@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
-    title="LangManus API",
-    description="API for LangManus LangGraph-based agent workflow",
+    title="cooragent API",
+    description="API for cooragent LangGraph-based agent workflow",
     version="0.1.0",
 )
 

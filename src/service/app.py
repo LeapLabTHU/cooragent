@@ -11,8 +11,8 @@ load_dotenv()
 import logging
 from src.interface.agent_types import *
 from src.service.workflow_service import run_agent_workflow
-from src.agents import agent_manager
-from src.agents.agents import NotFoundAgentError, NotFoundToolError
+from src.manager import agent_manager
+from src.manager.agents import NotFoundAgentError
 from src.service.session import UserSession
 
 
@@ -42,6 +42,7 @@ class Server:
 
         response = run_agent_workflow(
             request.user_id,
+            request.task_type,
             session_messages,
             request.debug,
             request.deep_thinking_mode,

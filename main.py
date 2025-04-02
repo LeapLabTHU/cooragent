@@ -2,7 +2,7 @@
 Entry point script for the LangGraph Demo.
 """
 
-from src.workflow import run_agent_workflow
+from src.manager.workflow import run_agent_workflow
 
 if __name__ == "__main__":
     import sys

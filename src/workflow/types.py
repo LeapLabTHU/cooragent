@@ -19,7 +19,7 @@ class State(MessagesState):
 
     # Constants
     TEAM_MEMBERS: list[str]
-
+    TEAM_MEMBERS_DESCRIPTION: str
     # Runtime Variables
     user_id: str
     next: str
