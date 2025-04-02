@@ -34,6 +34,8 @@ dependencies = [
     "beeai-framework>=0.1.11",
     "openpyxl>=3.1.5",
     "dashscope>=1.22.2",
+    "termcolor>=3.0.0",
+    "langchain-mcp-adapters>=0.0.3",
 ]
 
 [project.optional-dependencies]
