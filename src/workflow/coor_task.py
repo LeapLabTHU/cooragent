@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please execute the next step.*"
 
-def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
+def create_agent_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Node for the create agent agent that creates a new agent."""
     logger.info("Create agent agent starting task")
     messages = apply_prompt_template("create_agent", state)
@@ -56,16 +56,16 @@ def create_agent_node(state: State) -> Command[Literal["supervisor","__end__"]]:
                 )
             ],
         },
-        goto="supervisor",
+        goto="publisher",
     )
 
 
-def supervisor_node(state: State) -> Command[Literal["agent_proxy", "create_agent", "__end__"]]:
-    """Supervisor node that decides which agent should act next."""
-    logger.info("Supervisor evaluating next action")
-    messages = apply_prompt_template("supervisor", state)
+def publisher_node(state: State) -> Command[Literal["agent_proxy", "create_agent", "__end__"]]:
+    """publisher node that decides which agent should act next."""
+    logger.info("publisher evaluating next action")
+    messages = apply_prompt_template("publisher", state)
     response = (
-        get_llm_by_type(AGENT_LLM_MAP["supervisor"])
+        get_llm_by_type(AGENT_LLM_MAP["publisher"])
         .with_structured_output(Router)
         .invoke(messages)
     )
@@ -78,15 +78,15 @@ def supervisor_node(state: State) -> Command[Literal["agent_proxy", "create_agen
         return Command(goto=goto, update={"next": goto})
     elif agent != "create_agent":
         goto = "agent_proxy"
-        logger.info(f"Supervisor delegating to: {agent}")
+        logger.info(f"publisher delegating to: {agent}")
         return Command(goto=goto, update={"next": agent})
     else:
         goto = "create_agent"
-        logger.info(f"Supervisor delegating to: {agent}")
+        logger.info(f"publisher delegating to: {agent}")
         return Command(goto=goto, update={"next": agent})
 
 
-def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
+def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Agent proxy node that acts as a proxy for the agent."""
     logger.info("Agent proxy agent starting task")
     _agent = [agent["runtime"] for agent in agent_manager.available_agents if agent["mcp_obj"].agent_name == state["next"]][0]
@@ -105,12 +105,12 @@ def agent_proxy_node(state: State) -> Command[Literal["supervisor","__end__"]]:
             ],
             "agent_name": state["next"]
         },
-        goto="supervisor",
+        goto="publisher",
     )
 
 
 
-def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
+def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
     """Planner node that generate the full plan."""
     logger.info("Planner generating full plan")
     messages = apply_prompt_template("planner2", state)
@@ -135,7 +135,7 @@ def planner_node(state: State) -> Command[Literal["supervisor", "__end__"]]:
     if full_response.endswith("```"):
         full_response = full_response.removesuffix("```")
 
-    goto = "supervisor"
+    goto = "publisher"
     try:
         json.loads(full_response)
     except json.JSONDecodeError:
@@ -174,7 +174,7 @@ def build_graph():
     builder.add_edge(START, "coordinator")
     builder.add_node("coordinator", coordinator_node)
     builder.add_node("planner", planner_node)
-    builder.add_node("supervisor", supervisor_node)
+    builder.add_node("publish", publisher_node)
     builder.add_node("create_agent", create_agent_node)
     builder.add_node("agent_proxy", agent_proxy_node)
     return builder.compile()
