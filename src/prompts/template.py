@@ -4,9 +4,10 @@ from datetime import datetime
 
 from langchain_core.prompts import PromptTemplate
 from langgraph.prebuilt.chat_agent_executor import AgentState
-
+from src.utils.path_utils import get_project_root
 def get_prompt_template(prompt_name: str) -> str:
-    template = open(os.path.join(os.path.dirname(__file__), f"{prompt_name}.md")).read()
+    prompts_dir = get_project_root() / "store" / "prompts"
+    template = open(os.path.join(prompts_dir, f"{prompt_name}.md")).read()
     
     # 提取模板中的变量名（格式为 <<VAR>>）
     variables = re.findall(r"<<([^>>]+)>>", template)

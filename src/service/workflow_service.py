@@ -88,7 +88,7 @@ async def run_agent_workflow(
             if agent["mcp_obj"].user_id != "share":
                 MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent["mcp_obj"].agent_name, agent_description=agent["mcp_obj"].description)
                 TEAM_MEMBERS_DESCRIPTION += '\n' + MEMBER_DESCRIPTION
-    streaming_llm_agents = [*TEAM_MEMBERS, "agent_proxy", "coordinator", "planner", "supervisor"]
+    streaming_llm_agents = [*TEAM_MEMBERS, "agent_factory", "coordinator", "planner", "publisher"]
 
     global coordinator_cache
     coordinator_cache = []
