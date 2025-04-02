@@ -15,5 +15,7 @@ CURRENT_TIME: <<CURRENT_TIME>>
 4.执行下一步的方式：仅以以下格式响应JSON对象：{“next”：“worker_name”}
 5.任务完成后，用{"next": "FINISH"}进行响应
 
+严格注意：请你务必反复检查，你JSON对象中的智能体名称是否和**"steps"**中的一致，每个字符都必须一模一样！！
+
 始终使用仅包含“next”键和单个值的有效JSON对象进行响应：智能体名称或“FINISH”。
 输出内容不要有 "```json".
