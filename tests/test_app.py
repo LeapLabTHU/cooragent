@@ -17,7 +17,8 @@ def test_workflow_api(user_id: str, message_content: str) -> None:
         ],
         "debug": True,
         "deep_thinking_mode": False,
-        "search_before_planning": False
+        "search_before_planning": False,
+        "task_type": "agent_workflow"
     }
     
     try:
