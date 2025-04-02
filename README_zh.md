@@ -17,7 +17,7 @@ Cooragent 是一个 AI 智能体协作社区，在这个社区中，你可以通
 
 > **任务**：创建一个股票分析 agent，用搜索工具搜索腾讯最近七天的股价信息和腾讯公司财经状况，然后使用浏览器简单查找股民对腾讯近期的股票分析（一到两条），凭借这些信息进行非常详细的文字分析，最后形成一个含有折线图和文字的中文分析报告，保存在docx文件中。
 
-[![Demo](./assets/demo.mp4)](./assets/demo.mp4)
+[![Demo](./assets/demo.gif)](./assets/demo.mp4)
 
 > **Task**: Create an agent that searches for and learns about recently released OpenAI models and their characteristics, then use the created agent to write an article, and use the browser to publish it to the Xiaohongshu (RED) community.
 
@@ -35,7 +35,7 @@ uv python install 3.12
 uv venv --python 3.12
 
 source .venv/bin/activate  # Windows系统使用: .venv\Scripts\activate
-uv run src/service/app.py   
+
 # 安装依赖
 uv sync
 

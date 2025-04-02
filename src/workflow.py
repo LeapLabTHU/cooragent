@@ -24,7 +24,7 @@ DEFAULT_TEAM_MEMBERS_DESCRIPTION = """
 - **`coder`**: Executes Python or Bash commands, performs mathematical calculations, and outputs a Markdown report. Must be used for all mathematical computations.
 - **`browser`**: Directly interacts with web pages, performing complex operations and interactions. You can also leverage `browser` to perform in-domain search, like Facebook, Instagram, Github, etc.
 - **`reporter`**: Write a professional report based on the result of each step.Please note that this agent is unable to perform any code or command-line operations.
-- **`create_agent`**: Create a new agent based on the user's requirement.
+- **`agent_factory`**: Create a new agent based on the user's requirement.
 """
 
 TEAM_MEMBERS_DESCRIPTION_TEMPLATE = """
@@ -49,7 +49,7 @@ def run_agent_workflow(user_id: str, user_input: str, debug: bool = False):
 
     logger.info(f"Starting workflow with user input: {user_input}")
     TEAM_MEMBERS_DESCRIPTION = DEFAULT_TEAM_MEMBERS_DESCRIPTION
-    TEAM_MEMBERS = ["create_agent"]
+    TEAM_MEMBERS = ["agent_factory"]
     for agent in agent_manager.available_agents:
         if agent["mcp_obj"].user_id == user_id or agent["mcp_obj"].user_id == "share":
             TEAM_MEMBERS.append(agent["mcp_obj"].agent_name)
