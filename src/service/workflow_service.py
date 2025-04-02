@@ -1,6 +1,5 @@
 import logging
-
-# from src.config import TEAM_MEMBERS
+from typing import Optional
 from src.workflow import build_graph, agent_factory_graph
 from langchain_community.adapters.openai import convert_message_to_dict
 from src.manager import agent_manager
@@ -45,6 +44,7 @@ async def run_agent_workflow(
     debug: bool = False,
     deep_thinking_mode: bool = False,
     search_before_planning: bool = False,
+    coor_agents: Optional[list[str]] = None,
 ):
     """Run the agent workflow with the given user input.
 
@@ -83,11 +83,15 @@ async def run_agent_workflow(
     TEAM_MEMBERS_DESCRIPTION = DEFAULT_TEAM_MEMBERS_DESCRIPTION
     TEAM_MEMBERS = ["agent_factory"]
     for agent in agent_manager.available_agents:
-        if agent["mcp_obj"].user_id == user_id or agent["mcp_obj"].user_id == "share":
+        if agent["mcp_obj"].user_id == "share":
             TEAM_MEMBERS.append(agent["mcp_obj"].agent_name)
-            if agent["mcp_obj"].user_id != "share":
-                MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent["mcp_obj"].agent_name, agent_description=agent["mcp_obj"].description)
-                TEAM_MEMBERS_DESCRIPTION += '\n' + MEMBER_DESCRIPTION
+
+        if agent["mcp_obj"].user_id == user_id or agent["mcp_obj"].agent_name in coor_agents:
+            TEAM_MEMBERS.append(agent["mcp_obj"].agent_name)
+            
+        if agent["mcp_obj"].user_id != "share":
+            MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent["mcp_obj"].agent_name, agent_description=agent["mcp_obj"].description)
+            TEAM_MEMBERS_DESCRIPTION += '\n' + MEMBER_DESCRIPTION
     streaming_llm_agents = [*TEAM_MEMBERS, "agent_factory", "coordinator", "planner", "publisher"]
 
     global coordinator_cache
