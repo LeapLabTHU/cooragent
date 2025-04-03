@@ -17,7 +17,14 @@ class MCPManager:
         }
         cls._agents[agent_name] = _agent
         print(f"Successfully registered Agent: {agent_name}")
-        return _agent
+        return
+    
+    @classmethod
+    def get_agents(cls):
+        agent_list = []
+        for name in cls._agents.keys():
+            agent_list.append(cls._agents[name])
+        return agent_list
 
     @classmethod
     def get_agent(cls, agent_name):

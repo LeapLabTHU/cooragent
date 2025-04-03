@@ -155,6 +155,11 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
     messages = apply_prompt_template("coordinator", state)
     response = get_llm_by_type(AGENT_LLM_MAP["coordinator"]).invoke(messages)
 
+    for agent in agent_manager.available_agents:
+        if agent["mcp_obj"].agent_name.startswith("mcp_"):
+            res = agent["runtime"].invoke(state)
+            print(res)
+            
     goto = "__end__"
     if "handoff_to_planner" in response.content:
         goto = "planner"

@@ -15,6 +15,8 @@ from src.config.agents import AGENT_LLM_MAP
 from langchain_core.tools import tool
 from pathlib import Path
 from src.interface.agent_types import Agent
+from src.mcp.register import MCPManager
+from src.config.env import MCP_AGENT, USR_AGENT
 import logging
 import re
 
@@ -42,6 +44,9 @@ class AgentManager:
         if not self.tools_dir.exists() or not self.agents_dir.exists() or not self.prompt_dir.exists():
             raise FileNotFoundError("One or more provided directories do not exist.")
 
+        # 确保导入excel_agent模块
+        import src.mcp.excel_agent
+        
         self.available_agents = [{
         
             "runtime": create_react_agent(
@@ -89,7 +94,7 @@ class AgentManager:
             "tavily_tool": tavily_tool,
         }
         
-        # self._load_agents()
+        self._load_agents(USR_AGENT, MCP_AGENT)
         
     def _create_mcp_agent(self, user_id: str, name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
         mcp_tools = []
@@ -203,11 +208,14 @@ class AgentManager:
             self._save_agent(agent, flush)  
         return
         
-    def _load_agents(self):
+    def _load_agents(self, user_agent_flag, mcp_agent_flag):
         for agent_path in self.agents_dir.glob("*.json"):
             if agent_path.stem not in [agent["mcp_obj"].agent_name for agent in self.available_agents]:
-                self._load_agent(agent_path.stem)
-        return    
+                if user_agent_flag:
+                    self._load_agent(agent_path.stem)
+        if mcp_agent_flag:
+            self.available_agents.extend(MCPManager.get_agents())
+        return   
     
     def _list_default_tools(self):
         mcp_tools = []
