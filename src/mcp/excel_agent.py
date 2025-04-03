@@ -1,42 +1,41 @@
-import asyncio
-import os
-
-from dotenv import load_dotenv
+# Create server parameters for stdio connection
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from langchain_mcp_adapters.tools import load_mcp_tools
+from langgraph.prebuilt import create_react_agent
+from langchain_openai import ChatOpenAI
+import asyncio
 
-from beeai_framework.adapters.openai.backend.chat import OpenAIChatModel
-from beeai_framework.agents.react import ReActAgent
-from beeai_framework.memory import UnconstrainedMemory
-from beeai_framework.tools.mcp_tools import MCPTool
-from src.mcp.register import MCPManager
-load_dotenv()
+import os
 
+# 获取当前工作目录
 current_path = os.getcwd()
+# 获取当前路径的父路径
 parent_path = os.path.dirname(current_path)
 
-# Create server parameters for stdio connection
+model = ChatOpenAI(model='deepseek-chat',
+            base_url='https://api.deepseek.com/v1',
+            api_key='sk-fe4891f5e92642d9b2af32b3761f3f0c',)
 server_params = StdioServerParameters(
     command="python",
-    args=[current_path + '/excel_mcp/__main__.py'],
-    env={
-        "EXCEL_FILES_PATH": parent_path+'/excel_files/'
-    },
+    # Make sure to update to the full absolute path to your math_server.py file
+    args=[current_path + "/excel_mcp/server.py"],
 )
 
+async def run_agent(state):
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            # Initialize the connection
+            await session.initialize()
+            # Get tools
+            tools = await load_mcp_tools(session)
+            # Create and run the agent
+            agent = create_react_agent(model, tools)
+            agent_response = await agent.ainvoke(state)
+            return agent_response
 
-async def slack_tool() -> MCPTool:
-    async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
-        await session.initialize()
-        # Discover Slack tools via MCP client
-        slacktools = await MCPTool.from_client(session)
-        filter_tool = filter(lambda tool: tool.name == "excel_tools", slacktools)
-        slack = list(filter_tool)
-        return slack[0]
 
-print("xxxx")
-agent = ReActAgent(llm=OpenAIChatModel("deepseek-chat",{"base_url":'https://api.deepseek.com/v1',"api_key":'sk-fe4891f5e92642d9b2af32b3761f3f0c'}), tools=[asyncio.run(slack_tool())], memory=UnconstrainedMemory())
-MCPManager.register_agent("mcp_react_agent", agent)
-# a = agent.run(prompt="创建一个excel文件")
-# for i in a:
-#     print(i)
+if __name__ == "__main__":
+
+    result = asyncio.run(run_agent({"messages": "创建一个excel文件"}))
+    print(result)

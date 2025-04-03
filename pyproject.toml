@@ -26,8 +26,6 @@ dependencies = [
     "numpy>=2.2.3",
     "yfinance>=0.2.54",
     "langchain-deepseek>=0.1.2",
-    "dashscope>=1.22.2",
-    "beeai-framework>=0.1.11",
     "matplotlib>=3.10.1",
     "python-docx>=1.1.2",
     "seaborn>=0.13.2",
@@ -36,6 +34,8 @@ dependencies = [
     "beeai-framework>=0.1.11",
     "openpyxl>=3.1.5",
     "dashscope>=1.22.2",
+    "termcolor>=3.0.0",
+    "langchain-mcp-adapters>=0.0.3",
 ]
 
 [project.optional-dependencies]
