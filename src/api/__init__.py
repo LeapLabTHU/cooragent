@@ -1,3 +1,0 @@
-"""
-API module for cooragent.
-"""

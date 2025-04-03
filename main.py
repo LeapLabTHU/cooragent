@@ -2,6 +2,8 @@
 Entry point script for the LangGraph Demo.
 """
 
+# 导入excel_agent以确保在启动时执行
+import src.mcp.excel_agent
 from src.manager.workflow import run_agent_workflow
 
 if __name__ == "__main__":

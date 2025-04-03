@@ -5,24 +5,24 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 import asyncio
+from src.mcp.register import MCPManager
+from dotenv import load_dotenv
+from src.interface.agent_types import Agent, LLMType
+from src.utils import get_project_root
+load_dotenv()
 
 import os
 
-# 获取当前工作目录
-current_path = os.getcwd()
-# 获取当前路径的父路径
-parent_path = os.path.dirname(current_path)
+model = ChatOpenAI(model=os.getenv("BASIC_MODEL"),
+            base_url=os.getenv("BASIC_BASE_URL"),
+            api_key=os.getenv("BASIC_API_KEY"),)
 
-model = ChatOpenAI(model='deepseek-chat',
-            base_url='https://api.deepseek.com/v1',
-            api_key='sk-fe4891f5e92642d9b2af32b3761f3f0c',)
 server_params = StdioServerParameters(
     command="python",
-    # Make sure to update to the full absolute path to your math_server.py file
-    args=[current_path + "/excel_mcp/server.py"],
+    args=[str(get_project_root()) + "/src/mcp/excel_mcp/server.py"]
 )
 
-async def run_agent(state):
+async def excel_agent():
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             # Initialize the connection
@@ -31,11 +31,16 @@ async def run_agent(state):
             tools = await load_mcp_tools(session)
             # Create and run the agent
             agent = create_react_agent(model, tools)
-            agent_response = await agent.ainvoke(state)
-            return agent_response
+            return agent
 
 
-if __name__ == "__main__":
+agent = asyncio.run(excel_agent())
+agent_obj = Agent(user_id="share", 
+                  agent_name="mcp_excel_agent", 
+                  nick_name="mcp_excel_agent", 
+                  description="The agent are good at manipulating excel files, which includes creating, reading, writing, and analyzing excel files", 
+                  llm_type=LLMType.BASIC, 
+                  selected_tools=[], 
+                  prompt="")
 
-    result = asyncio.run(run_agent({"messages": "创建一个excel文件"}))
-    print(result)
+MCPManager.register_agent("mcp_excel_agent", agent, agent_obj)
