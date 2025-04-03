@@ -22,7 +22,7 @@ server_params = StdioServerParameters(
     args=[current_path + "/excel_mcp/server.py"],
 )
 
-async def run_agent():
+async def run_agent(state):
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             # Initialize the connection
@@ -31,9 +31,11 @@ async def run_agent():
             tools = await load_mcp_tools(session)
             # Create and run the agent
             agent = create_react_agent(model, tools)
-            agent_response = await agent.ainvoke({"messages": "创建一个excel文件"})
+            agent_response = await agent.ainvoke(state)
             return agent_response
-# Run the async function
+
+
 if __name__ == "__main__":
-    result = asyncio.run(run_agent())
+
+    result = asyncio.run(run_agent({"messages": "创建一个excel文件"}))
     print(result)
