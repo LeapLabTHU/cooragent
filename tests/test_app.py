@@ -17,7 +17,9 @@ def test_workflow_api(user_id: str, message_content: str) -> None:
         ],
         "debug": True,
         "deep_thinking_mode": False,
-        "search_before_planning": False
+        "search_before_planning": False,
+        "task_type": "agent_workflow",
+        "coor_agents": ["agent_factory"]
     }
     
     try:
@@ -198,6 +200,7 @@ if __name__ == "__main__":
     
     # 测试 list_default_tools API
     # test_list_default_tools_api()
+    
     
     # 测试 edit_agent API，需要提供一个Agent对象
     # 注意：这里使用了一个简单的示例，实际使用时需要根据您的Agent模型结构修改

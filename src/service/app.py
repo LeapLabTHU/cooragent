@@ -42,10 +42,12 @@ class Server:
 
         response = run_agent_workflow(
             request.user_id,
+            request.task_type,
             session_messages,
             request.debug,
             request.deep_thinking_mode,
-            request.search_before_planning
+            request.search_before_planning,
+            request.coor_agents
         )
         async for res in response:
             yield res

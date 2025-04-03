@@ -17,6 +17,8 @@ Cooragent 是一个 AI 智能体协作社区，在这个社区中，你可以通
 
 > **任务**：创建一个股票分析 agent，用搜索工具搜索腾讯最近七天的股价信息和腾讯公司财经状况，然后使用浏览器简单查找股民对腾讯近期的股票分析（一到两条），凭借这些信息进行非常详细的文字分析，最后形成一个含有折线图和文字的中文分析报告，保存在docx文件中。
 
+[![Demo](./assets/demo.gif)](./assets/demo.mp4)
+
 > **Task**: Create an agent that searches for and learns about recently released OpenAI models and their characteristics, then use the created agent to write an article, and use the browser to publish it to the Xiaohongshu (RED) community.
 
 > **任务**：创建一个智能体，等节開架第马米货书风指的安留：蒸后搜來最近何里于问新发布了哪些模型，这些模型有什么特点，然后用创建的智能休写个文章，并用浏览歸发布到小红书社区。
@@ -130,32 +132,6 @@ cooragent 实现了一个分层的多智能体系统，其中有一个主管智�
 
 在项目根目录创建 `.env` 文件并配置以下环境变量：
 
-```ini
-# 推理 LLM 配置（用于复杂推理任务）
-REASONING_MODEL=your_reasoning_model
-REASONING_API_KEY=your_reasoning_api_key
-REASONING_BASE_URL=your_custom_base_url  # 可选
-
-# 基础 LLM 配置（用于简单任务）
-BASIC_MODEL=your_basic_model
-BASIC_API_KEY=your_basic_api_key
-BASIC_BASE_URL=your_custom_base_url  # 可选
-
-# 视觉语言 LLM 配置（用于涉及图像的任务）
-VL_MODEL=your_vl_model
-VL_API_KEY=your_vl_api_key
-VL_BASE_URL=your_custom_base_url  # 可选
-
-# 工具 API 密钥
-TAVILY_API_KEY=your_tavily_api_key
-JINA_API_KEY=your_jina_api_key  # 可选
-
-# 浏览器配置
-CHROME_INSTANCE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome  # 可选，Chrome 可执行文件路径
-```
-
-您可以复制 `.env.example` 文件作为模板开始：
-
 ```bash
 cp .env.example .env
 ```
@@ -179,3 +155,7 @@ cooragent 提供一个默认的网页界面。
 ## 致谢
 
 特别感谢所有让 cooragent 成为可能的开源项目和贡献者。我们站在巨人的肩膀上。
+
+## 为什么选择 Cooragent
+
+## 与其他工具的比较

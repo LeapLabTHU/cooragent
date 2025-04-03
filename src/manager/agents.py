@@ -89,7 +89,7 @@ class AgentManager:
             "tavily_tool": tavily_tool,
         }
         
-        self._load_agents()
+        # self._load_agents()
         
     def _create_mcp_agent(self, user_id: str, name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
         mcp_tools = []
