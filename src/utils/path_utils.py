@@ -8,12 +8,12 @@ import logging
 @lru_cache(maxsize=None)
 def get_project_root():
     """
-    通过向上查找项目标识文件（如.git、.project-root等）确定项目根目录
-    支持多种查找策略确保可靠性
+    Determine the project root directory by searching for project identification files (e.g., .git, .project-root, etc.)
+    Supports multiple strategies to ensure reliability
     """
-    # 策略1：从当前文件向上查找
+    # Strategy 1: Search upwards from the current file
     current_path = Path(__file__).parent.absolute()
-    max_depth = 10  # 防止无限循环
+    max_depth = 10  # Prevent infinite loop
     
     for _ in range(max_depth):
         if (current_path / '.git').exists() or \
@@ -22,15 +22,15 @@ def get_project_root():
             return current_path
         current_path = current_path.parent
     
-    # 策略2：从工作目录向上查找（备选方案）
+    # Strategy 2: Search upwards from the working directory
     current_path = Path.cwd()
     for _ in range(max_depth):
         if (current_path / '.git').exists():
             return current_path
         current_path = current_path.parent
     
-    # 策略3：使用安装路径推断（适用于打包后的情况）
-    return Path(__file__).parent.parent.parent  # 根据实际项目结构调整
+    # Strategy 3: Use installation path (适用于打包后的情况)
+    return Path(__file__).parent.parent.parent
 
 
 def create_dir_and_file(directory_path, file_name):

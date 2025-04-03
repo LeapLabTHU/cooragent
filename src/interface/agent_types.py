@@ -2,6 +2,8 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from .mcp_types import Tool
 from enum import Enum, unique
+from typing_extensions import TypedDict
+from langgraph.graph import MessagesState
 
 
 @unique
@@ -62,3 +64,18 @@ class listAgentRequest(BaseModel):
     user_id: Optional[str]
     match: Optional[str]
     
+
+class Router(TypedDict):
+    """Worker to route to next. If no workers needed, route to FINISH."""
+    next: str
+
+
+class State(MessagesState):
+    """State for the agent system, extends MessagesState with next field."""
+    TEAM_MEMBERS: list[str]
+    TEAM_MEMBERS_DESCRIPTION: str
+    user_id: str
+    next: str
+    full_plan: str
+    deep_thinking_mode: bool
+    search_before_planning: bool
