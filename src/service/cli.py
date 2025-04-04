@@ -108,59 +108,187 @@ async def run_workflow(user_id, task_type, message, debug, deep_thinking, agents
         msg_table.add_row(role, Text(msg, style=style))
     console.print(msg_table)
     
+    # 构建消息列表
+    messages = []
+    for i, msg in enumerate(message):
+        role = "user" if i % 2 == 0 else "assistant"
+        messages.append({"role": role, "content": msg})
+    
+    # 构建请求对象
+    request = AgentRequest(
+        user_id=user_id,
+        lang="zh",
+        task_type=task_type,
+        messages=messages,
+        debug=debug,
+        deep_thinking_mode=deep_thinking,
+        search_before_planning=True,
+        coor_agents=list(agents)
+    )
+    
+    # 调用工作流
+    console.print(Panel.fit("[highlight]工作流开始执行[/highlight]", title="CoorAgent", border_style="cyan"))
+    server = Server()
+    
+    # 用于累积内容的变量
+    current_agent = None
+    current_content = ""
+    current_message_id = None
+    json_buffer = ""  # 用于累积JSON内容
+    in_json_block = False  # 标记是否在JSON块内
+    
+    # 使用Progress组件显示进度
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
-        console=console
+        console=console,
+        transient=True 
     ) as progress:
         task = progress.add_task("[green]正在处理请求...", total=None)
         
-        # 构建消息列表
-        messages = []
-        for i, msg in enumerate(message):
-            role = "user" if i % 2 == 0 else "assistant"
-            messages.append({"role": role, "content": msg})
-        
-        # 构建请求对象
-        request = AgentRequest(
-            user_id=user_id,
-            lang="zh",
-            task_type=task_type,
-            messages=messages,
-            debug=debug,
-            deep_thinking_mode=deep_thinking,
-            search_before_planning=True,
-            coor_agents=list(agents)
-        )
-        
-        # 调用工作流
-        progress.update(task, description="[green]工作流开始执行...")
-        console.print(Panel.fit("[highlight]工作流开始执行[/highlight]", title="CoorAgent", border_style="cyan"))
-        server = Server()
-        
-        response_panel = Panel("", title="Agent响应", border_style="green")
-        console.print(response_panel)
-        
         async for chunk in server._run_agent_workflow(request):
-            try:
-                data = json.loads(chunk)
-                if isinstance(data, dict):
-                    # 格式化字典输出
-                    formatted_json = json.dumps(data, indent=2, ensure_ascii=False)
-                    syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
-                    console.print(syntax)
+            event_type = chunk.get("event")
+            data = chunk.get("data", {})
+            
+            # 更新进度条描述
+            if event_type == "start_of_agent":
+                # 如果之前在处理JSON，确保完成输出
+                if in_json_block and json_buffer:
+                    try:
+                        parsed_json = json.loads(json_buffer)
+                        formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                        console.print("\n")  # 确保新行开始
+                        syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                        console.print(syntax)
+                    except:
+                        console.print(f"\n{json_buffer}")
+                    json_buffer = ""
+                    in_json_block = False
+                
+                agent_name = data.get("agent_name", "未知")
+                progress.update(task, description=f"[green]正在执行: {agent_name}...")
+                current_agent = agent_name
+                console.print(f"\n[agent_name]>>> {agent_name} 开始执行...[/agent_name]")
+            
+            elif event_type == "end_of_agent":
+                # 如果之前在处理JSON，确保完成输出
+                if in_json_block and json_buffer:
+                    try:
+                        parsed_json = json.loads(json_buffer)
+                        formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                        console.print("\n")  # 确保新行开始
+                        syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                        console.print(syntax)
+                    except:
+                        console.print(f"\n{json_buffer}")
+                    json_buffer = ""
+                    in_json_block = False
+                
+                agent_name = data.get("agent_name", "未知")
+                progress.update(task, description=f"[success]{agent_name} 执行完成!")
+                console.print(f"\n[agent_name]<<< {agent_name} 执行完成[/agent_name]")
+                current_agent = None
+                
+                # 确保当前内容已完全输出
+                if current_content:
+                    console.print("\n", end="")
+                    current_content = ""
+            
+            elif event_type == "message":
+                # 获取消息内容
+                delta = data.get("delta", {})
+                content = delta.get("content", "")
+                reasoning = delta.get("reasoning_content", "")
+                message_id = data.get("message_id")
+                
+                # 检测是否是JSON内容
+                if content and (content.strip().startswith("{") or in_json_block):
+                    # 如果是新的JSON块
+                    if not in_json_block:
+                        in_json_block = True
+                        json_buffer = ""
+                    
+                    # 累积JSON内容
+                    json_buffer += content
+                    
+                    # 尝试解析完整的JSON
+                    try:
+                        parsed_json = json.loads(json_buffer)
+                        # 如果解析成功，说明JSON完整了
+                        formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                        console.print("\n")  # 确保新行开始
+                        syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                        console.print(syntax)
+                        json_buffer = ""
+                        in_json_block = False
+                    except:
+                        # JSON不完整，继续累积
+                        pass
                 else:
-                    console.print(f"[success]{data}[/success]")
-            except:
-                # 尝试解析为Markdown
+                    # 如果不是JSON内容，直接输出
+                    if content:
+                        # 替换掉内容中的换行符，避免不自然的换行
+                        content = content.replace('\n', ' ')
+                        console.print(content, end="", highlight=False)
+                
+                # 如果有推理内容，显示在不同的样式中
+                if reasoning:
+                    console.print(f"\n[info]思考过程: {reasoning}[/info]")
+            
+            elif event_type == "tool_call":
+                # 确保在新行开始
+                if current_content and not current_content.endswith("\n"):
+                    print("\n", end="", flush=True)
+                
+                tool_name = data.get("tool_name", "未知工具")
+                tool_input = data.get("tool_input", {})
+                formatted_input = json.dumps(tool_input, indent=2, ensure_ascii=False) if isinstance(tool_input, dict) else str(tool_input)
+                console.print(f"\n[tool_name]调用工具: {tool_name}[/tool_name]")
+                syntax = Syntax(formatted_input, "json", theme="monokai", line_numbers=False)
+                console.print(syntax)
+            
+            elif event_type == "tool_call_result":
+                # 确保在新行开始
+                if current_content and not current_content.endswith("\n"):
+                    print("\n", end="", flush=True)
+                
+                tool_name = data.get("tool_name", "未知工具")
+                tool_result = data.get("tool_result", "")
+                console.print(f"\n[tool_name]工具 {tool_name} 返回结果:[/tool_name]")
+                
+                # 尝试解析为JSON
                 try:
-                    md = Markdown(chunk)
-                    console.print(md)
+                    result_json = json.loads(tool_result)
+                    formatted_result = json.dumps(result_json, indent=2, ensure_ascii=False)
+                    syntax = Syntax(formatted_result, "json", theme="monokai", line_numbers=False)
+                    console.print(syntax)
                 except:
-                    console.print(f"[warning]{chunk}[/warning]")
-        
-        progress.update(task, description="[success]工作流执行完成!")
-        console.print(Panel.fit("[success]工作流执行完成![/success]", title="CoorAgent", border_style="green"))
+                    # 尝试解析为Markdown
+                    try:
+                        md = Markdown(tool_result)
+                        console.print(md)
+                    except:
+                        console.print(tool_result)
+            
+            elif event_type == "end_of_workflow":
+                # 如果之前在处理JSON，确保完成输出
+                if in_json_block and json_buffer:
+                    try:
+                        parsed_json = json.loads(json_buffer)
+                        formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                        console.print("\n")  # 确保新行开始
+                        syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                        console.print(syntax)
+                    except:
+                        console.print(f"\n{json_buffer}")
+                    json_buffer = ""
+                    in_json_block = False
+                
+                progress.update(task, description="[success]工作流执行完成!")
+                console.print(Panel.fit("[success]工作流执行完成![/success]", title="CoorAgent", border_style="green"))
+    
+    # 工作流结束
+    console.print(Panel.fit("[success]工作流执行完成![/success]", title="CoorAgent", border_style="green"))
 
 
 @cli.command()
