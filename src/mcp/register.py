@@ -1,4 +1,8 @@
 # 创建全局MCP管理器类
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
+
 class MCPManager:
     _instance = None
     _agents = {}
@@ -16,7 +20,7 @@ class MCPManager:
             "mcp_obj": mcp_obj
         }
         cls._agents[agent_name] = _agent
-        print(f"Successfully registered Agent: {agent_name}")
+        logging.info(f"Successfully registered Agent: {agent_name}")
         return
     
     @classmethod

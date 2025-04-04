@@ -76,8 +76,10 @@ def cli():
 
 
 @cli.command()
-@click.option('--user-id', '-u', required=True, help='用户ID')
-@click.option('--task-type', '-t', required=True, help='任务类型')
+@click.option('--user-id', '-u', default="test", help='用户ID')
+@click.option('--task-type', '-t', required=True, 
+              type=click.Choice([task_type.value for task_type in TaskType]), 
+              help='任务类型 (可选值: agent_factory, agent_workflow)')
 @click.option('--message', '-m', required=True, multiple=True, help='消息内容 (可多次使用此选项添加多条消息)')
 @click.option('--debug/--no-debug', default=False, help='是否开启调试模式')
 @click.option('--deep-thinking/--no-deep-thinking', default=False, help='是否开启深度思考模式')

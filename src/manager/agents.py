@@ -21,6 +21,7 @@ import logging
 import re
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 class NotFoundAgentError(Exception):
     """when agent not found"""
@@ -126,7 +127,7 @@ class AgentManager:
                 if tool.name in self.available_tools:
                     _tools.append(self.available_tools[tool.name])
                 else:
-                    logger.error(f"Tool {tool.name} not found in available tools.")
+                    logger.info(f"Tool {tool.name} not found in available tools.")
         except Exception as e:
             logger.error(f"Tool {tool.name} load to langchain tool failed.")
         
@@ -162,14 +163,13 @@ class AgentManager:
         agent_path = self.agents_dir / f"{agent.agent_name}.json"
         agent_prompt_path = self.prompt_dir / f"{agent.agent_name}.md"
         if not flush and agent_path.exists():
-            print(f"agent {agent.agent_name} already exists, skipping save.")
             return
         with open(agent_path, "w") as f:
             f.write(agent.model_dump_json())
         with open(agent_prompt_path, "w") as f:
             f.write(agent.prompt)
 
-        print(f"agent {agent.agent_name} saved.")
+        logger.info(f"agent {agent.agent_name} saved.")
     
     def _load_agent(self, agent_name: str):
         agent_path = self.agents_dir / f"{agent_name}.json"
