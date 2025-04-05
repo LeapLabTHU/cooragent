@@ -45,9 +45,7 @@ class AgentManager:
         if not self.tools_dir.exists() or not self.agents_dir.exists() or not self.prompt_dir.exists():
             raise FileNotFoundError("One or more provided directories do not exist.")
 
-        # 确保导入excel_agent模块
-        import src.mcp.excel_agent
-        
+        # self.available_agents = []
         self.available_agents = [{
         
             "runtime": create_react_agent(
@@ -56,7 +54,7 @@ class AgentManager:
                             prompt=lambda state: apply_prompt_template("researcher", state),
                         ),
             "mcp_obj": self._create_mcp_agent("share", "researcher", AGENT_LLM_MAP["researcher"], [tavily_tool, crawl_tool], 
-                                                 get_prompt_template("researcher"), description="")
+                                                 get_prompt_template("researcher"), description="This agent specializes in research tasks by utilizing search engines and web crawling. It can search for information using keywords, crawl specific URLs to extract content, and synthesize findings into comprehensive reports. The agent excels at gathering information from multiple sources, verifying relevance and credibility, and presenting structured conclusions based on collected data.")
             },           
             {
             "runtime": create_react_agent(
@@ -65,7 +63,7 @@ class AgentManager:
                             prompt=lambda state: apply_prompt_template("coder", state),
                         ),
             "mcp_obj": self._create_mcp_agent("share", "coder", AGENT_LLM_MAP["coder"], [python_repl_tool, bash_tool], 
-                                                 get_prompt_template("coder"), description="")
+                                                 get_prompt_template("coder"), description="This agent specializes in software engineering tasks using Python and bash scripting. It can analyze requirements, implement efficient solutions, and provide clear documentation. The agent excels at data analysis, algorithm implementation, system resource management, and environment queries. It follows best practices, handles edge cases, and integrates Python with bash when needed for comprehensive problem-solving.")
             },
             {
             "runtime": create_react_agent(
@@ -74,7 +72,7 @@ class AgentManager:
                             prompt=lambda state: apply_prompt_template("browser", state),
                         ),
             "mcp_obj": self._create_mcp_agent("share", "browser", AGENT_LLM_MAP["browser"], [browser_tool], 
-                                                 get_prompt_template("browser"), description="")
+                                                 get_prompt_template("browser"), description="This agent specializes in interacting with web browsers. It can navigate to websites, perform actions like clicking, typing, and scrolling, and extract information from web pages. The agent is adept at handling tasks such as searching specific websites, interacting with web elements, and gathering online data. It is capable of operations like logging in, form filling, clicking buttons, and scraping content.")
             },
             {
             "runtime": create_react_agent(
@@ -83,7 +81,7 @@ class AgentManager:
                             prompt=lambda state: apply_prompt_template("reporter", state),
                         ),
             "mcp_obj": self._create_mcp_agent("share", "reporter", AGENT_LLM_MAP["reporter"], [], 
-                                                 get_prompt_template("reporter"), description="")
+                                                 get_prompt_template("reporter"), description="This agent specializes in creating clear, comprehensive reports based solely on provided information and verifiable facts. It presents data objectively, organizes information logically, and highlights key findings using professional language. The agent structures reports with executive summaries, detailed analysis, and actionable conclusions while maintaining strict data integrity and never fabricating information.")
             }
         ]
         
@@ -94,7 +92,8 @@ class AgentManager:
             "python_repl_tool": python_repl_tool,
             "tavily_tool": tavily_tool,
         }
-        
+        for agent in self.available_agents:
+            self._save_agent(agent["mcp_obj"], flush=True)
         self._load_agents(USR_AGENT, MCP_AGENT)
         
     def _create_mcp_agent(self, user_id: str, name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
@@ -171,7 +170,7 @@ class AgentManager:
 
         logger.info(f"agent {agent.agent_name} saved.")
     
-    def _load_agent(self, agent_name: str):
+    def _load_agent(self, agent_name: str, user_agent_flag: bool=False):
         agent_path = self.agents_dir / f"{agent_name}.json"
         if not agent_path.exists():
             raise FileNotFoundError(f"agent {agent_name} not found.")
@@ -182,7 +181,10 @@ class AgentManager:
                 "runtime": self._convert_mcp_agent_to_langchain_agent(mcp_obj),
                 "mcp_obj": mcp_obj
             }
-            self.available_agents.append(_agent)
+            if _agent["mcp_obj"].user_id == 'share':
+                self.available_agents.append(_agent)
+            elif user_agent_flag:
+                self.available_agents.append(_agent)
             return
         
     def _list_agents(self, user_id: str, match: str):
@@ -211,8 +213,7 @@ class AgentManager:
     def _load_agents(self, user_agent_flag, mcp_agent_flag):
         for agent_path in self.agents_dir.glob("*.json"):
             if agent_path.stem not in [agent["mcp_obj"].agent_name for agent in self.available_agents]:
-                if user_agent_flag:
-                    self._load_agent(agent_path.stem)
+                self._load_agent(agent_path.stem, user_agent_flag)
         if mcp_agent_flag:
             self.available_agents.extend(MCPManager.get_agents())
         return   

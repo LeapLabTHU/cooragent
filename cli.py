@@ -82,10 +82,10 @@ def cli():
               help='任务类型 (可选值: agent_factory, agent_workflow)')
 @click.option('--message', '-m', required=True, multiple=True, help='消息内容 (可多次使用此选项添加多条消息)')
 @click.option('--debug/--no-debug', default=False, help='是否开启调试模式')
-@click.option('--deep-thinking/--no-deep-thinking', default=False, help='是否开启深度思考模式')
+@click.option('--deep-thinking/--no-deep-thinking', default=True, help='是否开启深度思考模式')
 @click.option('--agents', '-a', multiple=True, help='协作Agent列表 (可多次使用此选项添加多个Agent)')
 @async_command  # 使用异步命令装饰器
-async def run_workflow(user_id, task_type, message, debug, deep_thinking, agents):
+async def run(user_id, task_type, message, debug, deep_thinking, agents):
     """运行Agent工作流"""
     # 显示配置信息
     config_table = Table(title="工作流配置", show_header=True, header_style="bold magenta")
@@ -294,6 +294,7 @@ async def run_workflow(user_id, task_type, message, debug, deep_thinking, agents
 @cli.command()
 @click.option('--user-id', '-u', required=True, help='用户ID')
 @click.option('--match', '-m', default="", help='匹配字符串')
+@async_command 
 async def list_agents(user_id, match):
     """列出用户的Agent"""
     with Progress(
@@ -344,13 +345,12 @@ async def list_default_agents():
         table = Table(title="默认Agent列表", show_header=True, header_style="bold magenta", border_style="cyan")
         table.add_column("名称", style="agent_name")
         table.add_column("描述", style="agent_desc")
-        table.add_column("类型", style="agent_type")
         
         count = 0
         async for agent_json in server._list_default_agents():
             try:
                 agent = json.loads(agent_json)
-                table.add_row(agent.get("name", ""), agent.get("description", ""), agent.get("type", ""))
+                table.add_row(agent.get("agent_name", ""), agent.get("description", ""))
                 count += 1
             except:
                 console.print(f"[danger]解析错误: {agent_json}[/danger]")
@@ -390,67 +390,83 @@ async def list_default_tools():
 
 
 @cli.command()
-@click.option('--agent-json', '-j', help='Agent JSON数据')
+@click.option('--agent-name', '-n', help='Agent名称')
 @click.option('--interactive/--no-interactive', '-i/-n', default=False, help='是否使用交互模式')
 @async_command  # 使用异步命令装饰器
-async def edit_agent(agent_json, interactive):
-    """编辑Agent"""
-    if interactive:
-        console.print(Panel("[highlight]进入交互式Agent编辑模式[/highlight]", border_style="cyan"))
-        name = Prompt.ask("[cyan]Agent名称[/cyan]")
-        description = Prompt.ask("[cyan]Agent描述[/cyan]")
-        user_id = Prompt.ask("[cyan]用户ID[/cyan]")
-        agent_type = Prompt.ask("[cyan]Agent类型[/cyan]", default="default")
-        
-        agent_data = {
-            "name": name,
-            "description": description,
-            "user_id": user_id,
-            "type": agent_type
-        }
-    else:
-        if not agent_json:
-            console.print("[danger]错误: 非交互模式下必须提供agent-json参数[/danger]")
-            return
-        
-        try:
-            agent_data = json.loads(agent_json)
-        except json.JSONDecodeError:
-            console.print("[danger]JSON格式错误[/danger]")
-            return
+async def edit_agent(agent_name, interactive):
+    """
+    Edit an existing agent configuration.
     
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console
-    ) as progress:
-        task = progress.add_task("[green]正在编辑Agent...", total=None)
+    Args:
+        agent_name (str): The name of the agent to edit
+        interactive (bool): Whether to use interactive mode
+    """
+    # 查找当前 agent 的配置
+    agent_path = os.path.join("store", "agents", f"{agent_name}.json")
+    
+    if not os.path.exists(agent_path):
+        print(f"Agent '{agent_name}' not found.")
+        return
+    
+    # 加载当前 agent 配置
+    with open(agent_path, "r") as f:
+        agent_config = json.load(f)
+    
+    if interactive:
+        # 交互式编辑
+        print(f"Editing agent: {agent_name}")
+        print("Current configuration:")
+        print(json.dumps(agent_config, indent=2))
         
-        try:
-            # 显示将要编辑的Agent信息
-            agent_info = Table(title="Agent信息", show_header=True, header_style="bold magenta")
-            agent_info.add_column("属性", style="cyan")
-            agent_info.add_column("值", style="green")
-            
-            for key, value in agent_data.items():
-                agent_info.add_row(key, str(value))
-            
-            console.print(agent_info)
-            
-            agent = Agent(**agent_data)
-            server = Server()
-            
-            async for result_json in server._edit_agent(agent):
-                result = json.loads(result_json)
-                if result.get("result") == "success":
-                    progress.update(task, description="[success]Agent编辑成功!")
-                    console.print(Panel("[success]Agent编辑成功![/success]", border_style="green"))
-                else:
-                    progress.update(task, description="[danger]Agent编辑失败!")
-                    console.print(Panel(f"[danger]Agent编辑失败: {result.get('result')}[/danger]", border_style="red"))
-        except Exception as e:
-            progress.update(task, description="[danger]发生错误!")
-            console.print(f"[danger]错误: {str(e)}[/danger]")
+        # 修改 agent 名称
+        new_name = input(f"Agent name [{agent_config.get('agent_name', '')}]: ")
+        if new_name:
+            agent_config['agent_name'] = new_name
+        
+        # 修改 agent 描述
+        new_description = input(f"Agent description [{agent_config.get('description', '')}]: ")
+        if new_description:
+            agent_config['description'] = new_description
+        
+        # 修改 LLM 类型
+        llm_types = ["basic", "vision"]
+        current_llm = agent_config.get('llm_type', 'basic')
+        print(f"Current LLM type: {current_llm}")
+        print("Available LLM types:")
+        for i, llm_type in enumerate(llm_types):
+            print(f"{i+1}. {llm_type}")
+        llm_choice = input(f"Select LLM type (1-{len(llm_types)}) [{llm_types.index(current_llm)+1}]: ")
+        if llm_choice and llm_choice.isdigit() and 1 <= int(llm_choice) <= len(llm_types):
+            agent_config['llm_type'] = llm_types[int(llm_choice)-1]
+        
+        # 修改工具
+        print("Current tools:")
+        for i, tool in enumerate(agent_config.get('selected_tools', [])):
+            print(f"{i+1}. {tool.get('name', 'Unknown tool')}")
+        
+        # 这里可以添加工具编辑逻辑
+        # ...
+        
+        # 修改提示词
+        edit_prompt = input("Edit prompt? (y/n): ").lower() == 'y'
+        if edit_prompt:
+            current_prompt = agent_config.get('prompt', '')
+            # 可以使用外部编辑器或者多行输入
+            print("Enter new prompt (type 'END' on a new line to finish):")
+            lines = []
+            while True:
+                line = input()
+                if line == "END":
+                    break
+                lines.append(line)
+            if lines:
+                agent_config['prompt'] = "\n".join(lines)
+    
+    # 保存修改后的配置
+    with open(agent_path, "w") as f:
+        json.dump(agent_config, f, indent=2)
+    
+    print(f"Agent '{agent_name}' updated successfully.")
 
 
 @cli.command()
@@ -463,7 +479,7 @@ def help():
     
     ### 运行Agent工作流
     ```
-    python cli.py run-workflow --user-id user123 --task-type planning --message "你好" --message "我能帮你什么?" --debug
+    python cli.py run --user-id user123 --task-type planning --message "你好" --message "我能帮你什么?" --debug
     ```
     
     ### 列出用户的Agent
