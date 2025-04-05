@@ -83,14 +83,14 @@ async def run_agent_workflow(
     TEAM_MEMBERS_DESCRIPTION = DEFAULT_TEAM_MEMBERS_DESCRIPTION
     TEAM_MEMBERS = ["agent_factory"]
     for agent in agent_manager.available_agents:
-        if agent["mcp_obj"].user_id == "share":
-            TEAM_MEMBERS.append(agent["mcp_obj"].agent_name)
+        if agent.user_id == "share":
+            TEAM_MEMBERS.append(agent.agent_name)
 
-        if agent["mcp_obj"].user_id == user_id or agent["mcp_obj"].agent_name in coor_agents:
-            TEAM_MEMBERS.append(agent["mcp_obj"].agent_name)
+        if agent.user_id == user_id or agent.agent_name in coor_agents:
+            TEAM_MEMBERS.append(agent.agent_name)
             
-        if agent["mcp_obj"].user_id != "share":
-            MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent["mcp_obj"].agent_name, agent_description=agent["mcp_obj"].description)
+        if agent.user_id != "share":
+            MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent.agent_name, agent_description=agent.description)
             TEAM_MEMBERS_DESCRIPTION += '\n' + MEMBER_DESCRIPTION
     streaming_llm_agents = [*TEAM_MEMBERS, "agent_factory", "coordinator", "planner", "publisher"]
 

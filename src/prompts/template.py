@@ -32,10 +32,9 @@ def apply_prompt_template(prompt_name: str, state: AgentState, template:str=None
     ).format(CURRENT_TIME=datetime.now().strftime("%a %b %d %Y %H:%M:%S %z"), **state)
     return [{"role": "system", "content": system_prompt}] + state["messages"]
 
-def apply_system_prompt(prompt_name: str, state: AgentState, template:str=None) -> list:
-    _template, _ = get_prompt_template(prompt_name)  if not template else template
-    system_prompt = PromptTemplate(
+def apply_prompt(state: AgentState, template:str=None) -> list:
+    _prompt = PromptTemplate(
         input_variables=["CURRENT_TIME"],
-        template=_template,
+        template=template,
     ).format(CURRENT_TIME=datetime.now().strftime("%a %b %d %Y %H:%M:%S %z"), **state)
-    return system_prompt
+    return _prompt

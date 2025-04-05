@@ -14,6 +14,9 @@ from src.tools.search import tavily_tool
 from src.interface.agent_types import State, Router
 from src.manager import agent_manager
 from langgraph.graph import StateGraph, START, END
+from src.prompts.template import apply_prompt
+from langgraph.prebuilt import create_react_agent
+from src.mcp.register import MCPManager
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +37,13 @@ def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
     agent_manager._create_agent_by_prebuilt(
         user_id=state["user_id"],
         name=response["agent_name"],
+        nick_name=response["agent_nick_name"],
         llm_type=response["llm_type"],
         tools=tools,
         prompt=response["prompt"],
         description=response["agent_description"],
     )
     
-
     state["TEAM_MEMBERS"].append(response["agent_name"])
 
     return Command(
@@ -85,11 +88,18 @@ def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_factor
 
 
 def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
-    """Agent proxy node that acts as a proxy for the agent."""
-    logger.info("Agent proxy agent starting task")
-    _agent = [agent["runtime"] for agent in agent_manager.available_agents if agent["mcp_obj"].agent_name == state["next"]][0]
-    
-    response = _agent.invoke(state)
+    """Agent Factory node that acts as a proxy for the agent."""
+    logger.info("Agent Factory starting task")
+    _agent = agent_manager.available_agents[state["next"]]
+    agent = create_react_agent(
+        get_llm_by_type(_agent.llm_type),
+        tools=[agent_manager.available_tools[tool.name] for tool in _agent.selected_tools],
+        prompt=apply_prompt(_agent.prompt),
+    )
+    if _agent.agent_name.startswith("mcp_"):
+        response = MCPManager._agents_runtime[_agent.agent_name].invoke(state)
+    else:
+        response = agent.invoke(state)
 
     return Command(
         update={
@@ -105,7 +115,6 @@ def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
         },
         goto="publisher",
     )
-
 
 
 def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
@@ -154,11 +163,6 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
     logger.info("Coordinator talking.")
     messages = apply_prompt_template("coordinator", state)
     response = get_llm_by_type(AGENT_LLM_MAP["coordinator"]).invoke(messages)
-
-    for agent in agent_manager.available_agents:
-        if agent["mcp_obj"].agent_name.startswith("mcp_"):
-            res = agent["runtime"].invoke(state)
-            print(res)
             
     goto = "__end__"
     if "handoff_to_planner" in response.content:

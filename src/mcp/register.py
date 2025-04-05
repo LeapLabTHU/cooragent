@@ -6,6 +6,7 @@ logger.setLevel(logging.WARNING)
 class MCPManager:
     _instance = None
     _agents = {}
+    _agents_runtime = {}
 
     def __new__(cls):
         if cls._instance is None:
@@ -19,16 +20,14 @@ class MCPManager:
             "runtime": agent,
             "mcp_obj": mcp_obj
         }
-        cls._agents[agent_name] = _agent
+        cls._agents[agent_name] = _agent['mcp_obj']
+        cls._agents_runtime[agent_name] = _agent['runtime']
         logging.info(f"Successfully registered Agent: {agent_name}")
         return
     
     @classmethod
     def get_agents(cls):
-        agent_list = []
-        for name in cls._agents.keys():
-            agent_list.append(cls._agents[name])
-        return agent_list
+        return cls._agents
 
     @classmethod
     def get_agent(cls, agent_name):
