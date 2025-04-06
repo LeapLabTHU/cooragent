@@ -12,7 +12,7 @@ from rich.theme import Theme
 from rich.style import Style
 from rich.text import Text
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Prompt
+from rich.prompt import Prompt, Confirm
 from dotenv import load_dotenv
 import functools
 
@@ -310,13 +310,16 @@ async def list_agents(user_id, match):
         table = Table(title=f"用户 [highlight]{user_id}[/highlight] 的Agent列表", show_header=True, header_style="bold magenta", border_style="cyan")
         table.add_column("名称", style="agent_name")
         table.add_column("描述", style="agent_desc")
-        table.add_column("类型", style="agent_type")
+        table.add_column("工具", style="agent_type")
         
         count = 0
         async for agent_json in server._list_agents(request):
             try:
                 agent = json.loads(agent_json)
-                table.add_row(agent.get("name", ""), agent.get("description", ""), agent.get("type", ""))
+                tools = []
+                for tool in agent.get("selected_tools", []):
+                    tools.append(tool.get("name", ""))
+                table.add_row(agent.get("agent_name", ""), agent.get("description", ""), ', '.join(tools))
                 count += 1
             except:
                 console.print(f"[danger]解析错误: {agent_json}[/danger]")
@@ -390,83 +393,129 @@ async def list_default_tools():
 
 
 @cli.command()
-@click.option('--agent-name', '-n', help='Agent名称')
-@click.option('--interactive/--no-interactive', '-i/-n', default=False, help='是否使用交互模式')
-@async_command  # 使用异步命令装饰器
+@click.option('--agent-name', '-n', required=True, help='要编辑的Agent名称')
+@click.option('--interactive/--no-interactive', '-i/-n', default=True, help='是否使用交互模式')
+@async_command
 async def edit_agent(agent_name, interactive):
-    """
-    Edit an existing agent configuration.
+    """编辑Agent配置（交互模式）"""
+    server = Server()
     
-    Args:
-        agent_name (str): The name of the agent to edit
-        interactive (bool): Whether to use interactive mode
-    """
-    # 查找当前 agent 的配置
-    agent_path = os.path.join("store", "agents", f"{agent_name}.json")
-    
-    if not os.path.exists(agent_path):
-        print(f"Agent '{agent_name}' not found.")
+    # 获取当前Agent配置
+    console.print(Panel.fit(f"[highlight]正在获取 {agent_name} 的配置...[/highlight]", border_style="cyan"))
+    original_config = None
+    try:
+        async for agent_json in server._list_agents(listAgentRequest(user_id="system", match=agent_name)):
+            agent = json.loads(agent_json)
+            if agent.get("agent_name") == agent_name:
+                original_config = agent
+                break
+        if not original_config:
+            console.print(f"[danger]未找到Agent: {agent_name}[/danger]")
+            return
+    except Exception as e:
+        console.print(f"[danger]获取配置失败: {str(e)}[/danger]")
         return
+
+    # 显示当前配置
+    def show_current_config():
+        console.print(Panel.fit(
+            f"[agent_name]名称:[/agent_name] {original_config.get('agent_name', '')}\n"
+            f"[agent_desc]描述:[/agent_desc] {original_config.get('description', '')}\n"
+            f"[tool_name]工具:[/tool_name] {', '.join([t.get('name', '') for t in original_config.get('selected_tools', [])])}\n"
+            f"[highlight]提示词:[/highlight]\n{original_config.get('prompt', '')}",
+            title="当前配置",
+            border_style="blue"
+        ))
     
-    # 加载当前 agent 配置
-    with open(agent_path, "r") as f:
-        agent_config = json.load(f)
-    
-    if interactive:
-        # 交互式编辑
-        print(f"Editing agent: {agent_name}")
-        print("Current configuration:")
-        print(json.dumps(agent_config, indent=2))
+    show_current_config()
+
+    # 交互式编辑
+    modified_config = original_config.copy()
+    while interactive:
+        choice = Prompt.ask(
+            "\n请选择要修改的内容：",
+            choices=["1", "2", "3", "4", "5", "0"],
+            show_choices=False,
+            show_default=False
+        )
         
-        # 修改 agent 名称
-        new_name = input(f"Agent name [{agent_config.get('agent_name', '')}]: ")
-        if new_name:
-            agent_config['agent_name'] = new_name
+        if choice == "1":
+            new_name = Prompt.ask(
+                "输入新名称", 
+                default=modified_config.get('agent_name', ''),
+                show_default=True
+            )
+            modified_config['agent_name'] = new_name
         
-        # 修改 agent 描述
-        new_description = input(f"Agent description [{agent_config.get('description', '')}]: ")
-        if new_description:
-            agent_config['description'] = new_description
+        elif choice == "2":
+            new_desc = Prompt.ask(
+                "输入新描述", 
+                default=modified_config.get('description', ''),
+                show_default=True
+            )
+            modified_config['description'] = new_desc
         
-        # 修改 LLM 类型
-        llm_types = ["basic", "vision"]
-        current_llm = agent_config.get('llm_type', 'basic')
-        print(f"Current LLM type: {current_llm}")
-        print("Available LLM types:")
-        for i, llm_type in enumerate(llm_types):
-            print(f"{i+1}. {llm_type}")
-        llm_choice = input(f"Select LLM type (1-{len(llm_types)}) [{llm_types.index(current_llm)+1}]: ")
-        if llm_choice and llm_choice.isdigit() and 1 <= int(llm_choice) <= len(llm_types):
-            agent_config['llm_type'] = llm_types[int(llm_choice)-1]
+        elif choice == "3":
+            current_tools = [t.get('name') for t in modified_config.get('selected_tools', [])]
+            console.print(f"当前工具: {', '.join(current_tools)}")
+            new_tools = Prompt.ask(
+                "输入新工具列表（逗号分隔）",
+                default=", ".join(current_tools),
+                show_default=True
+            )
+            modified_config['selected_tools'] = [
+                {"name": t.strip(), "description": ""} 
+                for t in new_tools.split(',') 
+                if t.strip()
+            ]
         
-        # 修改工具
-        print("Current tools:")
-        for i, tool in enumerate(agent_config.get('selected_tools', [])):
-            print(f"{i+1}. {tool.get('name', 'Unknown tool')}")
-        
-        # 这里可以添加工具编辑逻辑
-        # ...
-        
-        # 修改提示词
-        edit_prompt = input("Edit prompt? (y/n): ").lower() == 'y'
-        if edit_prompt:
-            current_prompt = agent_config.get('prompt', '')
-            # 可以使用外部编辑器或者多行输入
-            print("Enter new prompt (type 'END' on a new line to finish):")
+        elif choice == "4":
+            console.print("输入新提示词（输入'END'结束）:")
             lines = []
             while True:
-                line = input()
+                line = Prompt.ask("> ", default="")
                 if line == "END":
                     break
                 lines.append(line)
-            if lines:
-                agent_config['prompt'] = "\n".join(lines)
-    
-    # 保存修改后的配置
-    with open(agent_path, "w") as f:
-        json.dump(agent_config, f, indent=2)
-    
-    print(f"Agent '{agent_name}' updated successfully.")
+            modified_config['prompt'] = "\n".join(lines)
+        
+        elif choice == "5":
+            show_current_config()
+            console.print(Panel.fit(
+                f"[agent_name]新名称:[/agent_name] {modified_config.get('agent_name', '')}\n"
+                f"[agent_desc]新描述:[/agent_desc] {modified_config.get('description', '')}\n"
+                f"[tool_name]新工具:[/tool_name] {', '.join([t.get('name', '') for t in modified_config.get('selected_tools', [])])}\n"
+                f"[highlight]新提示词:[/highlight]\n{modified_config.get('prompt', '')}",
+                title="修改后的配置",
+                border_style="yellow"
+            ))
+        
+        elif choice == "0":
+            if Confirm.ask("确认保存修改吗？"):
+                try:
+                    # 构建Agent请求对象
+                    agent_request = Agent(
+                        user_id=original_config.get('user_id', ''),
+                        agent_name=modified_config['agent_name'],
+                        description=modified_config['description'],
+                        selected_tools=modified_config['selected_tools'],
+                        prompt=modified_config['prompt'],
+                        llm_type=original_config.get('llm_type', 'basic')
+                    )
+                    
+                    # 调用服务保存修改
+                    async for result in server._edit_agent(agent_request):
+                        res = json.loads(result)
+                        if res.get("result") == "success":
+                            console.print(Panel.fit("[success]Agent 更新成功![/success]", border_style="green"))
+                        else:
+                            console.print(f"[danger]更新失败: {res.get('result', '未知错误')}[/danger]")
+                    return
+                except Exception as e:
+                    console.print(f"[danger]保存时发生错误: {str(e)}[/danger]")
+            else:
+                console.print("[warning]修改已取消[/warning]")
+            return
 
 
 @cli.command()
