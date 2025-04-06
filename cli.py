@@ -15,6 +15,9 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt, Confirm
 from dotenv import load_dotenv
 import functools
+import shlex
+import readline
+import atexit
 
 load_dotenv()
 
@@ -41,6 +44,42 @@ custom_theme = Theme({
 
 # 创建Rich控制台对象用于美化输出
 console = Console(theme=custom_theme)
+
+HISTORY_FILE = os.path.expanduser("~/.cooragent_history")
+
+def _init_readline():
+    try:
+        # 确保历史文件路径有效
+        history_dir = os.path.dirname(HISTORY_FILE)
+        if not os.path.exists(history_dir):
+            os.makedirs(history_dir, exist_ok=True)
+        
+        # 安全创建历史文件
+        if not os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+                pass  # 创建空文件
+        
+        # 尝试加载历史（忽略加载错误）
+        try:
+            readline.read_history_file(HISTORY_FILE)
+        except:
+            pass
+        
+        # 设置历史记录长度
+        readline.set_history_length(1000)
+        
+        # 注册安全的退出处理
+        atexit.register(_save_history)
+        
+    except Exception as e:
+        console.print(f"[warning]命令历史初始化失败: {str(e)}[/warning]")
+
+def _save_history():
+    """安全保存历史记录"""
+    try:
+        readline.write_history_file(HISTORY_FILE)
+    except Exception as e:
+        console.print(f"[warning]无法保存命令历史: {str(e)}[/warning]")
 
 
 def print_banner():
@@ -69,13 +108,44 @@ def async_command(f):
     return wrapper
 
 
-@click.group()
-def cli():
-    """CoorAgent 命令行工具 - 直接调用Agent功能"""
-    print_banner()
+@click.group(invoke_without_command=True)
+@click.pass_context
+def cli(ctx):
+    """CoorAgent 命令行工具 - 交互模式"""
+    if ctx.invoked_subcommand is None:
+        _init_readline()
+        
+        print_banner()
+        console.print("输入 'exit' 退出交互模式\n")
+        
+        ctx.ensure_object(dict)
+        
+        # 添加初始化等待提示
+        with console.status("[bold green]正在初始化服务器...[/]", spinner="dots"):
+            ctx.obj['server'] = Server()
+        console.print("[success]✓ 服务器初始化完成[/]")
+        
+        while True:
+            try:
+                command = console.input("[bold cyan]CoorAgent>[/] ").strip()
+                
+                if command.lower() in ('exit', 'quit'):
+                    console.print("[success]再见！[/]")
+                    break
+                
+                if command:
+                    readline.add_history(command)
+                
+                args = shlex.split(command)
+                with cli.make_context("cli", args, parent=ctx) as sub_ctx:
+                    cli.invoke(sub_ctx)
+                    
+            except Exception as e:
+                console.print(f"[danger]错误: {str(e)}[/]")
 
 
 @cli.command()
+@click.pass_context
 @click.option('--user-id', '-u', default="test", help='用户ID')
 @click.option('--task-type', '-t', required=True, 
               type=click.Choice([task_type.value for task_type in TaskType]), 
@@ -84,9 +154,12 @@ def cli():
 @click.option('--debug/--no-debug', default=False, help='是否开启调试模式')
 @click.option('--deep-thinking/--no-deep-thinking', default=True, help='是否开启深度思考模式')
 @click.option('--agents', '-a', multiple=True, help='协作Agent列表 (可多次使用此选项添加多个Agent)')
-@async_command  # 使用异步命令装饰器
-async def run(user_id, task_type, message, debug, deep_thinking, agents):
+@async_command
+async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
     """运行Agent工作流"""
+    # 从上下文中获取server
+    server = ctx.obj['server']
+    
     # 显示配置信息
     config_table = Table(title="工作流配置", show_header=True, header_style="bold magenta")
     config_table.add_column("参数", style="cyan")
@@ -128,7 +201,6 @@ async def run(user_id, task_type, message, debug, deep_thinking, agents):
     
     # 调用工作流
     console.print(Panel.fit("[highlight]工作流开始执行[/highlight]", title="CoorAgent", border_style="cyan"))
-    server = Server()
     
     # 用于累积内容的变量
     current_agent = None
@@ -292,11 +364,15 @@ async def run(user_id, task_type, message, debug, deep_thinking, agents):
 
 
 @cli.command()
+@click.pass_context
 @click.option('--user-id', '-u', required=True, help='用户ID')
 @click.option('--match', '-m', default="", help='匹配字符串')
 @async_command 
-async def list_agents(user_id, match):
+async def list_agents(ctx, user_id, match):
     """列出用户的Agent"""
+    # 从上下文中获取server
+    server = ctx.obj['server']
+    
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -305,7 +381,6 @@ async def list_agents(user_id, match):
         task = progress.add_task("[green]正在获取Agent列表...", total=None)
         
         request = listAgentRequest(user_id=user_id, match=match)
-        server = Server()
         
         table = Table(title=f"用户 [highlight]{user_id}[/highlight] 的Agent列表", show_header=True, header_style="bold magenta", border_style="cyan")
         table.add_column("名称", style="agent_name")
@@ -333,17 +408,19 @@ async def list_agents(user_id, match):
 
 
 @cli.command()
+@click.pass_context
 @async_command  # 使用异步命令装饰器
-async def list_default_agents():
+async def list_default_agents(ctx):
     """列出默认Agent"""
+    # 从上下文中获取server
+    server = ctx.obj['server']
+    
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         console=console
     ) as progress:
         task = progress.add_task("[green]正在获取默认Agent列表...", total=None)
-        
-        server = Server()
         
         table = Table(title="默认Agent列表", show_header=True, header_style="bold magenta", border_style="cyan")
         table.add_column("名称", style="agent_name")
@@ -363,17 +440,19 @@ async def list_default_agents():
 
 
 @cli.command()
+@click.pass_context
 @async_command  # 使用异步命令装饰器
-async def list_default_tools():
+async def list_default_tools(ctx):
     """列出默认工具"""
+    # 从上下文中获取server
+    server = ctx.obj['server']
+    
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         console=console
     ) as progress:
         task = progress.add_task("[green]正在获取默认工具列表...", total=None)
-        
-        server = Server()
         
         table = Table(title="默认工具列表", show_header=True, header_style="bold magenta", border_style="cyan")
         table.add_column("名称", style="tool_name")
@@ -393,12 +472,14 @@ async def list_default_tools():
 
 
 @cli.command()
+@click.pass_context
 @click.option('--agent-name', '-n', required=True, help='要编辑的Agent名称')
 @click.option('--interactive/--no-interactive', '-i/-n', default=True, help='是否使用交互模式')
 @async_command
-async def edit_agent(agent_name, interactive):
+async def edit_agent(ctx, agent_name, interactive):
     """编辑Agent配置（交互模式）"""
-    server = Server()
+    # 从上下文中获取server
+    server = ctx.obj['server']
     
     # 获取当前Agent配置
     console.print(Panel.fit(f"[highlight]正在获取 {agent_name} 的配置...[/highlight]", border_style="cyan"))
