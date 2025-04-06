@@ -39,6 +39,7 @@ First, you need to find your task description on your own, following these steps
 6. Build prompt format and content that meets the requirements below: content within <> should not appear in the prompt you write
 7. Ensure the prompt is clear and explicit, fully meeting user requirements
 8. The agent name must be in **English** and globally unique (not duplicate existing agent names)
+9. Do not use 'yfinance' in the prompt
 
 # Prompt Format and Content
 You need to fill in the prompt according to the following format based on the task (details of the content to be filled in are in <>, please copy other content as is):

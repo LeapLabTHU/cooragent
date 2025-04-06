@@ -36,6 +36,7 @@ dependencies = [
     "dashscope>=1.22.2",
     "termcolor>=3.0.0",
     "langchain-mcp-adapters>=0.0.3",
+    "rich>=14.0.0",
 ]
 
 [project.optional-dependencies]

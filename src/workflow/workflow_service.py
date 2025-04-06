@@ -5,6 +5,9 @@ from langchain_community.adapters.openai import convert_message_to_dict
 from src.manager import agent_manager
 from src.interface.agent_types import TaskType
 import uuid
+import json
+from rich.syntax import Syntax
+from rich.console import Console
 
 # Configure logging
 logging.basicConfig(
@@ -12,6 +15,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
+console = Console()
 
 def enable_debug_logging():
     """Enable debug level logging for more detailed execution information."""
@@ -82,15 +86,15 @@ async def run_agent_workflow(
     """
     TEAM_MEMBERS_DESCRIPTION = DEFAULT_TEAM_MEMBERS_DESCRIPTION
     TEAM_MEMBERS = ["agent_factory"]
-    for agent in agent_manager.available_agents:
-        if agent["mcp_obj"].user_id == "share":
-            TEAM_MEMBERS.append(agent["mcp_obj"].agent_name)
+    for agent in agent_manager.available_agents.values():
+        if agent.user_id == "share":
+            TEAM_MEMBERS.append(agent.agent_name)
 
-        if agent["mcp_obj"].user_id == user_id or agent["mcp_obj"].agent_name in coor_agents:
-            TEAM_MEMBERS.append(agent["mcp_obj"].agent_name)
+        if agent.user_id == user_id or agent.agent_name in coor_agents:
+            TEAM_MEMBERS.append(agent.agent_name)
             
-        if agent["mcp_obj"].user_id != "share":
-            MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent["mcp_obj"].agent_name, agent_description=agent["mcp_obj"].description)
+        if agent.user_id != "share":
+            MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent.agent_name, agent_description=agent.description)
             TEAM_MEMBERS_DESCRIPTION += '\n' + MEMBER_DESCRIPTION
     streaming_llm_agents = [*TEAM_MEMBERS, "agent_factory", "coordinator", "planner", "publisher"]
 
@@ -98,6 +102,10 @@ async def run_agent_workflow(
     coordinator_cache = []
     global is_handoff_case
     is_handoff_case = False
+
+    json_buffer = []
+    current_json_size = 0
+    MAX_JSON_BUFFER_SIZE = 1024 * 1024  # 1MB限制
 
     async for event in graph.astream_events(
         {
@@ -232,6 +240,21 @@ async def run_agent_workflow(
             }
         else:
             continue
+
+        if kind in ("end_of_agent", "end_of_workflow"):
+            if json_buffer:
+                try:
+                    parsed_json = json.loads(''.join(json_buffer))
+                    formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                    console.print("\n")
+                    syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                    console.print(syntax)
+                except:
+                    console.print(f"\n[danger]不完整的JSON内容: {''.join(json_buffer)}[/danger]")
+                finally:
+                    json_buffer = []
+                    current_json_size = 0
+
         yield ydata
 
     if is_handoff_case:

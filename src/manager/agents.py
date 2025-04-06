@@ -21,6 +21,7 @@ import logging
 import re
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 class NotFoundAgentError(Exception):
     """when agent not found"""
@@ -44,47 +45,41 @@ class AgentManager:
         if not self.tools_dir.exists() or not self.agents_dir.exists() or not self.prompt_dir.exists():
             raise FileNotFoundError("One or more provided directories do not exist.")
 
-        # 确保导入excel_agent模块
-        import src.mcp.excel_agent
+        # self.available_agents = {}
+        self.available_agents = {
+            "researcher": self._create_mcp_agent(user_id="share", 
+                                                 name="researcher", 
+                                                 nick_name="researcher", 
+                                                 llm_type=AGENT_LLM_MAP["researcher"], 
+                                                 tools=[tavily_tool, crawl_tool], 
+                                                 prompt=get_prompt_template("researcher"),
+                                                 description="This agent specializes in research tasks by utilizing search engines and web crawling. It can search for information using keywords, crawl specific URLs to extract content, and synthesize findings into comprehensive reports. The agent excels at gathering information from multiple sources, verifying relevance and credibility, and presenting structured conclusions based on collected data."),
+            "coder": self._create_mcp_agent(user_id="share", 
+                                            name="coder", 
+                                            nick_name="coder", 
+                                            llm_type=AGENT_LLM_MAP["coder"], 
+                                            tools=[python_repl_tool, bash_tool], 
+                                            prompt=get_prompt_template("coder"),
+                                            description="This agent specializes in software engineering tasks using Python and bash scripting. It can analyze requirements, implement efficient solutions, and provide clear documentation. The agent excels at data analysis, algorithm implementation, system resource management, and environment queries. It follows best practices, handles edge cases, and integrates Python with bash when needed for comprehensive problem-solving."),
+            
+            
+            "browser": self._create_mcp_agent(user_id="share", 
+                                              name="browser", 
+                                              nick_name="browser", 
+                                              llm_type=AGENT_LLM_MAP["browser"], 
+                                              tools=[browser_tool], 
+                                              prompt=get_prompt_template("browser"), 
+                                              description="This agent specializes in interacting with web browsers. It can navigate to websites, perform actions like clicking, typing, and scrolling, and extract information from web pages. The agent is adept at handling tasks such as searching specific websites, interacting with web elements, and gathering online data. It is capable of operations like logging in, form filling, clicking buttons, and scraping content."),
         
-        self.available_agents = [{
-        
-            "runtime": create_react_agent(
-                            get_llm_by_type(AGENT_LLM_MAP["researcher"]),
-                            tools=[tavily_tool, crawl_tool],
-                            prompt=lambda state: apply_prompt_template("researcher", state),
-                        ),
-            "mcp_obj": self._create_mcp_agent("share", "researcher", AGENT_LLM_MAP["researcher"], [tavily_tool, crawl_tool], 
-                                                 get_prompt_template("researcher"), description="")
-            },           
-            {
-            "runtime": create_react_agent(
-                            get_llm_by_type(AGENT_LLM_MAP["coder"]),
-                            tools=[python_repl_tool, bash_tool],
-                            prompt=lambda state: apply_prompt_template("coder", state),
-                        ),
-            "mcp_obj": self._create_mcp_agent("share", "coder", AGENT_LLM_MAP["coder"], [python_repl_tool, bash_tool], 
-                                                 get_prompt_template("coder"), description="")
-            },
-            {
-            "runtime": create_react_agent(
-                            get_llm_by_type(AGENT_LLM_MAP["browser"]),
-                            tools=[browser_tool],
-                            prompt=lambda state: apply_prompt_template("browser", state),
-                        ),
-            "mcp_obj": self._create_mcp_agent("share", "browser", AGENT_LLM_MAP["browser"], [browser_tool], 
-                                                 get_prompt_template("browser"), description="")
-            },
-            {
-            "runtime": create_react_agent(
-                            get_llm_by_type(AGENT_LLM_MAP["reporter"]),
-                            tools=[],
-                            prompt=lambda state: apply_prompt_template("reporter", state),
-                        ),
-            "mcp_obj": self._create_mcp_agent("share", "reporter", AGENT_LLM_MAP["reporter"], [], 
-                                                 get_prompt_template("reporter"), description="")
-            }
-        ]
+            "reporter": self._create_mcp_agent(user_id="share", 
+                                                name="reporter", 
+                                                nick_name="reporter", 
+                                                llm_type=AGENT_LLM_MAP["reporter"], 
+                                                tools=[], 
+                                                prompt=get_prompt_template("reporter"), 
+                                                description="This agent specializes in creating clear, comprehensive reports based solely on provided information and verifiable facts. It presents data objectively, organizes information logically, and highlights key findings using professional language. The agent structures reports with executive summaries, detailed analysis, and actionable conclusions while maintaining strict data integrity and never fabricating information.")
+            
+        }
         
         self.available_tools = {
             "bash_tool": bash_tool,
@@ -93,10 +88,11 @@ class AgentManager:
             "python_repl_tool": python_repl_tool,
             "tavily_tool": tavily_tool,
         }
-        
+        # for agent_name in self.available_agents.keys():
+        #     self._save_agent(self.available_agents[agent_name], flush=True)
         self._load_agents(USR_AGENT, MCP_AGENT)
         
-    def _create_mcp_agent(self, user_id: str, name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
+    def _create_mcp_agent(self, user_id: str, name: str, nick_name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
         mcp_tools = []
         for tool in tools:
             mcp_tools.append(Tool(
@@ -107,7 +103,7 @@ class AgentManager:
         
         mcp_agent = Agent(
             agent_name=name,
-            nick_name=name,
+            nick_name=nick_name,
             description=description,
             user_id=user_id,
             llm_type=llm_type,
@@ -126,7 +122,7 @@ class AgentManager:
                 if tool.name in self.available_tools:
                     _tools.append(self.available_tools[tool.name])
                 else:
-                    logger.error(f"Tool {tool.name} not found in available tools.")
+                    logger.info(f"Tool {tool.name} not found in available tools.")
         except Exception as e:
             logger.error(f"Tool {tool.name} load to langchain tool failed.")
         
@@ -144,49 +140,40 @@ class AgentManager:
         return langchain_agent
         
 
-    def _create_agent_by_prebuilt(self, user_id: str, name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
-        langchain_agent = create_react_agent(
-            get_llm_by_type(llm_type),
-            tools=tools,
-            prompt=prompt,
-        )
-        _agent = {
-            "runtime": langchain_agent,
-            "mcp_obj": self._create_mcp_agent(user_id, name, llm_type, tools, prompt, description)
-        }
-        self.available_agents.append(_agent)
-        return langchain_agent
+    def _create_agent_by_prebuilt(self, user_id: str, name: str, nick_name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
+        _agent = self._create_mcp_agent(user_id, name, nick_name, llm_type, tools, prompt, description)
+
+        self.available_agents[name] = _agent
+        return 
     
 
     def _save_agent(self, agent: Agent, flush=False):
         agent_path = self.agents_dir / f"{agent.agent_name}.json"
         agent_prompt_path = self.prompt_dir / f"{agent.agent_name}.md"
         if not flush and agent_path.exists():
-            print(f"agent {agent.agent_name} already exists, skipping save.")
             return
         with open(agent_path, "w") as f:
             f.write(agent.model_dump_json())
         with open(agent_prompt_path, "w") as f:
             f.write(agent.prompt)
 
-        print(f"agent {agent.agent_name} saved.")
+        logger.info(f"agent {agent.agent_name} saved.")
     
-    def _load_agent(self, agent_name: str):
+    def _load_agent(self, agent_name: str, user_agent_flag: bool=False):
         agent_path = self.agents_dir / f"{agent_name}.json"
         if not agent_path.exists():
             raise FileNotFoundError(f"agent {agent_name} not found.")
         with open(agent_path, "r") as f:
             json_str = f.read()
-            mcp_obj = Agent.model_validate_json(json_str)
-            _agent  = {
-                "runtime": self._convert_mcp_agent_to_langchain_agent(mcp_obj),
-                "mcp_obj": mcp_obj
-            }
-            self.available_agents.append(_agent)
+            _agent = Agent.model_validate_json(json_str)
+            if _agent.user_id == 'share':
+                self.available_agents[_agent.agent_name] = _agent
+            elif user_agent_flag:
+                self.available_agents[_agent.agent_name] = _agent
             return
         
     def _list_agents(self, user_id: str, match: str):
-        agents = [agent["mcp_obj"] for agent in self.available_agents]
+        agents = [agent for agent in self.available_agents.values()]
         if user_id:
             agents = [agent for agent in agents if agent.user_id == user_id]
         if match:
@@ -194,14 +181,17 @@ class AgentManager:
         return agents
 
     def _edit_agent(self, agent: Agent):
-        for _agent in self.available_agents:
-            if _agent["mcp_obj"].agent_name == agent.agent_name:
-                _agent["mcp_obj"] = agent
-                del _agent["runtime"]
-                _agent["runtime"] = self._convert_mcp_agent_to_langchain_agent(agent)
-                self._save_agent(_agent["mcp_obj"])
-                return "agent updated successfully"
-        raise NotFoundAgentError(f"agent {agent.agent_name} not found.")
+        try:
+            _agent = self.available_agents[agent.agent_name]
+            _agent.nick_name = agent.nick_name
+            _agent.description = agent.description
+            _agent.selected_tools = agent.selected_tools
+            _agent.prompt = agent.prompt
+            _agent.llm_type = agent.llm_type
+            self._save_agent(_agent, flush=True)
+            return "success"
+        except Exception as e:
+            raise NotFoundAgentError(f"agent {agent.agent_name} not found.")
     
     def _save_agents(self, agents: list[Agent], flush=False):
         for agent in agents:
@@ -210,11 +200,10 @@ class AgentManager:
         
     def _load_agents(self, user_agent_flag, mcp_agent_flag):
         for agent_path in self.agents_dir.glob("*.json"):
-            if agent_path.stem not in [agent["mcp_obj"].agent_name for agent in self.available_agents]:
-                if user_agent_flag:
-                    self._load_agent(agent_path.stem)
+            if agent_path.stem not in [agent.agent_name for agent in self.available_agents.values()]:
+                self._load_agent(agent_path.stem, user_agent_flag)
         if mcp_agent_flag:
-            self.available_agents.extend(MCPManager.get_agents())
+            self.available_agents.update(MCPManager.get_agents())
         return   
     
     def _list_default_tools(self):
@@ -228,7 +217,7 @@ class AgentManager:
         return mcp_tools
     
     def _list_default_agents(self):
-        agents = [agent["mcp_obj"] for agent in self.available_agents if agent["mcp_obj"].user_id == "share"]
+        agents = [agent for agent in self.available_agents.values() if agent.user_id == "share"]
         return agents
     
 from src.utils.path_utils import get_project_root

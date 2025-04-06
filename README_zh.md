@@ -118,11 +118,38 @@ cooragent 实现了一个分层的多智能体系统，其中有一个主管智�
 
 ## 一句话创建智能体
 
-## 编辑智能体
 
 ## 通过 MCP 方式创建智能体
+```
+server_params = StdioServerParameters(
+    command="python",
+    args=[str(get_project_root()) + "/src/mcp/excel_mcp/server.py"]
+)
 
-##【发布/共享】智能体
+async def excel_agent():
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            # Initialize the connection
+            await session.initialize()
+            # Get tools
+            tools = await load_mcp_tools(session)
+            # Create and run the agent
+            agent = create_react_agent(model, tools)
+            return agent
+
+
+agent = asyncio.run(excel_agent())
+agent_obj = Agent(user_id="share", 
+                  agent_name="mcp_excel_agent", 
+                  nick_name="mcp_excel_agent", 
+                  description="The agent are good at manipulating excel files, which includes creating, reading, writing, and analyzing excel files", 
+                  llm_type=LLMType.BASIC, 
+                  selected_tools=[], 
+                  prompt="")
+
+MCPManager.register_agent("mcp_excel_agent", agent, agent_obj)
+```
+代码见 [src/mcp/excel_agent.py](./src/mcp/excel_agent.py)
 
 ## 使用一组智能体完成复杂任务
 

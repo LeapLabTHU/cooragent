@@ -5,9 +5,10 @@ from typing import Literal
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from langgraph.graph import END
-
+from langgraph.prebuilt import create_react_agent
 
 from src.llm import get_llm_by_type
+from src.prompts.template import apply_prompt
 from src.config.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
@@ -34,13 +35,13 @@ def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
     agent_manager._create_agent_by_prebuilt(
         user_id=state["user_id"],
         name=response["agent_name"],
+        nick_name=response["agent_name"],
         llm_type=response["llm_type"],
         tools=tools,
         prompt=response["prompt"],
         description=response["agent_description"],
     )
     
-
     state["TEAM_MEMBERS"].append(response["agent_name"])
 
     return Command(
@@ -82,28 +83,6 @@ def publisher_node(state: State) -> Command[Literal["agent_factory", "agent_fact
         goto = "agent_factory"
         logger.info(f"publisher delegating to: {agent}")
         return Command(goto=goto, update={"next": agent})
-
-def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
-    """Agent Factory node that acts as a proxy for the agent."""
-    logger.info("Agent Factory starting task")
-    _agent = [agent["runtime"] for agent in agent_manager.available_agents if agent["mcp_obj"].agent_name == state["next"]][0]
-    response = _agent.invoke(state)
-
-    return Command(
-        update={
-            "messages": [
-                HumanMessage(
-                    content=RESPONSE_FORMAT.format(
-                        state["next"], response["messages"][-1].content
-                    ),
-                    name=state["next"],
-                )
-            ],
-            "agent_name": state["next"]
-        },
-        goto="publisher",
-    )
-
 
 
 def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
@@ -167,6 +146,6 @@ def agent_factory_graph():
     builder.add_edge(START, "coordinator")
     builder.add_node("coordinator", coordinator_node)
     builder.add_node("planner", planner_node)
-    builder.add_node("publish", publisher_node)
+    builder.add_node("publisher", publisher_node)
     builder.add_node("agent_factory", agent_factory_node)
     return builder.compile()
