@@ -494,9 +494,10 @@ async def list_default_tools(ctx):
 @cli.command()
 @click.pass_context
 @click.option('--agent-name', '-n', required=True, help='要编辑的Agent名称')
+@click.option('--user-id', '-u', required=True, help='用户ID')
 @click.option('--interactive/--no-interactive', '-i/-I', default=True, help='是否使用交互模式')
 @async_command
-async def edit_agent(ctx, agent_name, interactive):
+async def edit_agent(ctx, agent_name, user_id, interactive):
     """编辑Agent配置（交互模式）"""
     # 从上下文中获取server
     server = ctx.obj['server']
@@ -505,7 +506,7 @@ async def edit_agent(ctx, agent_name, interactive):
     console.print(Panel.fit(f"[highlight]正在获取 {agent_name} 的配置...[/highlight]", border_style="cyan"))
     original_config = None
     try:
-        async for agent_json in server._list_agents(listAgentRequest(user_id="system", match=agent_name)):
+        async for agent_json in server._list_agents(listAgentRequest(user_id=user_id, match=agent_name)):
             agent = json.loads(agent_json)
             if agent.get("agent_name") == agent_name:
                 original_config = agent
@@ -521,6 +522,7 @@ async def edit_agent(ctx, agent_name, interactive):
     def show_current_config():
         console.print(Panel.fit(
             f"[agent_name]名称:[/agent_name] {original_config.get('agent_name', '')}\n"
+            f"[agent_nick_name]昵称:[/agent_nick_name] {original_config.get('nick_name', '')}\n"
             f"[agent_desc]描述:[/agent_desc] {original_config.get('description', '')}\n"
             f"[tool_name]工具:[/tool_name] {', '.join([t.get('name', '') for t in original_config.get('selected_tools', [])])}\n"
             f"[highlight]提示词:[/highlight]\n{original_config.get('prompt', '')}",
@@ -533,20 +535,30 @@ async def edit_agent(ctx, agent_name, interactive):
     # 交互式编辑
     modified_config = original_config.copy()
     while interactive:
+        # 显示选项菜单
+        console.print("\n请选择要修改的内容：")
+        console.print("1 - 修改昵称")
+        console.print("2 - 修改描述")
+        console.print("3 - 修改工具列表")
+        console.print("4 - 修改提示词")
+        console.print("5 - 预览修改")
+        console.print("0 - 保存退出")
+        
+        # 直接接收数字输入
         choice = Prompt.ask(
-            "\n请选择要修改的内容：",
-            choices=["1", "2", "3", "4", "5", "0"],
-            show_choices=False,
-            show_default=False
+            "请输入选项",
+            choices=["0", "1", "2", "3", "4", "5"],
+            show_choices=False
         )
         
+        # 不需要再分割，直接使用输入的数字
         if choice == "1":
             new_name = Prompt.ask(
                 "输入新名称", 
-                default=modified_config.get('agent_name', ''),
+                default=modified_config.get('nick_name', ''),
                 show_default=True
             )
-            modified_config['agent_name'] = new_name
+            modified_config['nick_name'] = new_name
         
         elif choice == "2":
             new_desc = Prompt.ask(
@@ -597,6 +609,7 @@ async def edit_agent(ctx, agent_name, interactive):
                     # 构建Agent请求对象
                     agent_request = Agent(
                         user_id=original_config.get('user_id', ''),
+                        nick_name=modified_config['nick_name'],
                         agent_name=modified_config['agent_name'],
                         description=modified_config['description'],
                         selected_tools=modified_config['selected_tools'],
