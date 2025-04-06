@@ -18,6 +18,9 @@ import functools
 import shlex
 import readline
 import atexit
+import logging
+
+logging.basicConfig(level=logging.WARNING)
 
 load_dotenv()
 
@@ -596,6 +599,7 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
             show_current_config()
             console.print(Panel.fit(
                 f"[agent_name]新名称:[/agent_name] {modified_config.get('agent_name', '')}\n"
+                f"[nick_name]新昵称:[/nick_name] {modified_config.get('nick_name', '')}\n"
                 f"[agent_desc]新描述:[/agent_desc] {modified_config.get('description', '')}\n"
                 f"[tool_name]新工具:[/tool_name] {', '.join([t.get('name', '') for t in modified_config.get('selected_tools', [])])}\n"
                 f"[highlight]新提示词:[/highlight]\n{modified_config.get('prompt', '')}",

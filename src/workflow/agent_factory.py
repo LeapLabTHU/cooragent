@@ -35,7 +35,7 @@ def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
     agent_manager._create_agent_by_prebuilt(
         user_id=state["user_id"],
         name=response["agent_name"],
-        nick_name=response["agent_nick_name"],
+        nick_name=response["agent_name"],
         llm_type=response["llm_type"],
         tools=tools,
         prompt=response["prompt"],
