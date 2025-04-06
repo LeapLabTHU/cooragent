@@ -88,13 +88,13 @@ def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_factor
 
 
 def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
-    """Agent Factory node that acts as a proxy for the agent."""
-    logger.info("Agent Factory starting task")
+    """Proxy node that acts as a proxy for the agent."""
+    logger.info("Agent starting task")
     _agent = agent_manager.available_agents[state["next"]]
     agent = create_react_agent(
         get_llm_by_type(_agent.llm_type),
         tools=[agent_manager.available_tools[tool.name] for tool in _agent.selected_tools],
-        prompt=apply_prompt(_agent.prompt),
+        prompt=apply_prompt(state, _agent.prompt),
     )
     if _agent.agent_name.startswith("mcp_"):
         response = MCPManager._agents_runtime[_agent.agent_name].invoke(state)

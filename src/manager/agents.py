@@ -45,7 +45,7 @@ class AgentManager:
         if not self.tools_dir.exists() or not self.agents_dir.exists() or not self.prompt_dir.exists():
             raise FileNotFoundError("One or more provided directories do not exist.")
 
-        # self.available_agents = []
+        # self.available_agents = {}
         self.available_agents = {
             "researcher": self._create_mcp_agent(user_id="share", 
                                                  name="researcher", 
