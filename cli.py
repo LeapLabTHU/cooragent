@@ -554,7 +554,7 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
         # 不需要再分割，直接使用输入的数字
         if choice == "1":
             new_name = Prompt.ask(
-                "输入新名称", 
+                "输入新昵称", 
                 default=modified_config.get('nick_name', ''),
                 show_default=True
             )

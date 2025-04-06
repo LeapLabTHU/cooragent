@@ -88,8 +88,8 @@ class AgentManager:
             "python_repl_tool": python_repl_tool,
             "tavily_tool": tavily_tool,
         }
-        for agent_name in self.available_agents.keys():
-            self._save_agent(self.available_agents[agent_name], flush=True)
+        # for agent_name in self.available_agents.keys():
+        #     self._save_agent(self.available_agents[agent_name], flush=True)
         self._load_agents(USR_AGENT, MCP_AGENT)
         
     def _create_mcp_agent(self, user_id: str, name: str, nick_name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
@@ -181,12 +181,17 @@ class AgentManager:
         return agents
 
     def _edit_agent(self, agent: Agent):
-        for _agent in self.available_agents.values():
-            if _agent.agent_name == agent.agent_name:
-                _agent = agent
-                self._save_agent(_agent, flush=True)
-                return "agent updated successfully"
-        raise NotFoundAgentError(f"agent {agent.agent_name} not found.")
+        try:
+            _agent = self.available_agents[agent.agent_name]
+            _agent.nick_name = agent.nick_name
+            _agent.description = agent.description
+            _agent.selected_tools = agent.selected_tools
+            _agent.prompt = agent.prompt
+            _agent.llm_type = agent.llm_type
+            self._save_agent(_agent, flush=True)
+            return "success"
+        except Exception as e:
+            raise NotFoundAgentError(f"agent {agent.agent_name} not found.")
     
     def _save_agents(self, agents: list[Agent], flush=False):
         for agent in agents:
