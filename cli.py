@@ -115,35 +115,43 @@ def async_command(f):
     return wrapper
 
 
-@click.group(invoke_without_command=True)
-@click.pass_context
-def cli(ctx):
-    """CoorAgent 命令行工具 - 交互模式"""
-    if ctx.invoked_subcommand is None:
+def init_server(ctx):
+    """全局初始化函数"""
+    # 确保只初始化一次
+    if not ctx.obj.get('_initialized', False):
         with console.status("[bold green]正在初始化服务器...[/]", spinner="dots"):
             _init_readline()
             print_banner()
-            console.print("输入 'exit' 退出交互模式\n")
-            ctx.ensure_object(dict)        
             ctx.obj['server'] = Server()
+            ctx.obj['_initialized'] = True
         console.print("[success]✓ 服务器初始化完成[/]")
-        
-        should_exit = False  # 添加退出标志
-        while not should_exit:  # 修改循环条件
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+def cli(ctx):
+    """CoorAgent 命令行工具"""
+    # 确保上下文对象存在
+    ctx.ensure_object(dict)
+    
+    # 无论是否交互模式都执行初始化
+    init_server(ctx)
+    
+    # 交互模式处理
+    if ctx.invoked_subcommand is None:
+        console.print("输入 'exit' 退出交互模式\n")
+        should_exit = False
+        while not should_exit:
             try:
-                # 使用自定义输入函数保持样式
                 command = input("\001\033[1;36m\002CoorAgent>\001\033[0m\002 ").strip()
                 
                 if not command:
                     continue
                 
-                # 处理退出命令
                 if command.lower() in ('exit', 'quit'):
                     console.print("[success]再见！[/]")
-                    should_exit = True  # 设置退出标志
-                    break  # 立即退出循环
+                    should_exit = True
+                    break
                 
-                # 添加历史记录前检查
                 if command and not command.lower().startswith(('exit', 'quit')):
                     readline.add_history(command)
                 
@@ -151,12 +159,9 @@ def cli(ctx):
                 with cli.make_context("cli", args, parent=ctx) as sub_ctx:
                     cli.invoke(sub_ctx)
                     
-            except click.exceptions.Exit:
-                continue
             except Exception as e:
                 console.print(f"[danger]错误: {str(e)}[/]")
-        
-        return  # 确保退出函数
+        return
 
 
 @cli.command()

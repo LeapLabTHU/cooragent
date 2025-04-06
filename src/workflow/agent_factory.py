@@ -146,6 +146,6 @@ def agent_factory_graph():
     builder.add_edge(START, "coordinator")
     builder.add_node("coordinator", coordinator_node)
     builder.add_node("planner", planner_node)
-    builder.add_node("publish", publisher_node)
+    builder.add_node("publisher", publisher_node)
     builder.add_node("agent_factory", agent_factory_node)
     return builder.compile()

@@ -82,7 +82,7 @@ async def run_agent_workflow(
     """
     TEAM_MEMBERS_DESCRIPTION = DEFAULT_TEAM_MEMBERS_DESCRIPTION
     TEAM_MEMBERS = ["agent_factory"]
-    for agent in agent_manager.available_agents:
+    for agent in agent_manager.available_agents.values():
         if agent.user_id == "share":
             TEAM_MEMBERS.append(agent.agent_name)
 
