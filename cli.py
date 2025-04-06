@@ -494,7 +494,7 @@ async def list_default_tools(ctx):
 @cli.command()
 @click.pass_context
 @click.option('--agent-name', '-n', required=True, help='要编辑的Agent名称')
-@click.option('--interactive/--no-interactive', '-i/-n', default=True, help='是否使用交互模式')
+@click.option('--interactive/--no-interactive', '-i/-I', default=True, help='是否使用交互模式')
 @async_command
 async def edit_agent(ctx, agent_name, interactive):
     """编辑Agent配置（交互模式）"""
@@ -622,44 +622,37 @@ async def edit_agent(ctx, agent_name, interactive):
 @cli.command()
 def help():
     """显示帮助信息"""
-    help_text = """
-    # CoorAgent 命令行工具使用指南
+    help_table = Table(title="帮助信息", show_header=False, border_style="cyan", width=100)
+    help_table.add_column(style="bold cyan")
+    help_table.add_column(style="green")
     
-    ## 可用命令:
+    help_table.add_row("[命令] run", "运行工作流")
+    help_table.add_row("  -u/--user-id", "用户ID")
+    help_table.add_row("  -t/--task-type", "任务类型 (agent_factory/agent_workflow)")
+    help_table.add_row("  -m/--message", "消息内容 (可多次使用)")
+    help_table.add_row("  --debug", "开启调试模式")
+    help_table.add_row("  --no-deep-thinking", "关闭深度思考模式")
+    help_table.add_row("  -a/--agents", "协作Agent列表")
+    help_table.add_row()
     
-    ### 运行Agent工作流
-    ```
-    python cli.py run --user-id user123 --task-type planning --message "你好" --message "我能帮你什么?" --debug
-    ```
+    help_table.add_row("[命令] list-agents", "列出用户Agent")
+    help_table.add_row("  -u/--user-id", "用户ID (必填)")
+    help_table.add_row("  -m/--match", "匹配字符串")
+    help_table.add_row()
     
-    ### 列出用户的Agent
-    ```
-    python cli.py list-agents --user-id user123
-    ```
+    help_table.add_row("[命令] list-default-agents", "列出默认Agent")
+    help_table.add_row("[命令] list-default-tools", "列出默认工具")
+    help_table.add_row()
     
-    ### 列出默认Agent
-    ```
-    python cli.py list-default-agents
-    ```
+    help_table.add_row("[命令] edit-agent", "交互式编辑Agent")
+    help_table.add_row("  -n/--agent-name", "Agent名称 (必填)")
+    help_table.add_row("  -i/--interactive", "交互模式")
+    help_table.add_row()
     
-    ### 列出默认工具
-    ```
-    python cli.py list-default-tools
-    ```
+    help_table.add_row("[交互模式]", "直接运行 cli.py 进入")
+    help_table.add_row("  exit/quit", "退出交互模式")
     
-    ### 编辑Agent (交互模式)
-    ```
-    python cli.py edit-agent --interactive
-    ```
-    
-    ### 编辑Agent (JSON模式)
-    ```
-    python cli.py edit-agent --agent-json '{"name": "myagent", "description": "测试agent", "user_id": "user123"}'
-    ```
-    """
-    
-    md = Markdown(help_text)
-    console.print(Panel(md, title="帮助信息", border_style="cyan"))
+    console.print(help_table)
 
 
 if __name__ == "__main__":

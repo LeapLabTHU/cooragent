@@ -5,6 +5,9 @@ from langchain_community.adapters.openai import convert_message_to_dict
 from src.manager import agent_manager
 from src.interface.agent_types import TaskType
 import uuid
+import json
+from rich.syntax import Syntax
+from rich.console import Console
 
 # Configure logging
 logging.basicConfig(
@@ -12,6 +15,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
+console = Console()
 
 def enable_debug_logging():
     """Enable debug level logging for more detailed execution information."""
@@ -98,6 +102,10 @@ async def run_agent_workflow(
     coordinator_cache = []
     global is_handoff_case
     is_handoff_case = False
+
+    json_buffer = []
+    current_json_size = 0
+    MAX_JSON_BUFFER_SIZE = 1024 * 1024  # 1MB限制
 
     async for event in graph.astream_events(
         {
@@ -232,6 +240,21 @@ async def run_agent_workflow(
             }
         else:
             continue
+
+        if kind in ("end_of_agent", "end_of_workflow"):
+            if json_buffer:
+                try:
+                    parsed_json = json.loads(''.join(json_buffer))
+                    formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                    console.print("\n")
+                    syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                    console.print(syntax)
+                except:
+                    console.print(f"\n[danger]不完整的JSON内容: {''.join(json_buffer)}[/danger]")
+                finally:
+                    json_buffer = []
+                    current_json_size = 0
+
         yield ydata
 
     if is_handoff_case:
