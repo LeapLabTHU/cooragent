@@ -49,6 +49,13 @@ HISTORY_FILE = os.path.expanduser("~/.cooragent_history")
 
 def _init_readline():
     try:
+        # 添加更全面的readline配置
+        readline.parse_and_bind(r'"\C-?": backward-kill-word')  # 使用原始字符串
+        readline.parse_and_bind(r'"\e[3~": delete-char')        # 使用原始字符串
+        readline.parse_and_bind('set editing-mode emacs')  # 强制使用emacs模式
+        readline.parse_and_bind('set horizontal-scroll-mode on')
+        readline.parse_and_bind('set bell-style none')
+        
         # 确保历史文件路径有效
         history_dir = os.path.dirname(HISTORY_FILE)
         if not os.path.exists(history_dir):
@@ -113,35 +120,43 @@ def async_command(f):
 def cli(ctx):
     """CoorAgent 命令行工具 - 交互模式"""
     if ctx.invoked_subcommand is None:
-        _init_readline()
-        
-        print_banner()
-        console.print("输入 'exit' 退出交互模式\n")
-        
-        ctx.ensure_object(dict)
-        
-        # 添加初始化等待提示
         with console.status("[bold green]正在初始化服务器...[/]", spinner="dots"):
+            _init_readline()
+            print_banner()
+            console.print("输入 'exit' 退出交互模式\n")
+            ctx.ensure_object(dict)        
             ctx.obj['server'] = Server()
         console.print("[success]✓ 服务器初始化完成[/]")
         
-        while True:
+        should_exit = False  # 添加退出标志
+        while not should_exit:  # 修改循环条件
             try:
-                command = console.input("[bold cyan]CoorAgent>[/] ").strip()
+                # 使用自定义输入函数保持样式
+                command = input("\001\033[1;36m\002CoorAgent>\001\033[0m\002 ").strip()
                 
+                if not command:
+                    continue
+                
+                # 处理退出命令
                 if command.lower() in ('exit', 'quit'):
                     console.print("[success]再见！[/]")
-                    break
+                    should_exit = True  # 设置退出标志
+                    break  # 立即退出循环
                 
-                if command:
+                # 添加历史记录前检查
+                if command and not command.lower().startswith(('exit', 'quit')):
                     readline.add_history(command)
                 
                 args = shlex.split(command)
                 with cli.make_context("cli", args, parent=ctx) as sub_ctx:
                     cli.invoke(sub_ctx)
                     
+            except click.exceptions.Exit:
+                continue
             except Exception as e:
                 console.print(f"[danger]错误: {str(e)}[/]")
+        
+        return  # 确保退出函数
 
 
 @cli.command()
