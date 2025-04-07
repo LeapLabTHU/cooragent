@@ -295,7 +295,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 content = delta.get("content", "")
                 reasoning = delta.get("reasoning_content", "")
                 message_id = data.get("message_id")
-                
+                node = data.get("node", "")
                 # 检测是否是JSON内容
                 if content and (content.strip().startswith("{") or in_json_block):
                     # 如果是新的JSON块
@@ -308,6 +308,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     
                     # 尝试解析完整的JSON
                     try:
+                        agent_name = data.get("agent_name", "")
                         parsed_json = json.loads(json_buffer)
                         # 如果解析成功，说明JSON完整了
                         formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)

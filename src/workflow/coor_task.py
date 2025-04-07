@@ -92,7 +92,8 @@ def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
     logger.info("Agent starting task")
     _agent = agent_manager.available_agents[state["next"]]
     agent = create_react_agent(
-        get_llm_by_type(_agent.llm_type),
+        # get_llm_by_type(_agent.llm_type),
+        get_llm_by_type("basic"),
         tools=[agent_manager.available_tools[tool.name] for tool in _agent.selected_tools],
         prompt=apply_prompt(state, _agent.prompt),
     )
@@ -127,9 +128,7 @@ def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
     if state.get("search_before_planning"):
         searched_content = tavily_tool.invoke({"query": state["messages"][-1].content})
         messages = deepcopy(messages)
-        messages[
-            -1
-        ].content += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
+        messages[-1].content += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
     stream = llm.stream(messages)
     full_response = ""
     for chunk in stream:
@@ -163,7 +162,19 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
     logger.info("Coordinator talking.")
     messages = apply_prompt_template("coordinator", state)
     response = get_llm_by_type(AGENT_LLM_MAP["coordinator"]).invoke(messages)
-            
+    
+    # _agent = agent_manager.available_agents["researcher"]
+    # agent = create_react_agent(
+    #     # get_llm_by_type(_agent.llm_type),
+    #     get_llm_by_type("basic"),
+    #     tools=[agent_manager.available_tools[tool.name] for tool in _agent.selected_tools],
+    #     prompt=apply_prompt(state, _agent.prompt),
+    # )
+    # if _agent.agent_name.startswith("mcp_"):
+    #     response = MCPManager._agents_runtime[_agent.agent_name].invoke(state)
+    # else:
+    #     response = agent.invoke(state)
+                   
     goto = "__end__"
     if "handoff_to_planner" in response.content:
         goto = "planner"

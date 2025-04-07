@@ -141,6 +141,10 @@ async def run_agent_workflow(
                     "event": "start_of_workflow",
                     "data": {"workflow_id": workflow_id, "input": user_input_messages},
                 }
+            print(f"started chain name: {name}")
+            # if "chunk" in data:
+            #     content = data["chunk"].content
+            #     print(f"content: {content}")
             ydata = {
                 "event": "start_of_agent",
                 "data": {
@@ -149,6 +153,11 @@ async def run_agent_workflow(
                 },
             }
         elif kind == "on_chain_end" and name in streaming_llm_agents:
+            content = data["chunk"].content
+            print(f"ended chain name: {name}")
+            # if "chunk" in data:
+            #     content = data["chunk"].content
+            #     print(f"content: {content}")
             ydata = {
                 "event": "end_of_agent",
                 "data": {
@@ -197,6 +206,7 @@ async def run_agent_workflow(
                         # Send the cached message
                         ydata = {
                             "event": "message",
+                            "node": node,
                             "data": {
                                 "message_id": data["chunk"].id,
                                 "delta": {"content": cached_content},
@@ -205,6 +215,7 @@ async def run_agent_workflow(
                     elif not is_handoff_case:
                         # For other agents, send the message directly
                         ydata = {
+                            "node": node,
                             "event": "message",
                             "data": {
                                 "message_id": data["chunk"].id,
@@ -214,12 +225,15 @@ async def run_agent_workflow(
                 else:
                     # For other agents, send the message directly
                     ydata = {
+                        "node": node,
                         "event": "message",
                         "data": {
                             "message_id": data["chunk"].id,
                             "delta": {"content": content},
                         },
                     }
+                    
+                    print(f"agent_proxy_data: {ydata}")
         elif kind == "on_tool_start" and node in TEAM_MEMBERS:
             ydata = {
                 "event": "tool_call",
