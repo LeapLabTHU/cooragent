@@ -421,6 +421,8 @@ async def _process_custom_workflow(
         }
     
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         logger.error(f"Error in custom workflow: {str(e)}")
         # 发送错误事件
         yield {

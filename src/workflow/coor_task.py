@@ -182,9 +182,9 @@ def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
     if state.get("deep_thinking_mode"):
         llm = get_llm_by_type("reasoning")
     if state.get("search_before_planning"):
-        searched_content = tavily_tool.invoke({"query": state["messages"][-1].content})
+        searched_content = tavily_tool.invoke({"query": state["messages"][-1]["content"]})
         messages = deepcopy(messages)
-        messages[-1].content += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
+        messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
     
     # 这里使用stream方法，确保能够获取流式输出
     stream = llm.stream(messages)
