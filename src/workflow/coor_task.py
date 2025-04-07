@@ -1,10 +1,9 @@
 import logging
 import json
 from copy import deepcopy
-from typing import Literal
+from typing import Literal, Dict, Any, Callable, List, Optional, Union
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
-from langgraph.graph import END
 
 
 from src.llm import get_llm_by_type
@@ -13,7 +12,6 @@ from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
 from src.interface.agent_types import State, Router
 from src.manager import agent_manager
-from langgraph.graph import StateGraph, START, END
 from src.prompts.template import apply_prompt
 from langgraph.prebuilt import create_react_agent
 from src.mcp.register import MCPManager
@@ -22,6 +20,64 @@ logger = logging.getLogger(__name__)
 
 RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please execute the next step.*"
 
+# 自定义工作流节点类型
+NodeFunc = Callable[[State], Command]
+
+# 自定义工作流类
+class CustomWorkflow:
+    def __init__(self):
+        self.nodes: Dict[str, NodeFunc] = {}
+        self.edges: Dict[str, List[str]] = {}
+        self.start_node: Optional[str] = None
+        
+    def add_node(self, name: str, func: NodeFunc) -> None:
+        """添加节点到工作流"""
+        self.nodes[name] = func
+        
+    def add_edge(self, source: str, target: str) -> None:
+        """添加边到工作流"""
+        if source not in self.edges:
+            self.edges[source] = []
+        self.edges[source].append(target)
+        
+    def set_start(self, node: str) -> None:
+        """设置起始节点"""
+        self.start_node = node
+        
+    def compile(self):
+        """编译工作流，返回可执行的工作流对象"""
+        return CompiledWorkflow(self.nodes, self.edges, self.start_node)
+
+# 编译后的工作流类
+class CompiledWorkflow:
+    def __init__(self, nodes: Dict[str, NodeFunc], edges: Dict[str, List[str]], start_node: str):
+        self.nodes = nodes
+        self.edges = edges
+        self.start_node = start_node
+        
+    def invoke(self, state: State) -> State:
+        """执行工作流"""
+        current_node = self.start_node
+        
+        while current_node != "__end__":
+            if current_node not in self.nodes:
+                raise ValueError(f"Node {current_node} not found in workflow")
+                
+            # 执行当前节点
+            node_func = self.nodes[current_node]
+            command = node_func(state)
+            
+            # 更新状态
+            if hasattr(command, 'update') and command.update:
+                for key, value in command.update.items():
+                    state[key] = value
+            
+            # 获取下一个节点
+            current_node = command.goto
+            
+        return state
+
+# 以下节点函数保持不变
 def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Node for the create agent agent that creates a new agent."""
     logger.info("Create agent agent starting task")
@@ -129,6 +185,8 @@ def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
         searched_content = tavily_tool.invoke({"query": state["messages"][-1].content})
         messages = deepcopy(messages)
         messages[-1].content += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
+    
+    # 这里使用stream方法，确保能够获取流式输出
     stream = llm.stream(messages)
     full_response = ""
     for chunk in stream:
@@ -176,11 +234,16 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
 
 def build_graph():
     """Build and return the agent workflow graph."""
-    builder = StateGraph(State)
-    builder.add_edge(START, "coordinator")
-    builder.add_node("coordinator", coordinator_node)
-    builder.add_node("planner", planner_node)
-    builder.add_node("publisher", publisher_node)
-    builder.add_node("agent_factory", agent_factory_node)
-    builder.add_node("agent_proxy", agent_proxy_node)
-    return builder.compile()
+    workflow = CustomWorkflow()
+    
+    # 添加节点
+    workflow.add_node("coordinator", coordinator_node)
+    workflow.add_node("planner", planner_node)
+    workflow.add_node("publisher", publisher_node)
+    workflow.add_node("agent_factory", agent_factory_node)
+    workflow.add_node("agent_proxy", agent_proxy_node)
+    
+    # 设置起始节点
+    workflow.set_start("coordinator")
+    
+    return workflow.compile()
