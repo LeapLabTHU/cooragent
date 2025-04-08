@@ -9,7 +9,6 @@ from rich.table import Table
 from rich.markdown import Markdown
 from rich.syntax import Syntax
 from rich.theme import Theme
-from rich.style import Style
 from rich.text import Text
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt, Confirm
@@ -26,9 +25,7 @@ load_dotenv()
 
 from src.interface.agent_types import *
 from src.service.app import Server
-from src.service.session import UserSession
 
-# 自定义主题，增加更多颜色
 custom_theme = Theme({
     "info": "dim cyan",
     "warning": "magenta",
@@ -52,33 +49,26 @@ HISTORY_FILE = os.path.expanduser("~/.cooragent_history")
 
 def _init_readline():
     try:
-        # 添加更全面的readline配置
-        readline.parse_and_bind(r'"\C-?": backward-kill-word')  # 使用原始字符串
-        readline.parse_and_bind(r'"\e[3~": delete-char')        # 使用原始字符串
-        readline.parse_and_bind('set editing-mode emacs')  # 强制使用emacs模式
+        readline.parse_and_bind(r'"\C-?": backward-kill-word') 
+        readline.parse_and_bind(r'"\e[3~": delete-char')        
+        readline.parse_and_bind('set editing-mode emacs') 
         readline.parse_and_bind('set horizontal-scroll-mode on')
         readline.parse_and_bind('set bell-style none')
         
-        # 确保历史文件路径有效
         history_dir = os.path.dirname(HISTORY_FILE)
         if not os.path.exists(history_dir):
             os.makedirs(history_dir, exist_ok=True)
         
-        # 安全创建历史文件
         if not os.path.exists(HISTORY_FILE):
             with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
-                pass  # 创建空文件
+                pass
         
-        # 尝试加载历史（忽略加载错误）
         try:
             readline.read_history_file(HISTORY_FILE)
         except:
             pass
         
-        # 设置历史记录长度
         readline.set_history_length(1000)
-        
-        # 注册安全的退出处理
         atexit.register(_save_history)
         
     except Exception as e:
@@ -119,8 +109,7 @@ def async_command(f):
 
 
 def init_server(ctx):
-    """全局初始化函数"""
-    # 确保只初始化一次
+    """global init function"""
     if not ctx.obj.get('_initialized', False):
         with console.status("[bold green]正在初始化服务器...[/]", spinner="dots"):
             _init_readline()
@@ -133,13 +122,9 @@ def init_server(ctx):
 @click.pass_context
 def cli(ctx):
     """CoorAgent 命令行工具"""
-    # 确保上下文对象存在
     ctx.ensure_object(dict)
-    
-    # 无论是否交互模式都执行初始化
     init_server(ctx)
     
-    # 交互模式处理
     if ctx.invoked_subcommand is None:
         console.print("输入 'exit' 退出交互模式\n")
         should_exit = False
@@ -179,11 +164,9 @@ def cli(ctx):
 @click.option('--agents', '-a', multiple=True, help='协作Agent列表 (可多次使用此选项添加多个Agent)')
 @async_command
 async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
-    """运行Agent工作流"""
-    # 从上下文中获取server
+
     server = ctx.obj['server']
     
-    # 显示配置信息
     config_table = Table(title="工作流配置", show_header=True, header_style="bold magenta")
     config_table.add_column("参数", style="cyan")
     config_table.add_column("值", style="green")
@@ -194,7 +177,6 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
     config_table.add_row("协作Agent", ", ".join(agents) if agents else "无")
     console.print(config_table)
     
-    # 显示消息历史
     msg_table = Table(title="消息历史", show_header=True, header_style="bold magenta")
     msg_table.add_column("角色", style="cyan")
     msg_table.add_column("内容", style="green")
@@ -243,7 +225,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     try:
                         parsed_json = json.loads(json_buffer)
                         formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
-                        console.print("\n")  # 确保新行开始
+                        console.print("\n")
                         syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
                         console.print(syntax)
                     except:
@@ -260,7 +242,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     try:
                         parsed_json = json.loads(json_buffer)
                         formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
-                        console.print("\n")  # 确保新行开始
+                        console.print("\n")  
                         syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
                         console.print(syntax)
                     except:
