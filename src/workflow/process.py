@@ -9,6 +9,7 @@ import uuid
 import json
 from rich.syntax import Syntax
 from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 logging.basicConfig(
     level=logging.INFO,
@@ -103,20 +104,25 @@ async def run_agent_workflow(
     global is_handoff_case
     is_handoff_case = False
 
-    async for event_data in _process_workflow(
-        graph,
-        {
-            "user_id": user_id,
-            "TEAM_MEMBERS": TEAM_MEMBERS,
-            "TEAM_MEMBERS_DESCRIPTION": TEAM_MEMBERS_DESCRIPTION,
-            "messages": user_input_messages,
-            "deep_thinking_mode": deep_thinking_mode,
-            "search_before_planning": search_before_planning,
-        },
-        workflow_id,
-        streaming_llm_agents,
-    ):
-        yield event_data
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console
+    ) as progress:
+        async for event_data in _process_workflow(
+            graph,
+            {
+                "user_id": user_id,
+                "TEAM_MEMBERS": TEAM_MEMBERS,
+                "TEAM_MEMBERS_DESCRIPTION": TEAM_MEMBERS_DESCRIPTION,
+                "messages": user_input_messages,
+                "deep_thinking_mode": deep_thinking_mode,
+                "search_before_planning": search_before_planning,
+            },
+            workflow_id,
+            streaming_llm_agents,
+        ):
+            yield event_data
 
 async def _process_workflow(
     workflow, 
