@@ -141,10 +141,7 @@ async def _process_workflow(
     try:
         current_node = workflow.start_node
         state = initial_state.copy()
-        
-        # # 添加next字段，确保与原有工作流兼容
-        # if "next" not in state:
-        #     state["next"] = current_node
+    
         
         while current_node != "__end__":
             agent_name = current_node
@@ -194,6 +191,14 @@ async def _process_workflow(
                                     },
                                 }
                                 await asyncio.sleep(0.01)
+                            yield {
+                                    "event": "full_message",
+                                    "agent_name": agent_name,
+                                    "data": {
+                                        "message_id": f"{workflow_id}_{agent_name}_msg_{i}",
+                                        "delta": {"content": content},
+                                    },
+                                }
 
             yield {
                 "event": "end_of_agent",
@@ -205,6 +210,7 @@ async def _process_workflow(
             
             next_node = command.goto            
             current_node = next_node
+            await asyncio.sleep(0.1)
             
         yield {
             "event": "end_of_workflow",

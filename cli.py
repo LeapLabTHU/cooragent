@@ -2,6 +2,7 @@
 import os
 import json
 import asyncio
+import sys
 import click
 from rich.console import Console
 from rich.panel import Panel
@@ -19,8 +20,7 @@ import readline
 import atexit
 import logging
 
-logging.basicConfig(level=logging.INFO)
-
+logging.basicConfig(level=logging.WARNING)
 load_dotenv()
 
 from src.interface.agent_types import *
@@ -44,6 +44,80 @@ custom_theme = Theme({
 
 # 创建Rich控制台对象用于美化输出
 console = Console(theme=custom_theme)
+
+# 全局变量用于跟踪输出状态
+
+# 定义一个函数来处理直接输出纯文本
+def direct_print(text):
+    """
+    直接输出纯文本，处理特殊字符。
+    不管理换行状态，由调用者处理。
+    """
+    if not text:
+        return
+        
+    text_to_print = str(text)
+    
+    # 处理特殊字符 (< 和 >)
+    if '<' in text_to_print or '>' in text_to_print:
+        # 确保特殊标记能够完整显示
+        parts = []
+        i = 0
+        while i < len(text_to_print):
+            if text_to_print[i] == '<':
+                end_pos = text_to_print.find('>', i)
+                if end_pos > i:
+                    parts.append(text_to_print[i:end_pos+1])
+                    i = end_pos + 1
+                else:
+                    parts.append(text_to_print[i])
+                    i += 1
+            else:
+                parts.append(text_to_print[i])
+                i += 1
+        
+        text_to_print = ''.join(parts)
+    
+    # 直接写入处理后的文本
+    sys.stdout.write(text_to_print)
+    sys.stdout.flush()
+
+# 定义一个函数来支持流式输出
+def stream_print(text, **kwargs):
+    """流式打印文本，确保立即显示。自动检测并渲染Markdown格式。"""
+    # 如果是纯文本流式输出（有end=""参数），则直接使用sys.stdout
+    if kwargs.get("end", "\n") == "" and not kwargs.get("highlight", True):
+        # 直接写入标准输出流，绕过Rich的处理
+        if text:
+            sys.stdout.write(str(text))
+            sys.stdout.flush()
+    else:
+        # 对于带格式的内容，使用Rich的console.print
+        # 尝试检测并渲染Markdown
+        if isinstance(text, str) and _is_likely_markdown(text):
+            try:
+                # 移除可能导致解析问题的Rich标签
+                plain_text = Text.from_markup(text).plain
+                # 如果文本不为空，则渲染为Markdown
+                if plain_text.strip():
+                    md = Markdown(plain_text)
+                    console.print(md, **kwargs)
+                else:
+                    # 如果去除标签后为空，则按原样打印（可能就是标签）
+                    console.print(text, **kwargs)
+            except Exception:
+                 # 如果Markdown解析失败或移除标签失败，则按原样打印
+                 console.print(text, **kwargs)
+        else:
+            # 如果不是字符串或不像Markdown，则按原样打印
+            console.print(text, **kwargs)
+        sys.stdout.flush()
+
+def _is_likely_markdown(text):
+    """使用简单的启发式规则判断文本是否可能是Markdown。"""
+    # 检查常见的Markdown标记
+    # 注意：这只是一个基本的检查，可能误判。
+    return any(marker in text for marker in ['\n#', '\n*', '\n-', '\n>', '```', '**', '__', '`', '[', '](', '![', '](', '<a href', '<img src'])
 
 HISTORY_FILE = os.path.expanduser("~/.cooragent_history")
 
@@ -164,7 +238,7 @@ def cli(ctx):
 @click.option('--agents', '-a', multiple=True, help='协作Agent列表 (可多次使用此选项添加多个Agent)')
 @async_command
 async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
-
+    # 初始化函数内部状态
     server = ctx.obj['server']
     
     config_table = Table(title="工作流配置", show_header=True, header_style="bold magenta")
@@ -204,9 +278,12 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
     
     console.print(Panel.fit("[highlight]工作流开始执行[/highlight]", title="CoorAgent", border_style="cyan"))
     
+    # 状态变量
     current_content = ""
     json_buffer = ""  
-    in_json_block = False  
+    in_json_block = False
+    last_agent_name = ""
+    live_mode = True
     
     with Progress(
         SpinnerColumn(),
@@ -221,6 +298,11 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
             data = chunk.get("data", {})
             
             if event_type == "start_of_agent":
+                # 输出任何剩余内容
+                if current_content:
+                    console.print(current_content, end="", highlight=False)
+                    current_content = ""
+                
                 if in_json_block and json_buffer:
                     try:
                         parsed_json = json.loads(json_buffer)
@@ -234,10 +316,20 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     in_json_block = False
                 
                 agent_name = data.get("agent_name", "未知")
+                last_agent_name = agent_name
+                
+                console.print("\n")
                 progress.update(task, description=f"[green]正在执行: {agent_name}...")
-                console.print(f"\n[agent_name]>>> {agent_name} 开始执行...[/agent_name]")
+                console.print(f"[agent_name]>>> {agent_name} 开始执行...[/agent_name]")
+                console.print("")
+                await asyncio.sleep(0.01)
             
             elif event_type == "end_of_agent":
+                # 输出任何剩余内容
+                if current_content:
+                    console.print(current_content, end="", highlight=False)
+                    current_content = ""
+                
                 if in_json_block and json_buffer:
                     try:
                         parsed_json = json.loads(json_buffer)
@@ -251,56 +343,81 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     in_json_block = False
                 
                 agent_name = data.get("agent_name", "未知")
-                progress.update(task, description=f"[success]{agent_name} 执行完成!")
-                console.print(f"\n[agent_name]<<< {agent_name} 执行完成[/agent_name]")
+                last_agent_name = ""
                 
-    
-                if current_content:
-                    console.print("\n", end="")
-                    current_content = ""
+                console.print("")
+                progress.update(task, description=f"[success]{agent_name} 执行完成!")
+                console.print(f"[agent_name]<<< {agent_name} 执行完成[/agent_name]")
+                console.print("")
+                await asyncio.sleep(0.01)
             
             elif event_type == "message":
                 delta = data.get("delta", {})
                 content = delta.get("content", "")
                 reasoning = delta.get("reasoning_content", "")
+                agent_name = data.get("agent_name", "未知") or data.get("processing_agent_name", "未知")
                 
+                if agent_name and agent_name != last_agent_name:
+                    # 代理变更
+                    if current_content:
+                        console.print(current_content, end="", highlight=False)
+                        current_content = ""
+                    
+                    last_agent_name = agent_name
+                    console.print("")
+                    progress.update(task, description=f"[green]正在执行: {agent_name}...")
                 
-                # check if content  json
+                # 优先检查是否是JSON内容
                 if content and (content.strip().startswith("{") or in_json_block):
-                    # if new json block
+                    # JSON块处理
                     if not in_json_block:
                         in_json_block = True
                         json_buffer = ""
                     
-                    
                     json_buffer += content
                     
-                    # try to parse complete json
                     try:
-                        agent_name = data.get("processing_agent_name", "")
                         parsed_json = json.loads(json_buffer)
-                        # if parse success, json is complete
                         formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                        
+                        if current_content:
+                            console.print(current_content, end="", highlight=False)
+                            current_content = ""
+                        
+                        console.print("")
+                        syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                        console.print(syntax)
+                        json_buffer = ""
+                        in_json_block = False
                     except:
+                        # JSON不完整，继续收集
                         pass
-                    finally:
-                        if formatted_json:
-                            progress.update(task, description=f"[green]正在执行: {agent_name}...")
-                            console.print(f"\n[agent_name]<<< {agent_name} 执行完成[/agent_name]")
-                            console.print("\n")  # ensure new line
-                            syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
-                            console.print(syntax)
-                            json_buffer = ""
-                            in_json_block = False
-                else:
-                    if content:
-                        content = content.replace('\n', ' ')
-                        console.print(content, end="", highlight=False)
+                elif content:
+                    # 普通文本处理 - 实现真正的增量打印
+                    if live_mode:
+                        if not content: # 跳过空块
+                            continue
+                        
+                        direct_print(content) # 直接增量打印
+
+                    else:
+                        # 积累模式 - 仅用于调试
+                        current_content += content
                 
                 if reasoning:
-                    console.print(f"\n[info]思考过程: {reasoning}[/info]")
+                    stream_print(f"\n[info]思考过程: {reasoning}[/info]")
+
+            elif event_type == "full_message":
+                delta = data.get("delta", {})
+                content = delta.get("content", "")
+                stream_print(content)
 
             elif event_type == "end_of_workflow":
+                # 输出任何剩余内容
+                if current_content:
+                    console.print(current_content, end="", highlight=False)
+                    current_content = ""
+                
                 if in_json_block and json_buffer:
                     try:
                         parsed_json = json.loads(json_buffer)
@@ -313,6 +430,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     json_buffer = ""
                     in_json_block = False
                 
+                console.print("")
                 progress.update(task, description="[success]工作流执行完成!")
                 console.print(Panel.fit("[success]工作流执行完成![/success]", title="CoorAgent", border_style="green"))
     
@@ -352,14 +470,14 @@ async def list_agents(ctx, user_id, match):
                 table.add_row(agent.get("agent_name", ""), agent.get("description", ""), ', '.join(tools))
                 count += 1
             except:
-                console.print(f"[danger]解析错误: {agent_json}[/danger]")
+                stream_print(f"[danger]解析错误: {agent_json}[/danger]")
         
         progress.update(task, description=f"[success]已获取 {count} 个Agent!")
         
         if count == 0:
-            console.print(Panel(f"未找到匹配的Agent", title="结果", border_style="yellow"))
+            stream_print(Panel(f"未找到匹配的Agent", title="结果", border_style="yellow"))
         else:
-            console.print(table)
+            stream_print(table)
 
 
 @cli.command()
@@ -386,10 +504,10 @@ async def list_default_agents(ctx):
                 table.add_row(agent.get("agent_name", ""), agent.get("description", ""))
                 count += 1
             except:
-                console.print(f"[danger]解析错误: {agent_json}[/danger]")
+                stream_print(f"[danger]解析错误: {agent_json}[/danger]")
         
         progress.update(task, description=f"[success]已获取 {count} 个默认Agent!")
-        console.print(table)
+        stream_print(table)
 
 
 @cli.command()
@@ -417,10 +535,10 @@ async def list_default_tools(ctx):
                 table.add_row(tool.get("name", ""), tool.get("description", ""))
                 count += 1
             except:
-                console.print(f"[danger]解析错误: {tool_json}[/danger]")
+                stream_print(f"[danger]解析错误: {tool_json}[/danger]")
         
         progress.update(task, description=f"[success]已获取 {count} 个默认工具!")
-        console.print(table)
+        stream_print(table)
 
 
 @cli.command()
@@ -431,7 +549,7 @@ async def list_default_tools(ctx):
 @async_command
 async def edit_agent(ctx, agent_name, user_id, interactive):
     server = ctx.obj['server']
-    console.print(Panel.fit(f"[highlight]正在获取 {agent_name} 的配置...[/highlight]", border_style="cyan"))
+    stream_print(Panel.fit(f"[highlight]正在获取 {agent_name} 的配置...[/highlight]", border_style="cyan"))
     original_config = None
     try:
         async for agent_json in server._list_agents(listAgentRequest(user_id=user_id, match=agent_name)):
@@ -440,14 +558,14 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
                 original_config = agent
                 break
         if not original_config:
-            console.print(f"[danger]未找到Agent: {agent_name}[/danger]")
+            stream_print(f"[danger]未找到Agent: {agent_name}[/danger]")
             return
     except Exception as e:
-        console.print(f"[danger]获取配置失败: {str(e)}[/danger]")
+        stream_print(f"[danger]获取配置失败: {str(e)}[/danger]")
         return
 
     def show_current_config():
-        console.print(Panel.fit(
+        stream_print(Panel.fit(
             f"[agent_name]名称:[/agent_name] {original_config.get('agent_name', '')}\n"
             f"[agent_nick_name]昵称:[/agent_nick_name] {original_config.get('nick_name', '')}\n"
             f"[agent_desc]描述:[/agent_desc] {original_config.get('description', '')}\n"
@@ -493,7 +611,7 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
         
         elif choice == "3":
             current_tools = [t.get('name') for t in modified_config.get('selected_tools', [])]
-            console.print(f"当前工具: {', '.join(current_tools)}")
+            stream_print(f"当前工具: {', '.join(current_tools)}")
             new_tools = Prompt.ask(
                 "输入新工具列表（逗号分隔）",
                 default=", ".join(current_tools),
@@ -517,7 +635,7 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
         
         elif choice == "5":
             show_current_config()
-            console.print(Panel.fit(
+            stream_print(Panel.fit(
                 f"[agent_name]新名称:[/agent_name] {modified_config.get('agent_name', '')}\n"
                 f"[nick_name]新昵称:[/nick_name] {modified_config.get('nick_name', '')}\n"
                 f"[agent_desc]新描述:[/agent_desc] {modified_config.get('description', '')}\n"
@@ -543,14 +661,14 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
                     async for result in server._edit_agent(agent_request):
                         res = json.loads(result)
                         if res.get("result") == "success":
-                            console.print(Panel.fit("[success]Agent 更新成功![/success]", border_style="green"))
+                            stream_print(Panel.fit("[success]Agent 更新成功![/success]", border_style="green"))
                         else:
-                            console.print(f"[danger]更新失败: {res.get('result', '未知错误')}[/danger]")
+                            stream_print(f"[danger]更新失败: {res.get('result', '未知错误')}[/danger]")
                     return
                 except Exception as e:
-                    console.print(f"[danger]保存时发生错误: {str(e)}[/danger]")
+                    stream_print(f"[danger]保存时发生错误: {str(e)}[/danger]")
             else:
-                console.print("[warning]修改已取消[/warning]")
+                stream_print("[warning]修改已取消[/warning]")
             return
 
 
@@ -594,6 +712,6 @@ if __name__ == "__main__":
     try:
         cli()
     except KeyboardInterrupt:
-        console.print("\n[warning]操作已取消[/warning]")
+        stream_print("\n[warning]操作已取消[/warning]")
     except Exception as e:
-        console.print(f"\n[danger]发生错误: {str(e)}[/danger]")
+        stream_print(f"\n[danger]发生错误: {str(e)}[/danger]")
