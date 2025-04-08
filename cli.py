@@ -292,7 +292,6 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
             data = chunk.get("data", {})
             
             if event_type == "start_of_agent":
-                # 输出任何剩余内容
                 if current_content:
                     console.print(current_content, end="", highlight=False)
                     current_content = ""
@@ -316,10 +315,8 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 progress.update(task, description=f"[green]正在执行: {agent_name}...")
                 console.print(f"[agent_name]>>> {agent_name} 开始执行...[/agent_name]")
                 console.print("")
-                await asyncio.sleep(0.01)
             
             elif event_type == "end_of_agent":
-                # 输出任何剩余内容
                 if current_content:
                     console.print(current_content, end="", highlight=False)
                     current_content = ""
@@ -343,7 +340,6 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 progress.update(task, description=f"[success]{agent_name} 执行完成!")
                 console.print(f"[agent_name]<<< {agent_name} 执行完成[/agent_name]")
                 console.print("")
-                await asyncio.sleep(0.01)
             
             elif event_type == "message":
                 delta = data.get("delta", {})
@@ -384,18 +380,15 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                         json_buffer = ""
                         in_json_block = False
                     except:
-                        # JSON不完整，继续收集
                         pass
                 elif content:
-                    # 普通文本处理 - 实现真正的增量打印
                     if live_mode:
-                        if not content: # 跳过空块
+                        if not content: 
                             continue
-                        
-                        direct_print(content) # 直接增量打印
+    
+                        direct_print(content)
 
                     else:
-                        # 积累模式 - 仅用于调试
                         current_content += content
                 
                 if reasoning:
@@ -407,7 +400,6 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 stream_print(content)
 
             elif event_type == "end_of_workflow":
-                # 输出任何剩余内容
                 if current_content:
                     console.print(current_content, end="", highlight=False)
                     current_content = ""

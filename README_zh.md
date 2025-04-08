@@ -17,7 +17,11 @@ Cooragent 是一个 AI 智能体协作社区，在这个社区中，你可以通
 
 > **任务**：创建一个股票分析 agent，用搜索工具搜索腾讯最近七天的股价信息和腾讯公司财经状况，然后使用浏览器简单查找股民对腾讯近期的股票分析（一到两条），凭借这些信息进行非常详细的文字分析，最后形成一个含有折线图和文字的中文分析报告，保存在docx文件中。
 
-[![Demo](./assets/demo.gif)](./assets/demo.mp4)
+<p align="center">
+  <a href="./assets/demo.mp4">
+    <img src="./assets/demo.mp4" alt="Demo" />
+  </a>
+</p>
 
 > **Task**: Create an agent that searches for and learns about recently released OpenAI models and their characteristics, then use the created agent to write an article, and use the browser to publish it to the Xiaohongshu (RED) community.
 
@@ -114,11 +118,25 @@ uv run main.py
 
 cooragent 实现了一个分层的多智能体系统，其中有一个主管智能体协调专门的智能体来完成复杂任务：
 
-![cooragent 架构](./assets/cooragent.png)
+<p align="center">
+  <img src="./assets/cooragent.png" alt="cooragent architecture" />
+</p>
+
 
 ## 一句话创建智能体
+```
+python cli.py
+```
+<p align="center">
+<img src="./assets/help.png" alt="查看帮助" />
+</p>
 
-
+```
+run -t agent_workflow -u <user> -m '创建一个股票分析专家 agent，分析过去一个月的小米股票走势，并预测下个交易日的股价走势，并给出买入或卖出的建议。'
+```
+<p align="center">
+<img src="./assets/create_agent.png" alt="创建智能体" />
+</p>
 ## 通过 MCP 方式创建智能体
 ```
 server_params = StdioServerParameters(
@@ -151,7 +169,13 @@ MCPManager.register_agent("mcp_excel_agent", agent, agent_obj)
 ```
 代码见 [src/mcp/excel_agent.py](./src/mcp/excel_agent.py)
 
+## 编辑 Agent
+
+
+
 ## 使用一组智能体完成复杂任务
+
+
 
 基于工具调用实现复杂功能
 

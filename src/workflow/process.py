@@ -226,7 +226,7 @@ async def _process_workflow(
     except Exception as e:
         import traceback
         traceback.print_exc()
-        logger.error(f"Error in custom workflow: {str(e)}")
+        logger.error(f"Error in Agent workflow: {str(e)}")
         yield {
             "event": "error",
             "data": {
