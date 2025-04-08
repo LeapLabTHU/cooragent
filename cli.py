@@ -45,14 +45,10 @@ custom_theme = Theme({
 # 创建Rich控制台对象用于美化输出
 console = Console(theme=custom_theme)
 
-# 全局变量用于跟踪输出状态
+_pending_line = ''
 
-# 定义一个函数来处理直接输出纯文本
 def direct_print(text):
-    """
-    直接输出纯文本，处理特殊字符。
-    不管理换行状态，由调用者处理。
-    """
+    global _pending_line
     if not text:
         return
         
@@ -60,7 +56,6 @@ def direct_print(text):
     
     # 处理特殊字符 (< 和 >)
     if '<' in text_to_print or '>' in text_to_print:
-        # 确保特殊标记能够完整显示
         parts = []
         i = 0
         while i < len(text_to_print):
@@ -78,45 +73,46 @@ def direct_print(text):
         
         text_to_print = ''.join(parts)
     
-    # 直接写入处理后的文本
-    sys.stdout.write(text_to_print)
-    sys.stdout.flush()
+    _pending_line += text_to_print
+    
+    while '\n' in _pending_line:
+        pos = _pending_line.find('\n')
+        line = _pending_line[:pos+1]  
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        _pending_line = _pending_line[pos+1:]
 
-# 定义一个函数来支持流式输出
+def flush_pending():
+    global _pending_line
+    if _pending_line:
+        sys.stdout.write(_pending_line)
+        sys.stdout.flush()
+        _pending_line = ''
+
 def stream_print(text, **kwargs):
     """流式打印文本，确保立即显示。自动检测并渲染Markdown格式。"""
-    # 如果是纯文本流式输出（有end=""参数），则直接使用sys.stdout
     if kwargs.get("end", "\n") == "" and not kwargs.get("highlight", True):
-        # 直接写入标准输出流，绕过Rich的处理
         if text:
             sys.stdout.write(str(text))
             sys.stdout.flush()
     else:
-        # 对于带格式的内容，使用Rich的console.print
-        # 尝试检测并渲染Markdown
+
         if isinstance(text, str) and _is_likely_markdown(text):
             try:
-                # 移除可能导致解析问题的Rich标签
                 plain_text = Text.from_markup(text).plain
-                # 如果文本不为空，则渲染为Markdown
                 if plain_text.strip():
                     md = Markdown(plain_text)
                     console.print(md, **kwargs)
                 else:
-                    # 如果去除标签后为空，则按原样打印（可能就是标签）
                     console.print(text, **kwargs)
             except Exception:
-                 # 如果Markdown解析失败或移除标签失败，则按原样打印
                  console.print(text, **kwargs)
         else:
-            # 如果不是字符串或不像Markdown，则按原样打印
             console.print(text, **kwargs)
         sys.stdout.flush()
 
 def _is_likely_markdown(text):
     """使用简单的启发式规则判断文本是否可能是Markdown。"""
-    # 检查常见的Markdown标记
-    # 注意：这只是一个基本的检查，可能误判。
     return any(marker in text for marker in ['\n#', '\n*', '\n-', '\n>', '```', '**', '__', '`', '[', '](', '![', '](', '<a href', '<img src'])
 
 HISTORY_FILE = os.path.expanduser("~/.cooragent_history")
@@ -174,7 +170,6 @@ def print_banner():
     console.print("欢迎使用 [highlight]CoorAgent[/highlight] Cooragent 是一个 AI 智能体协作社区，在这个社区中，你可以通过一句话创建一个特定功能的智能体，并与其他智能体协作完成复杂任务。智能体可以自由组合，创造出无限可能。与此同时，你还可以将你的智能体发布到社区中，与其他人共享。！\n", justify="center")
 
 
-# 添加异步命令处理装饰器
 def async_command(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
@@ -212,6 +207,7 @@ def cli(ctx):
                 if command.lower() in ('exit', 'quit'):
                     console.print("[success]再见！[/]")
                     should_exit = True
+                    flush_pending()  # 退出前刷新缓冲区
                     break
                 
                 if command and not command.lower().startswith(('exit', 'quit')):
@@ -238,7 +234,6 @@ def cli(ctx):
 @click.option('--agents', '-a', multiple=True, help='协作Agent列表 (可多次使用此选项添加多个Agent)')
 @async_command
 async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
-    # 初始化函数内部状态
     server = ctx.obj['server']
     
     config_table = Table(title="工作流配置", show_header=True, header_style="bold magenta")
@@ -278,7 +273,6 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
     
     console.print(Panel.fit("[highlight]工作流开始执行[/highlight]", title="CoorAgent", border_style="cyan"))
     
-    # 状态变量
     current_content = ""
     json_buffer = ""  
     in_json_block = False
@@ -713,5 +707,9 @@ if __name__ == "__main__":
         cli()
     except KeyboardInterrupt:
         stream_print("\n[warning]操作已取消[/warning]")
+        flush_pending()
     except Exception as e:
         stream_print(f"\n[danger]发生错误: {str(e)}[/danger]")
+        flush_pending()
+    finally:
+        flush_pending()

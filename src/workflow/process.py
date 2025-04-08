@@ -210,7 +210,7 @@ async def _process_workflow(
             
             next_node = command.goto            
             current_node = next_node
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.5)
             
         yield {
             "event": "end_of_workflow",
