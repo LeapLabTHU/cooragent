@@ -136,12 +136,11 @@ async def _process_workflow(
         current_node = workflow.start_node
         state = initial_state.copy()
         
-        # 添加next字段，确保与原有工作流兼容
-        if "next" not in state:
-            state["next"] = current_node
+        # # 添加next字段，确保与原有工作流兼容
+        # if "next" not in state:
+        #     state["next"] = current_node
         
         while current_node != "__end__":
-            # 发送节点开始事件
             agent_name = current_node
             logger.info(f"Started node: {agent_name}")
             
@@ -153,55 +152,43 @@ async def _process_workflow(
                 },
             }
             
-            yield {
-                "event": "start_of_llm",
-                "data": {"agent_name": agent_name},
-            }
+
             
             node_func = workflow.nodes[current_node]
             command = node_func(state)
             
             if hasattr(command, 'update') and command.update:
                 for key, value in command.update.items():
-                    print(f"update {key} to {value}")
                     state[key] = value
                     
-                    # 如果更新了消息，发送消息事件
                     if key == "messages" and isinstance(value, list) and value:
                         last_message = value[-1]
                         if hasattr(last_message, 'content') and last_message.content:
-                            # 处理coordinator节点的特殊情况
                             if agent_name == "coordinator":
-                                # 检查是否是handoff情况
                                 content = last_message.content
                                 if content.startswith("handoff"):
-                                    # 标记为handoff情况，不发送消息
+                                    # mark handoff, do not send maesages
                                     global is_handoff_case
                                     is_handoff_case = True
                                     continue
                             
                             content = last_message.content
-                            chunk_size = 10  # 每次发送10个字符
+                            chunk_size = 10  # send 10 words for each chunk
                             for i in range(0, len(content), chunk_size):
                                 chunk = content[i:i+chunk_size]
+                                if 'processing_agent_name' in state:
+                                    agent_name = state['processing_agent_name']
+                  
                                 yield {
                                     "event": "message",
-                                    "node": agent_name,
+                                    "agent_name": agent_name,
                                     "data": {
                                         "message_id": f"{workflow_id}_{agent_name}_msg_{i}",
                                         "delta": {"content": chunk},
                                     },
                                 }
-                                # 添加小延迟以模拟流式效果
                                 await asyncio.sleep(0.01)
-            
-            # 发送LLM结束事件
-            yield {
-                "event": "end_of_llm",
-                "data": {"agent_name": agent_name},
-            }
-            
-            # 发送代理结束事件
+
             yield {
                 "event": "end_of_agent",
                 "data": {
@@ -210,12 +197,9 @@ async def _process_workflow(
                 },
             }
             
-            # 获取下一个节点
-            next_node = command.goto
-            
+            next_node = command.goto            
             current_node = next_node
             
-        # 工作流结束事件
         yield {
             "event": "end_of_workflow",
             "data": {
@@ -231,7 +215,6 @@ async def _process_workflow(
         import traceback
         traceback.print_exc()
         logger.error(f"Error in custom workflow: {str(e)}")
-        # 发送错误事件
         yield {
             "event": "error",
             "data": {

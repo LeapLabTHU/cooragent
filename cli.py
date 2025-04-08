@@ -263,10 +263,9 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 delta = data.get("delta", {})
                 content = delta.get("content", "")
                 reasoning = delta.get("reasoning_content", "")
-                message_id = data.get("message_id")
-                node = data.get("node", "")
                 
-                # check if content is json
+                
+                # check if content  json
                 if content and (content.strip().startswith("{") or in_json_block):
                     # if new json block
                     if not in_json_block:
@@ -278,59 +277,29 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     
                     # try to parse complete json
                     try:
-                        agent_name = data.get("agent_name", "")
+                        agent_name = data.get("processing_agent_name", "")
                         parsed_json = json.loads(json_buffer)
                         # if parse success, json is complete
                         formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
-                        console.print("\n")  # ensure new line
-                        syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
-                        console.print(syntax)
-                        json_buffer = ""
-                        in_json_block = False
                     except:
                         pass
+                    finally:
+                        if formatted_json:
+                            progress.update(task, description=f"[green]正在执行: {agent_name}...")
+                            console.print(f"\n[agent_name]<<< {agent_name} 执行完成[/agent_name]")
+                            console.print("\n")  # ensure new line
+                            syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                            console.print(syntax)
+                            json_buffer = ""
+                            in_json_block = False
                 else:
-                        # if not json, just output
                     if content:
                         content = content.replace('\n', ' ')
                         console.print(content, end="", highlight=False)
                 
-                # if there is reasoning content, show in different style
                 if reasoning:
                     console.print(f"\n[info]思考过程: {reasoning}[/info]")
-            
-            elif event_type == "tool_call":
-                # ensure new line
-                if current_content and not current_content.endswith("\n"):
-                    print("\n", end="", flush=True)
-                
-                tool_name = data.get("tool_name", "未知工具")
-                tool_input = data.get("tool_input", {})
-                formatted_input = json.dumps(tool_input, indent=2, ensure_ascii=False) if isinstance(tool_input, dict) else str(tool_input)
-                console.print(f"\n[tool_name]调用工具: {tool_name}[/tool_name]")
-                syntax = Syntax(formatted_input, "json", theme="monokai", line_numbers=False)
-                console.print(syntax)
-            
-            elif event_type == "tool_call_result":
-                if current_content and not current_content.endswith("\n"):
-                    print("\n", end="", flush=True)
-                
-                tool_name = data.get("tool_name", "未知工具")
-                tool_result = data.get("tool_result", "")
-                console.print(f"\n[tool_name]工具 {tool_name} 返回结果:[/tool_name]")
-                
-                try:
-                    result_json = json.loads(tool_result)
-                    formatted_result = json.dumps(result_json, indent=2, ensure_ascii=False)
-                    syntax = Syntax(formatted_result, "json", theme="monokai", line_numbers=False)
-                    console.print(syntax)
-                except:
-                    try:
-                        md = Markdown(tool_result)
-                        console.print(md)
-                    except:
-                        console.print(tool_result)
-            
+
             elif event_type == "end_of_workflow":
                 if in_json_block and json_buffer:
                     try:
@@ -357,7 +326,6 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
 @async_command 
 async def list_agents(ctx, user_id, match):
     """列出用户的Agent"""
-    # 从上下文中获取server
     server = ctx.obj['server']
     
     with Progress(
@@ -396,10 +364,8 @@ async def list_agents(ctx, user_id, match):
 
 @cli.command()
 @click.pass_context
-@async_command  # 使用异步命令装饰器
+@async_command 
 async def list_default_agents(ctx):
-    """列出默认Agent"""
-    # 从上下文中获取server
     server = ctx.obj['server']
     
     with Progress(
@@ -428,10 +394,9 @@ async def list_default_agents(ctx):
 
 @cli.command()
 @click.pass_context
-@async_command  # 使用异步命令装饰器
+@async_command  
 async def list_default_tools(ctx):
     """列出默认工具"""
-    # 从上下文中获取server
     server = ctx.obj['server']
     
     with Progress(
@@ -465,11 +430,7 @@ async def list_default_tools(ctx):
 @click.option('--interactive/--no-interactive', '-i/-I', default=True, help='是否使用交互模式')
 @async_command
 async def edit_agent(ctx, agent_name, user_id, interactive):
-    """编辑Agent配置（交互模式）"""
-    # 从上下文中获取server
     server = ctx.obj['server']
-    
-    # 获取当前Agent配置
     console.print(Panel.fit(f"[highlight]正在获取 {agent_name} 的配置...[/highlight]", border_style="cyan"))
     original_config = None
     try:
@@ -485,7 +446,6 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
         console.print(f"[danger]获取配置失败: {str(e)}[/danger]")
         return
 
-    # 显示当前配置
     def show_current_config():
         console.print(Panel.fit(
             f"[agent_name]名称:[/agent_name] {original_config.get('agent_name', '')}\n"
@@ -499,10 +459,8 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
     
     show_current_config()
 
-    # 交互式编辑
     modified_config = original_config.copy()
     while interactive:
-        # 显示选项菜单
         console.print("\n请选择要修改的内容：")
         console.print("1 - 修改昵称")
         console.print("2 - 修改描述")
@@ -511,14 +469,12 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
         console.print("5 - 预览修改")
         console.print("0 - 保存退出")
         
-        # 直接接收数字输入
         choice = Prompt.ask(
             "请输入选项",
             choices=["0", "1", "2", "3", "4", "5"],
             show_choices=False
         )
         
-        # 不需要再分割，直接使用输入的数字
         if choice == "1":
             new_name = Prompt.ask(
                 "输入新昵称", 
@@ -574,7 +530,6 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
         elif choice == "0":
             if Confirm.ask("确认保存修改吗？"):
                 try:
-                    # 构建Agent请求对象
                     agent_request = Agent(
                         user_id=original_config.get('user_id', ''),
                         nick_name=modified_config['nick_name'],
@@ -585,7 +540,6 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
                         llm_type=original_config.get('llm_type', 'basic')
                     )
                     
-                    # 调用服务保存修改
                     async for result in server._edit_agent(agent_request):
                         res = json.loads(result)
                         if res.get("result") == "success":
@@ -638,7 +592,6 @@ def help():
 
 if __name__ == "__main__":
     try:
-        # 不再使用asyncio.run包装cli()
         cli()
     except KeyboardInterrupt:
         console.print("\n[warning]操作已取消[/warning]")

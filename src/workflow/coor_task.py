@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please execute the next step.*"
 
-# 以下节点函数保持不变
 def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Node for the create agent agent that creates a new agent."""
     logger.info("Create agent agent starting task")
@@ -78,11 +77,17 @@ def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_factor
     elif agent != "agent_factory":
         goto = "agent_proxy"
         logger.info(f"publisher delegating to: {agent}")
-        return Command(goto=goto, update={"next": agent})
+        return Command(goto=goto, 
+                       update={
+                           "messages": [HumanMessage(content=f"publisher delegating to: {agent}", name="publisher")],
+                           "next": agent})
     else:
         goto = "agent_factory"
         logger.info(f"publisher delegating to: {agent}")
-        return Command(goto=goto, update={"next": agent})
+        return Command(goto=goto, 
+                       update={
+                           "messages": [HumanMessage(content=f"publisher delegating to: {agent}", name="publisher")],
+                           "next": agent})
 
 
 def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
@@ -110,7 +115,7 @@ def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
                     name=state["next"],
                 )
             ],
-            "agent_name": state["next"]
+            "processing_agent_name": state["next"]
         },
         goto="publisher",
     )
@@ -128,7 +133,6 @@ def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
         messages = deepcopy(messages)
         messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
     
-    # 这里使用stream方法，确保能够获取流式输出
     stream = llm.stream(messages)
     full_response = ""
     for chunk in stream:
@@ -162,7 +166,6 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
     logger.info("Coordinator talking.")
     messages = apply_prompt_template("coordinator", state)
     response = get_llm_by_type(AGENT_LLM_MAP["coordinator"]).invoke(messages)
-
 
     goto = "__end__"
     if "handoff_to_planner" in response.content:
