@@ -15,6 +15,8 @@ from src.tools.search import tavily_tool
 from src.interface.agent_types import State, Router
 from src.manager import agent_manager
 from langgraph.graph import StateGraph, START, END
+from src.workflow.graph import AgentWorkflow
+
 
 logger = logging.getLogger(__name__)
 
@@ -142,10 +144,11 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
     )
 
 def agent_factory_graph():
-    builder = StateGraph(State)
-    builder.add_edge(START, "coordinator")
-    builder.add_node("coordinator", coordinator_node)
-    builder.add_node("planner", planner_node)
-    builder.add_node("publisher", publisher_node)
-    builder.add_node("agent_factory", agent_factory_node)
-    return builder.compile()
+    workflow = AgentWorkflow()    
+    workflow.add_node("coordinator", coordinator_node)
+    workflow.add_node("planner", planner_node)
+    workflow.add_node("publisher", publisher_node)
+    workflow.add_node("agent_factory", agent_factory_node)
+    
+    workflow.set_start("coordinator")    
+    return workflow.compile()
