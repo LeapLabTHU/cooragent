@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Generator, List, Sequence, Tuple, AsyncGenerator
+from typing import Dict, List, AsyncGenerator
 import uvicorn
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +10,7 @@ import json
 load_dotenv()
 import logging
 from src.interface.agent_types import *
-from src.workflow.workflow_service import run_agent_workflow
+from src.workflow.process import run_agent_workflow
 from src.manager import agent_manager
 from src.manager.agents import NotFoundAgentError
 from src.service.session import UserSession

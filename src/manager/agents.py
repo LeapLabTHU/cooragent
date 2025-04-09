@@ -82,11 +82,11 @@ class AgentManager:
         }
         
         self.available_tools = {
-            "bash_tool": bash_tool,
-            "browser_tool": browser_tool,
-            "crawl_tool": crawl_tool,
-            "python_repl_tool": python_repl_tool,
-            "tavily_tool": tavily_tool,
+            bash_tool.name: bash_tool,
+            browser_tool.name: browser_tool,
+            crawl_tool.name: crawl_tool,
+            python_repl_tool.name: python_repl_tool,
+            tavily_tool.name: tavily_tool,
         }
         # for agent_name in self.available_agents.keys():
         #     self._save_agent(self.available_agents[agent_name], flush=True)

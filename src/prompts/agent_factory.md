@@ -16,7 +16,7 @@ First, you need to find your task description on your own, following these steps
 - **`crawl_tool`**: Crawl webpages and extract structured data.
 - **`tavily_tool`**: Get the latest online information through the Tavily search engine.
 - **`python_repl_tool`**: Run Python code, handle data analysis and programming tasks.
-- **`browser_tool`**: Directly interact with webpages, supporting complex operations (such as searching within platforms like Facebook, GitHub, downloading content, etc.).
+- **`browser`**: Directly interact with webpages, supporting complex operations (such as searching within platforms like Facebook, GitHub, downloading content, etc.).
 - 
 ## LLM Type Selection
 

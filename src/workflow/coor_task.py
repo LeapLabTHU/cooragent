@@ -1,22 +1,19 @@
 import logging
 import json
 from copy import deepcopy
-from typing import Literal
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
-from langgraph.graph import END
-
-
+from typing import Literal
 from src.llm import get_llm_by_type
 from src.config.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
 from src.interface.agent_types import State, Router
 from src.manager import agent_manager
-from langgraph.graph import StateGraph, START, END
 from src.prompts.template import apply_prompt
 from langgraph.prebuilt import create_react_agent
 from src.mcp.register import MCPManager
+from src.workflow.graph import AgentWorkflow
 
 logger = logging.getLogger(__name__)
 
@@ -80,11 +77,17 @@ def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_factor
     elif agent != "agent_factory":
         goto = "agent_proxy"
         logger.info(f"publisher delegating to: {agent}")
-        return Command(goto=goto, update={"next": agent})
+        return Command(goto=goto, 
+                       update={
+                           "messages": [HumanMessage(content=f"Next step is delegating to: {agent}", name="publisher")],
+                           "next": agent})
     else:
         goto = "agent_factory"
         logger.info(f"publisher delegating to: {agent}")
-        return Command(goto=goto, update={"next": agent})
+        return Command(goto=goto, 
+                       update={
+                           "messages": [HumanMessage(content=f"Next step is delegating to: {agent}", name="publisher")],
+                           "next": agent})
 
 
 def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
@@ -92,7 +95,8 @@ def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
     logger.info("Agent starting task")
     _agent = agent_manager.available_agents[state["next"]]
     agent = create_react_agent(
-        get_llm_by_type(_agent.llm_type),
+        # get_llm_by_type(_agent.llm_type),
+        get_llm_by_type("basic"),
         tools=[agent_manager.available_tools[tool.name] for tool in _agent.selected_tools],
         prompt=apply_prompt(state, _agent.prompt),
     )
@@ -111,7 +115,7 @@ def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
                     name=state["next"],
                 )
             ],
-            "agent_name": state["next"]
+            "processing_agent_name": state["next"]
         },
         goto="publisher",
     )
@@ -127,9 +131,8 @@ def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
     if state.get("search_before_planning"):
         searched_content = tavily_tool.invoke({"query": state["messages"][-1].content})
         messages = deepcopy(messages)
-        messages[
-            -1
-        ].content += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
+        messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
+    
     stream = llm.stream(messages)
     full_response = ""
     for chunk in stream:
@@ -163,7 +166,7 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
     logger.info("Coordinator talking.")
     messages = apply_prompt_template("coordinator", state)
     response = get_llm_by_type(AGENT_LLM_MAP["coordinator"]).invoke(messages)
-            
+
     goto = "__end__"
     if "handoff_to_planner" in response.content:
         goto = "planner"
@@ -176,11 +179,12 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
 
 def build_graph():
     """Build and return the agent workflow graph."""
-    builder = StateGraph(State)
-    builder.add_edge(START, "coordinator")
-    builder.add_node("coordinator", coordinator_node)
-    builder.add_node("planner", planner_node)
-    builder.add_node("publisher", publisher_node)
-    builder.add_node("agent_factory", agent_factory_node)
-    builder.add_node("agent_proxy", agent_proxy_node)
-    return builder.compile()
+    workflow = AgentWorkflow()    
+    workflow.add_node("coordinator", coordinator_node)
+    workflow.add_node("planner", planner_node)
+    workflow.add_node("publisher", publisher_node)
+    workflow.add_node("agent_factory", agent_factory_node)
+    workflow.add_node("agent_proxy", agent_proxy_node)
+    
+    workflow.set_start("coordinator")    
+    return workflow.compile()

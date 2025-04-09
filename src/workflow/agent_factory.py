@@ -4,17 +4,15 @@ from copy import deepcopy
 from typing import Literal
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
-from langgraph.graph import END
-from langgraph.prebuilt import create_react_agent
 
 from src.llm import get_llm_by_type
-from src.prompts.template import apply_prompt
 from src.config.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
 from src.interface.agent_types import State, Router
 from src.manager import agent_manager
-from langgraph.graph import StateGraph, START, END
+from src.workflow.graph import AgentWorkflow
+
 
 logger = logging.getLogger(__name__)
 
@@ -142,10 +140,11 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
     )
 
 def agent_factory_graph():
-    builder = StateGraph(State)
-    builder.add_edge(START, "coordinator")
-    builder.add_node("coordinator", coordinator_node)
-    builder.add_node("planner", planner_node)
-    builder.add_node("publisher", publisher_node)
-    builder.add_node("agent_factory", agent_factory_node)
-    return builder.compile()
+    workflow = AgentWorkflow()    
+    workflow.add_node("coordinator", coordinator_node)
+    workflow.add_node("planner", planner_node)
+    workflow.add_node("publisher", publisher_node)
+    workflow.add_node("agent_factory", agent_factory_node)
+    
+    workflow.set_start("coordinator")    
+    return workflow.compile()
