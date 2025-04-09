@@ -6,10 +6,10 @@ from langchain_community.adapters.openai import convert_message_to_dict
 from src.manager import agent_manager
 from src.interface.agent_types import TaskType
 import uuid
-import json
-from rich.syntax import Syntax
+from langchain_core.messages import HumanMessage, SystemMessage
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from src.interface.agent_types import State
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,6 +71,13 @@ async def run_agent_workflow(
         enable_debug_logging()
 
     logger.info(f"Starting workflow with user input: {user_input_messages}")
+    
+    input_messages = []
+    for msg in user_input_messages:
+        if msg.get("role") == "user":
+            input_messages.append(HumanMessage(content=msg.get("content")))
+        else:
+            input_messages.append(SystemMessage(content=msg.get("content")))
 
     workflow_id = str(uuid.uuid4())
 
@@ -115,7 +122,7 @@ async def run_agent_workflow(
                 "user_id": user_id,
                 "TEAM_MEMBERS": TEAM_MEMBERS,
                 "TEAM_MEMBERS_DESCRIPTION": TEAM_MEMBERS_DESCRIPTION,
-                "messages": user_input_messages,
+                "messages": input_messages,
                 "deep_thinking_mode": deep_thinking_mode,
                 "search_before_planning": search_before_planning,
             },
@@ -140,7 +147,7 @@ async def _process_workflow(
     
     try:
         current_node = workflow.start_node
-        state = initial_state.copy()
+        state = State(**initial_state)
     
         
         while current_node != "__end__":
@@ -162,9 +169,11 @@ async def _process_workflow(
             
             if hasattr(command, 'update') and command.update:
                 for key, value in command.update.items():
-                    state[key] = value
+                    if key != "messages":
+                        state[key] = value
                     
                     if key == "messages" and isinstance(value, list) and value:
+                        state["messages"] += value
                         last_message = value[-1]
                         if hasattr(last_message, 'content') and last_message.content:
                             if agent_name == "coordinator":
