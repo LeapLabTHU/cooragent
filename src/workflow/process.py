@@ -200,6 +200,7 @@ async def _process_workflow(
                                     },
                                 }
                                 await asyncio.sleep(0.01)
+                                
                             yield {
                                     "event": "full_message",
                                     "agent_name": agent_name,
@@ -219,7 +220,6 @@ async def _process_workflow(
             
             next_node = command.goto            
             current_node = next_node
-            await asyncio.sleep(0.5)
             
         yield {
             "event": "end_of_workflow",

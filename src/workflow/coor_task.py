@@ -115,7 +115,7 @@ def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
                     name=state["next"],
                 )
             ],
-            "processing_agent_name": state["next"]
+            "processing_agent_name": _agent.agent_name
         },
         goto="publisher",
     )

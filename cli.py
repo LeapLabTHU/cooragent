@@ -283,7 +283,8 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         console=console,
-        transient=True 
+        transient=True,
+        refresh_per_second=2
     ) as progress:
         task = progress.add_task("[green]正在处理请求...", total=None)
         
@@ -308,14 +309,13 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     json_buffer = ""
                     in_json_block = False
                 
-                agent_name = data.get("agent_name", "未知")
-                last_agent_name = agent_name
-                
-                console.print("\n")
-                progress.update(task, description=f"[green]正在执行: {agent_name}...")
-                console.print(f"[agent_name]>>> {agent_name} 开始执行...[/agent_name]")
-                console.print("")
-            
+                agent_name = data.get("agent_name", "")
+                if agent_name :
+                    console.print("\n")
+                    progress.update(task, description=f"[green]开始执行: {agent_name}...")
+                    console.print(f"[agent_name]>>> {agent_name} 开始执行...[/agent_name]")
+                    console.print("")
+                    
             elif event_type == "end_of_agent":
                 if current_content:
                     console.print(current_content, end="", highlight=False)
@@ -333,30 +333,24 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     json_buffer = ""
                     in_json_block = False
                 
-                agent_name = data.get("agent_name", "未知")
-                last_agent_name = ""
-                
-                console.print("")
-                progress.update(task, description=f"[success]{agent_name} 执行完成!")
-                console.print(f"[agent_name]<<< {agent_name} 执行完成[/agent_name]")
-                console.print("")
+                agent_name = data.get("agent_name", "")
+                if agent_name:
+                    console.print("\n")
+                    progress.update(task, description=f"[green]执行完成: {agent_name}...")
+                    console.print(f"[agent_name]<<< {agent_name} 执行完成[/agent_name]")
+                    console.print("")
             
             elif event_type == "message":
                 delta = data.get("delta", {})
                 content = delta.get("content", "")
                 reasoning = delta.get("reasoning_content", "")
-                agent_name = data.get("agent_name", "未知") or data.get("processing_agent_name", "未知")
+                agent_name = data.get("agent_name", "")
                 
-                if agent_name and agent_name != last_agent_name:
-                    # 代理变更
-                    if current_content:
-                        console.print(current_content, end="", highlight=False)
-                        current_content = ""
-                    
-                    last_agent_name = agent_name
-                    console.print("")
+                if agent_name:
+                    console.print("\n")
                     progress.update(task, description=f"[green]正在执行: {agent_name}...")
-                
+                    console.print(f"[agent_name]>>> {agent_name} 正在执行...[/agent_name]")
+                    console.print("")
                 # 优先检查是否是JSON内容
                 if content and (content.strip().startswith("{") or in_json_block):
                     # JSON块处理
@@ -395,9 +389,13 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     stream_print(f"\n[info]思考过程: {reasoning}[/info]")
 
             elif event_type == "full_message":
+                agent_name = data.get("agent_name", "") or data.get("processing_agent_name", "")
                 delta = data.get("delta", {})
                 content = delta.get("content", "")
-                stream_print(content)
+                if content and (content.strip().startswith("{") or in_json_block):
+                    pass
+                else:
+                    stream_print(content)
 
             elif event_type == "end_of_workflow":
                 if current_content:
@@ -419,6 +417,8 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 console.print("")
                 progress.update(task, description="[success]工作流执行完成!")
                 console.print(Panel.fit("[success]工作流执行完成![/success]", title="CoorAgent", border_style="green"))
+                
+                    
     
     console.print(Panel.fit("[success]工作流执行完成![/success]", title="CoorAgent", border_style="green"))
 
