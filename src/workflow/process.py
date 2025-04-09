@@ -104,7 +104,6 @@ async def run_agent_workflow(
         if agent.user_id != "share":
             MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent.agent_name, agent_description=agent.description)
             TEAM_MEMBERS_DESCRIPTION += '\n' + MEMBER_DESCRIPTION
-    streaming_llm_agents = [*TEAM_MEMBERS, "agent_factory", "coordinator", "planner", "publisher"]
 
     global coordinator_cache
     coordinator_cache = []
@@ -127,7 +126,6 @@ async def run_agent_workflow(
                 "search_before_planning": search_before_planning,
             },
             workflow_id,
-            streaming_llm_agents,
         ):
             yield event_data
 
@@ -135,7 +133,6 @@ async def _process_workflow(
     workflow, 
     initial_state: Dict[str, Any], 
     workflow_id: str,
-    streaming_llm_agents: list
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """处理自定义工作流的事件流"""
     current_node = None
@@ -200,8 +197,16 @@ async def _process_workflow(
                                     },
                                 }
                                 await asyncio.sleep(0.01)
-                                
-                            yield {
+                            
+                            if last_message.new_agent_name:
+                                yield {
+                                    "event": "new_agent_name",
+                                    "agent_name": last_message.new_agent_name,
+                                    "agent": agent_manager.available_agents[last_message.new_agent_name],
+                                }
+                            
+                            if agent_name == "agent_factory":
+                                yield {
                                     "event": "full_message",
                                     "agent_name": agent_name,
                                     "data": {
