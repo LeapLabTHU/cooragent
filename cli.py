@@ -345,8 +345,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 content = delta.get("content", "")
                 reasoning = delta.get("reasoning_content", "")
                 agent_name = data.get("agent_name", "")
-                new_agent_name = data.get("new_agent_name", "")
-                agent_obj = data.get("agent_obj", None)
+
                 
                 if agent_name:
                     console.print("\n")
@@ -390,20 +389,15 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 if reasoning:
                     stream_print(f"\n[info]思考过程: {reasoning}[/info]")
                 
-                if new_agent_name:
-                    console.print(f"[new_agent_name]>>> {new_agent_name} 创建成功...")
-                    console.print(f"[new_agent]>>> 配置: ")
-                    syntax = Syntax(agent_obj.model_dump_json(), "json", theme="monokai", line_numbers=False)
-                    console.print(syntax)
 
-            elif event_type == "full_message":
-                agent_name = data.get("agent_name", "") or data.get("processing_agent_name", "")
-                delta = data.get("delta", {})
-                content = delta.get("content", "")
-                if content and (content.strip().startswith("{") or in_json_block):
-                    pass
-                else:
-                    stream_print(content)
+            elif event_type == "new_agent_created":
+                new_agent_name = data.get("new_agent_name", "")
+                agent_obj = data.get("agent_obj", None)
+                console.print(f"[new_agent_name]>>> {new_agent_name} 创建成功...")
+                console.print(f"[new_agent]>>> 配置: ")
+                syntax = Syntax(agent_obj.model_dump_json(), "json", theme="monokai", line_numbers=False)
+                console.print(syntax)
+
 
             elif event_type == "end_of_workflow":
                 if current_content:

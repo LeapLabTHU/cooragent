@@ -52,6 +52,7 @@ def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
                     name=state["next"],
                 )
             ],
+           "new_agent_name": response["agent_name"],  
         },
         goto="__end__",
     )

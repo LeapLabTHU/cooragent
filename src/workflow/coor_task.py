@@ -50,9 +50,9 @@ def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
                     content=RESPONSE_FORMAT.format(
                         state["next"], f'New agent {response["agent_name"]} created.'
                     ),
-                    new_agent_name=response["agent_name"],
                 )
             ],
+            "new_agent_name": response["agent_name"],
         },
         goto="publisher",
     )
