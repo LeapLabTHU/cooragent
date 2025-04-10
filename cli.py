@@ -395,8 +395,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 agent_obj = chunk.get("agent_obj", None)
                 console.print(f"[new_agent_name]>>> {new_agent_name} 创建成功...")
                 console.print(f"[new_agent]>>> 配置: ")
-                formatted_json = json.dumps(agent_obj.model_dump_json(indent=2), indent=2, ensure_ascii=False)
-                syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                syntax = Syntax(agent_obj.model_dump_json(indent=2), "json", theme="monokai", line_numbers=False)
                 console.print(syntax)
 
 
