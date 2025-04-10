@@ -395,7 +395,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 agent_obj = chunk.get("agent_obj", None)
                 console.print(f"[new_agent_name]>>> {new_agent_name} 创建成功...")
                 console.print(f"[new_agent]>>> 配置: ")
-                formatted_json = json.dumps(agent_obj.model_dump_json(), indent=2, ensure_ascii=False)
+                formatted_json = json.dumps(agent_obj.model_dump_json(indent=2), indent=2, ensure_ascii=False)
                 syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
                 console.print(syntax)
 
@@ -661,6 +661,33 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
             return
 
 
+@cli.command(name="remove-agent")
+@click.pass_context
+@click.option('--agent-name', '-n', required=True, help='要删除的Agent名称')
+@click.option('--user-id', '-u', required=True, help='用户ID')
+@async_command
+async def remove_agent(ctx, agent_name, user_id):
+    """删除指定的Agent"""
+    server = ctx.obj['server']
+    
+    if not Confirm.ask(f"[warning]确定要删除 Agent '{agent_name}' 吗？此操作不可撤销！[/warning]", default=False):
+        stream_print("[info]操作已取消[/info]")
+        return
+        
+    stream_print(Panel.fit(f"[highlight]正在删除 Agent: {agent_name}...[/highlight]", border_style="cyan"))
+
+    try:
+        request = RemoveAgentRequest(user_id=user_id, agent_name=agent_name)
+        async for result_json in server._remove_agent(request):
+            result = json.loads(result_json)
+            if result.get("result") == "success":
+                stream_print(Panel.fit(f"[success]✅ {result.get('message', 'Agent 删除成功!')}[/success]", border_style="green"))
+            else:
+                stream_print(Panel.fit(f"[danger]❌ {result.get('message', 'Agent 删除失败!')}[/danger]", border_style="red"))
+    except Exception as e:
+        stream_print(Panel.fit(f"[danger]执行删除时发生错误: {str(e)}[/danger]", border_style="red"))
+
+
 @cli.command()
 def help():
     """显示帮助信息"""
@@ -691,6 +718,11 @@ def help():
     help_table.add_row("  -i/--interactive", "交互模式")
     help_table.add_row()
     
+    help_table.add_row("[命令] remove-agent", "删除指定的Agent")
+    help_table.add_row("  -n/--agent-name", "Agent名称 (必填)")
+    help_table.add_row("  -u/--user-id", "用户ID (必填)")
+    help_table.add_row()
+
     help_table.add_row("[交互模式]", "直接运行 cli.py 进入")
     help_table.add_row("  exit/quit", "退出交互模式")
     
