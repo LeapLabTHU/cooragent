@@ -243,7 +243,6 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
     config_table.add_row("任务类型", task_type)
     config_table.add_row("调试模式", "✅ 开启" if debug else "❌ 关闭")
     config_table.add_row("深度思考", "✅ 开启" if deep_thinking else "❌ 关闭")
-    config_table.add_row("协作Agent", ", ".join(agents) if agents else "无")
     console.print(config_table)
     
     msg_table = Table(title="消息历史", show_header=True, header_style="bold magenta")
