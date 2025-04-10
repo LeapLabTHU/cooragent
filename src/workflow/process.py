@@ -198,22 +198,13 @@ async def _process_workflow(
                                 }
                                 await asyncio.sleep(0.01)
 
-                            if agent_name == "agent_factory":
-                                yield {
-                                    "event": "full_message",
-                                    "agent_name": agent_name,
-                                    "data": {
-                                        "message_id": f"{workflow_id}_{agent_name}_msg_{i}",
-                                        "delta": {"content": content},
-                                    },
-                                }
-                                                
-                    if key == "new_agent_name":
+                    if agent_name == "agent_factory" and key == "new_agent_name":
                         yield {
-                            "event": "message",
+                            "event": "new_agent_created",
                             "new_agent_name": value,
                             "agent_obj": agent_manager.available_agents[value],
                         }
+                                                
                             
 
             yield {

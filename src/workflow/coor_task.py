@@ -47,9 +47,7 @@ def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
         update={
             "messages": [
                 HumanMessage(
-                    content=RESPONSE_FORMAT.format(
-                        state["next"], f'New agent {response["agent_name"]} created.'
-                    ),
+                    content='New agent {response["agent_name"]} created.'
                 )
             ],
             "new_agent_name": response["agent_name"],

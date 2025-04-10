@@ -391,11 +391,12 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 
 
             elif event_type == "new_agent_created":
-                new_agent_name = data.get("new_agent_name", "")
-                agent_obj = data.get("agent_obj", None)
+                new_agent_name = chunk.get("new_agent_name", "")
+                agent_obj = chunk.get("agent_obj", None)
                 console.print(f"[new_agent_name]>>> {new_agent_name} 创建成功...")
                 console.print(f"[new_agent]>>> 配置: ")
-                syntax = Syntax(agent_obj.model_dump_json(), "json", theme="monokai", line_numbers=False)
+                formatted_json = json.dumps(agent_obj.model_dump_json(), indent=2, ensure_ascii=False)
+                syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
                 console.print(syntax)
 
 
@@ -427,7 +428,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
 
 @cli.command()
 @click.pass_context
-@click.option('--user-id', '-u', required=True, help='用户ID')
+@click.option('--user-id', '-u', default="test", help='用户ID')
 @click.option('--match', '-m', default="", help='匹配字符串')
 @async_command 
 async def list_agents(ctx, user_id, match):
