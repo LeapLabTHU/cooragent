@@ -14,6 +14,7 @@ from src.workflow.process import run_agent_workflow
 from src.manager import agent_manager
 from src.manager.agents import NotFoundAgentError
 from src.service.session import UserSession
+from src.interface.agent_types import RemoveAgentRequest
 
 
 logging.basicConfig(filename='app.log', level=logging.INFO)
@@ -87,6 +88,16 @@ class Server:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
+    async def _remove_agent(self, request: RemoveAgentRequest):
+        """处理删除 Agent 的请求"""
+        try:
+
+            agent_manager._remove_agent(request.agent_name)
+            yield json.dumps({"result": "success", "message": f"Agent '{request.agent_name}' 已成功删除。"})
+        except Exception as e:
+            logging.error(f"Error removing agent {request.agent_name}: {e}", exc_info=True)
+            yield json.dumps({"result": "error", "message": f"删除 Agent '{request.agent_name}' 时出错: {str(e)}"})
+
     def launch(self):
         @self.app.post("/v1/workflow", status_code=status.HTTP_200_OK)
         async def agent_workflow(request: AgentRequest):
@@ -124,6 +135,13 @@ class Server:
         async def edit_agent(request: Agent):
             return StreamingResponse(
                 self._edit_agent(request),
+                media_type="application/x-ndjson"
+            )
+        
+        @self.app.post("/v1/remove_agent", status_code=status.HTTP_200_OK)
+        async def remove_agent(request: RemoveAgentRequest):
+            return StreamingResponse(
+                self._remove_agent(request),
                 media_type="application/x-ndjson"
             )
         

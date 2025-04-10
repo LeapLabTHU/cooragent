@@ -243,7 +243,6 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
     config_table.add_row("任务类型", task_type)
     config_table.add_row("调试模式", "✅ 开启" if debug else "❌ 关闭")
     config_table.add_row("深度思考", "✅ 开启" if deep_thinking else "❌ 关闭")
-    config_table.add_row("协作Agent", ", ".join(agents) if agents else "无")
     console.print(config_table)
     
     msg_table = Table(title="消息历史", show_header=True, header_style="bold magenta")
@@ -283,7 +282,8 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         console=console,
-        transient=True 
+        transient=True,
+        refresh_per_second=2
     ) as progress:
         task = progress.add_task("[green]正在处理请求...", total=None)
         
@@ -308,14 +308,13 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     json_buffer = ""
                     in_json_block = False
                 
-                agent_name = data.get("agent_name", "未知")
-                last_agent_name = agent_name
-                
-                console.print("\n")
-                progress.update(task, description=f"[green]正在执行: {agent_name}...")
-                console.print(f"[agent_name]>>> {agent_name} 开始执行...[/agent_name]")
-                console.print("")
-            
+                agent_name = data.get("agent_name", "")
+                if agent_name :
+                    console.print("\n")
+                    progress.update(task, description=f"[green]开始执行: {agent_name}...")
+                    console.print(f"[agent_name]>>> {agent_name} 开始执行...[/agent_name]")
+                    console.print("")
+                    
             elif event_type == "end_of_agent":
                 if current_content:
                     console.print(current_content, end="", highlight=False)
@@ -333,30 +332,25 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     json_buffer = ""
                     in_json_block = False
                 
-                agent_name = data.get("agent_name", "未知")
-                last_agent_name = ""
-                
-                console.print("")
-                progress.update(task, description=f"[success]{agent_name} 执行完成!")
-                console.print(f"[agent_name]<<< {agent_name} 执行完成[/agent_name]")
-                console.print("")
+                agent_name = data.get("agent_name", "")
+                if agent_name:
+                    console.print("\n")
+                    progress.update(task, description=f"[green]执行完成: {agent_name}...")
+                    console.print(f"[agent_name]<<< {agent_name} 执行完成[/agent_name]")
+                    console.print("")
             
             elif event_type == "message":
                 delta = data.get("delta", {})
                 content = delta.get("content", "")
                 reasoning = delta.get("reasoning_content", "")
-                agent_name = data.get("agent_name", "未知") or data.get("processing_agent_name", "未知")
+                agent_name = data.get("agent_name", "")
+
                 
-                if agent_name and agent_name != last_agent_name:
-                    # 代理变更
-                    if current_content:
-                        console.print(current_content, end="", highlight=False)
-                        current_content = ""
-                    
-                    last_agent_name = agent_name
-                    console.print("")
+                if agent_name:
+                    console.print("\n")
                     progress.update(task, description=f"[green]正在执行: {agent_name}...")
-                
+                    console.print(f"[agent_name]>>> {agent_name} 正在执行...[/agent_name]")
+                    console.print("")
                 # 优先检查是否是JSON内容
                 if content and (content.strip().startswith("{") or in_json_block):
                     # JSON块处理
@@ -393,11 +387,16 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 
                 if reasoning:
                     stream_print(f"\n[info]思考过程: {reasoning}[/info]")
+                
 
-            elif event_type == "full_message":
-                delta = data.get("delta", {})
-                content = delta.get("content", "")
-                stream_print(content)
+            elif event_type == "new_agent_created":
+                new_agent_name = chunk.get("new_agent_name", "")
+                agent_obj = chunk.get("agent_obj", None)
+                console.print(f"[new_agent_name]>>> {new_agent_name} 创建成功...")
+                console.print(f"[new_agent]>>> 配置: ")
+                syntax = Syntax(agent_obj.model_dump_json(indent=2), "json", theme="monokai", line_numbers=False)
+                console.print(syntax)
+
 
             elif event_type == "end_of_workflow":
                 if current_content:
@@ -419,13 +418,15 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 console.print("")
                 progress.update(task, description="[success]工作流执行完成!")
                 console.print(Panel.fit("[success]工作流执行完成![/success]", title="CoorAgent", border_style="green"))
+                
+                    
     
     console.print(Panel.fit("[success]工作流执行完成![/success]", title="CoorAgent", border_style="green"))
 
 
 @cli.command()
 @click.pass_context
-@click.option('--user-id', '-u', required=True, help='用户ID')
+@click.option('--user-id', '-u', default="test", help='用户ID')
 @click.option('--match', '-m', default="", help='匹配字符串')
 @async_command 
 async def list_agents(ctx, user_id, match):
@@ -658,6 +659,33 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
             return
 
 
+@cli.command(name="remove-agent")
+@click.pass_context
+@click.option('--agent-name', '-n', required=True, help='要删除的Agent名称')
+@click.option('--user-id', '-u', required=True, help='用户ID')
+@async_command
+async def remove_agent(ctx, agent_name, user_id):
+    """删除指定的Agent"""
+    server = ctx.obj['server']
+    
+    if not Confirm.ask(f"[warning]确定要删除 Agent '{agent_name}' 吗？此操作不可撤销！[/warning]", default=False):
+        stream_print("[info]操作已取消[/info]")
+        return
+        
+    stream_print(Panel.fit(f"[highlight]正在删除 Agent: {agent_name}...[/highlight]", border_style="cyan"))
+
+    try:
+        request = RemoveAgentRequest(user_id=user_id, agent_name=agent_name)
+        async for result_json in server._remove_agent(request):
+            result = json.loads(result_json)
+            if result.get("result") == "success":
+                stream_print(Panel.fit(f"[success]✅ {result.get('message', 'Agent 删除成功!')}[/success]", border_style="green"))
+            else:
+                stream_print(Panel.fit(f"[danger]❌ {result.get('message', 'Agent 删除失败!')}[/danger]", border_style="red"))
+    except Exception as e:
+        stream_print(Panel.fit(f"[danger]执行删除时发生错误: {str(e)}[/danger]", border_style="red"))
+
+
 @cli.command()
 def help():
     """显示帮助信息"""
@@ -688,6 +716,11 @@ def help():
     help_table.add_row("  -i/--interactive", "交互模式")
     help_table.add_row()
     
+    help_table.add_row("[命令] remove-agent", "删除指定的Agent")
+    help_table.add_row("  -n/--agent-name", "Agent名称 (必填)")
+    help_table.add_row("  -u/--user-id", "用户ID (必填)")
+    help_table.add_row()
+
     help_table.add_row("[交互模式]", "直接运行 cli.py 进入")
     help_table.add_row("  exit/quit", "退出交互模式")
     

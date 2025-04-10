@@ -47,12 +47,10 @@ def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
         update={
             "messages": [
                 HumanMessage(
-                    content=RESPONSE_FORMAT.format(
-                        state["next"], f'New agent {response["agent_name"]} created.'
-                    ),
-                    name=state["next"],
+                    content='New agent {response["agent_name"]} created.'
                 )
             ],
+            "new_agent_name": response["agent_name"],
         },
         goto="publisher",
     )
@@ -115,7 +113,7 @@ def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
                     name=state["next"],
                 )
             ],
-            "processing_agent_name": state["next"]
+            "processing_agent_name": _agent.agent_name
         },
         goto="publisher",
     )

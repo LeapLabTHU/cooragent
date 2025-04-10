@@ -52,6 +52,7 @@ def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
                     name=state["next"],
                 )
             ],
+           "new_agent_name": response["agent_name"],  
         },
         goto="__end__",
     )
@@ -93,9 +94,7 @@ def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
     if state.get("search_before_planning"):
         searched_content = tavily_tool.invoke({"query": state["messages"][-1].content})
         messages = deepcopy(messages)
-        messages[
-            -1
-        ].content += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
+        messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
     stream = llm.stream(messages)
     full_response = ""
     for chunk in stream:

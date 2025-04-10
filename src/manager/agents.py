@@ -158,6 +158,29 @@ class AgentManager:
             f.write(agent.prompt)
 
         logger.info(f"agent {agent.agent_name} saved.")
+        
+    def _remove_agent(self, agent_name: str):
+        agent_path = self.agents_dir / f"{agent_name}.json"
+        agent_prompt_path = self.prompt_dir / f"{agent_name}.md"
+
+        try:
+            agent_path.unlink(missing_ok=True)  # delete json file
+            logger.info(f"Removed agent definition file: {agent_path}")
+        except Exception as e:
+            logger.error(f"Error removing agent definition file {agent_path}: {e}")
+
+        try:
+            agent_prompt_path.unlink(missing_ok=True) # delete prompt file
+            logger.info(f"Removed agent prompt file: {agent_prompt_path}")
+        except Exception as e:
+            logger.error(f"Error removing agent prompt file {agent_prompt_path}: {e}")
+
+        try:
+            if agent_name in self.available_agents:
+                del self.available_agents[agent_name] # remove from memory dict
+                logger.info(f"Removed agent '{agent_name}' from available agents.")
+        except Exception as e:
+             logger.error(f"Error removing agent '{agent_name}' from available_agents dictionary: {e}")
     
     def _load_agent(self, agent_name: str, user_agent_flag: bool=False):
         agent_path = self.agents_dir / f"{agent_name}.json"
