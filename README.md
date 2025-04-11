@@ -2,7 +2,7 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Wechat](https://img.shields.io/badge/WeChat-cooragent-brightgreen?logo=wechat&logoColor=white)](./assets/wechat_community.jpg)
-[![Discord Follow](https://dcbadge.vercel.app/api/server/m3MszDcn?style=flat)](https://discord.gg/StFHzvmz)
+[![Discord Follow](https://dcbadge.vercel.app/api/server/StFHzvmz?style=flat)](https://discord.gg/StFHzvmz)
 
 
 [English](./README.md) | [简体中文](./README_zh.md)
@@ -136,10 +136,12 @@ run -t agent_workflow -u <user> -m 'create a stock analysis expert agent, analyz
 ```
 edit-agent -n <agent_name> -i
 ```
+
 ## Query Agent
 ```
 list-agents -u <user-id> -m <regex>
 ```
+
 ## Remove Agent
 ```
 remove-agent -n <agent_name> -u <user-id>
