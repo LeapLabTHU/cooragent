@@ -9,7 +9,7 @@
 
 # Cooragent 是什么
 
-Cooragent 是一个 AI 智能体协作社区，在这个社区中，你可以通过一句话创建一个特定功能的智能体，并与其他智能体协作完成复杂任务。智能体可以自由组合，创造出无限可能。与此同时，你还可以将你的智能体发布到社区中，与其他人共享。
+Cooragent 是一个 AI 智能体协作社区。在这个社区中，你可以通过一句话创建一个具备强大功能的智能体，并与其他智能体协作完成复杂任务。智能体可以自由组合，创造出无限可能。与此同时，你还可以将你的智能体发布到社区中，与其他人共享。
 
 ## 演示视频
 
@@ -48,7 +48,7 @@ cp .env.example .env
 # 编辑 .env 文件，填入你的 API 密钥
 
 # 运行项目
-uv run main.py
+uv run cli.py
 ```
 
 ## Cooragent 有什么不同
@@ -59,7 +59,7 @@ uv run main.py
     <th align="center">功能</th>
     <th align="center">cooragent</th>
     <th align="center">open-manus</th>
-    <th align="center">cooragent</th>
+    <th align="center">langmanus</th>
     <th align="center">OpenAI Assistant Operator</th>
   </tr>
   <tr>
@@ -119,7 +119,7 @@ uv run main.py
 cooragent 实现了一个分层的多智能体系统，其中有一个主管智能体协调专门的智能体来完成复杂任务：
 
 <p align="center">
-  <img src="./assets/cooragent.png" alt="cooragent architecture" />
+  <img src="./assets/cooragent.png" alt="cooragent architecture" width="600"/>
 </p>
 
 
@@ -134,9 +134,25 @@ python cli.py
 ```
 run -t agent_workflow -u <user> -m '创建一个股票分析专家 agent，分析过去一个月的小米股票走势，并预测下个交易日的股价走势，并给出买入或卖出的建议。'
 ```
-<p align="center">
-<img src="./assets/create_agent.png" alt="创建智能体" />
-</p>
+
+## 编辑智能体
+```
+edit-agent -n <agent_name> -i
+```
+## 查询智能体
+```
+list-agents -u <user-id> -m <regex>
+```
+## 删除智能体
+```
+remove-agent -n <agent_name> -u <user-id>
+```
+
+## 使用一组智能体协作完成复杂任务
+```
+run -t agent_workflow -u <user> -m '综合运用任务规划智能体，爬虫智能体，代码运行智能体，浏览器操作智能体，报告撰写智能体，文件操作智能体为我规划一个 2025 年五一期间去云南旅游的行程。首先运行爬虫智能体爬取云南旅游的景点信息，并使用浏览器操作智能体浏览景点信息，选取最值得去的 10 个景点。然后规划一个 5 天的旅游的行程，使用报告撰写智能体生成一份旅游报告，最后使用文件操作智能体将报告保存为 pdf 文件。'
+```
+
 ## 通过 MCP 方式创建智能体
 ```
 server_params = StdioServerParameters(
@@ -169,16 +185,6 @@ MCPManager.register_agent("mcp_excel_agent", agent, agent_obj)
 ```
 代码见 [src/mcp/excel_agent.py](./src/mcp/excel_agent.py)
 
-## 编辑 Agent
-
-
-
-## 使用一组智能体完成复杂任务
-
-
-
-基于工具调用实现复杂功能
-
 ### 配置
 
 在项目根目录创建 `.env` 文件并配置以下环境变量：
@@ -187,12 +193,6 @@ MCPManager.register_agent("mcp_excel_agent", agent, agent_obj)
 cp .env.example .env
 ```
 
-
-## web 端
-
-cooragent 提供一个默认的网页界面。
-
-请参考 [brainleap/brainleap-ai](https://www.brainleap.ai) 项目了解更多信息。
 
 
 ## 贡献
