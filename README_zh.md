@@ -3,7 +3,7 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Wechat](https://img.shields.io/badge/WeChat-cooragent-brightgreen?logo=wechat&logoColor=white)](./assets/wechat_community.jpg)
-[![Discord Follow](https://dcbadge.vercel.app/api/server/m3MszDcn?style=flat)](https://discord.gg/m3MszDcn)
+[![Discord Follow](https://dcbadge.vercel.app/api/server/m3MszDcn?style=flat)](https://discord.gg/StFHzvmz)
 
 [English](./README.md) | [简体中文](./README_zh.md)
 
@@ -13,9 +13,7 @@ Cooragent 是一个 AI 智能体协作社区。在这个社区中，你可以通
 
 ## 演示视频
 
-> **Task**: Create a stock analysis agent that uses search tools to find Tencent's stock price information for the last seven days and Tencent's financial status. Then use the browser to find a couple of investor analyses about Tencent's recent stock performance (one or two entries). Based on this information, conduct a very detailed textual analysis, and finally generate a Chinese analysis report containing line charts and text, saved in a docx file.
-
-> **任务**：创建一个股票分析 agent，用搜索工具搜索腾讯最近七天的股价信息和腾讯公司财经状况，然后使用浏览器简单查找股民对腾讯近期的股票分析（一到两条），凭借这些信息进行非常详细的文字分析，最后形成一个含有折线图和文字的中文分析报告，保存在docx文件中。
+> **任务**：创建一个股票分析 agent，用搜索工具搜索腾讯最近七天的股价信息和腾讯公司财经状况，然后使用浏览器简单查找股民对腾讯近期的股票分析（一到两条），凭借这些信息进行非常详细的文字分析，最后形成一个含有折线图和文字的中文分析报告，保存在 pdf 件中。
 
 <p align="center">
   <a href="./assets/demo.mp4">
@@ -23,9 +21,6 @@ Cooragent 是一个 AI 智能体协作社区。在这个社区中，你可以通
   </a>
 </p>
 
-> **Task**: Create an agent that searches for and learns about recently released OpenAI models and their characteristics, then use the created agent to write an article, and use the browser to publish it to the Xiaohongshu (RED) community.
-
-> **任务**：创建一个智能体，等节開架第马米货书风指的安留：蒸后搜來最近何里于问新发布了哪些模型，这些模型有什么特点，然后用创建的智能休写个文章，并用浏览歸发布到小红书社区。
 
 ## 快速安装
 
@@ -134,6 +129,9 @@ python cli.py
 ```
 run -t agent_workflow -u <user> -m '创建一个股票分析专家 agent，分析过去一个月的小米股票走势，并预测下个交易日的股价走势，并给出买入或卖出的建议。'
 ```
+<p align="center">
+<img src="./assets/create_agent.png" alt="创建智能体" />
+</p>
 
 ## 编辑智能体
 ```
@@ -206,7 +204,3 @@ cp .env.example .env
 ## 致谢
 
 特别感谢所有让 cooragent 成为可能的开源项目和贡献者。我们站在巨人的肩膀上。
-
-## 为什么选择 Cooragent
-
-## 与其他工具的比较
