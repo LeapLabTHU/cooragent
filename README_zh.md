@@ -109,21 +109,12 @@ uv run cli.py
 </table>
 
 
-## 架构
-
-cooragent 实现了一个分层的多智能体系统，其中有一个主管智能体协调专门的智能体来完成复杂任务：
-
-<p align="center">
-  <img src="./assets/cooragent.png" alt="cooragent architecture" width="600"/>
-</p>
-
-
 ## 一句话创建智能体
 ```
 python cli.py
 ```
 <p align="center">
-<img src="./assets/help.png" alt="查看帮助" />
+<img src="./assets/welcome.png" alt="欢迎使用 Cooragent" />
 </p>
 
 ```
@@ -182,6 +173,14 @@ agent_obj = Agent(user_id="share",
 MCPManager.register_agent("mcp_excel_agent", agent, agent_obj)
 ```
 代码见 [src/mcp/excel_agent.py](./src/mcp/excel_agent.py)
+
+## 架构
+
+cooragent 实现了一个分层的多智能体系统，其中有一个主管智能体协调专门的智能体来完成复杂任务：
+
+<p align="center">
+  <img src="./assets/cooragent.png" alt="cooragent architecture" width="600"/>
+</p>
 
 ### 配置
 

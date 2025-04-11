@@ -121,7 +121,7 @@ Cooragent implements a hierarchical multi-agent system with a supervisor agent c
 python cli.py
 ```
 <p align="center">
-<img src="./assets/help.png" alt="check help" />
+<img src="./assets/welcome.png" alt="welcome to cooragent" />
 </p>
 ```
 run -t agent_workflow -u <user> -m 'create a stock analysis expert agent, analyze the past month's Xiaomi stock price trend, predict the stock price trend of the next trading day, and give a buy or sell suggestion.'
