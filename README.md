@@ -1,9 +1,9 @@
 # cooragent
-
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Wechat](https://img.shields.io/badge/WeChat-cooragent-brightgreen?logo=wechat&logoColor=white)](./assets/wechat_community.jpg)
-[![Discord Follow](https://dcbadge.vercel.app/api/server/m3MszDcn?style=flat)](https://discord.gg/m3MszDcn)
+[![Discord Follow](https://dcbadge.vercel.app/api/server/m3MszDcn?style=flat)](https://discord.gg/StFHzvmz)
+
 
 [English](./README.md) | [简体中文](./README_zh.md)
 
@@ -13,9 +13,8 @@ Cooragent is an AI agent collaboration community where you can create specific-f
 
 ## Demo Videos
 
-> **Task**: Create a stock analysis agent that uses search tools to find Tencent's stock price information for the last seven days and Tencent's financial status. Then use the browser to find a couple of investor analyses about Tencent's recent stock performance (one or two entries). Based on this information, conduct a very detailed textual analysis, and finally generate a Chinese analysis report containing line charts and text, saved in a docx file.
+> **Task**: Create a stock analysis agent that uses search tools to find Tencent's stock price information for the last seven days and Tencent's financial status. Then use the browser to find a couple of investor analyses about Tencent's recent stock performance (one or two entries). Based on this information, conduct a very detailed textual analysis, and finally generate a Chinese analysis report containing line charts and text, saved in a pdf file.
 
-> **Task**: Create an agent that searches for and learns about recently released OpenAI models and their characteristics, then use the created agent to write an article, and use the browser to publish it to the Xiaohongshu (RED) community.
 
 <p align="center">
   <a href="./assets/demo.mp4">
@@ -44,7 +43,7 @@ cp .env.example .env
 # Edit .env file and fill in your API keys
 
 # Run the project (Example, assuming main.py is the entry point)
-uv run main.py # Adjust if your entry point is different
+uv run cli.py # Adjust if your entry point is different
 ```
 
 ## What Makes Cooragent Different
@@ -114,7 +113,7 @@ uv run main.py # Adjust if your entry point is different
 Cooragent implements a hierarchical multi-agent system with a supervisor agent coordinating specialized agents to complete complex tasks:
 
 <p align="center">
-  <img src="./assets/cooragent.png" alt="cooragent architecture" />
+  <img src="./assets/cooragent.png" alt="cooragent architecture"  width="600"/>
 </p>
 
 ## One-Sentence Agent Creation
@@ -122,14 +121,32 @@ Cooragent implements a hierarchical multi-agent system with a supervisor agent c
 python cli.py
 ```
 <p align="center">
-<img src="./assets/help.png" alt="查看帮助" />
+<img src="./assets/help.png" alt="check help" />
 </p>
 ```
-run -t agent_workflow -u <user> -m '创建一个股票分析专家 agent，分析过去一个月的小米股票走势，并预测下个交易日的股价走势，并给出买入或卖出的建议。'
+run -t agent_workflow -u <user> -m 'create a stock analysis expert agent, analyze the past month's Xiaomi stock price trend, predict the stock price trend of the next trading day, and give a buy or sell suggestion.'
 ```
 <p align="center">
-<img src="./assets/create_agent.png" alt="创建智能体" />
+<img src="./assets/create_agent.png" alt="create agent" />
 </p>
+
+## Edit Agent
+```
+edit-agent -n <agent_name> -i
+```
+## Query Agent
+```
+list-agents -u <user-id> -m <regex>
+```
+## Remove Agent
+```
+remove-agent -n <agent_name> -u <user-id>
+```
+
+## Complete Complex Tasks with Agent Teams
+```
+run -t agent_workflow -u <user> -m 'use the task planning agent, crawler agent, code running agent, browser operation agent, report writing agent, and file operation agent to plan a trip to Yunnan Province during the May Day holiday in 2025. First, use the crawler agent to crawl the scenic information of Yunnan Province, and use the browser operation agent to browse the scenic information. Select the top 10 most worth visiting scenic spots. Then plan a 5-day travel itinerary, use the report writing agent to generate a travel report, and finally use the file operation agent to save the report as a pdf file.'
+```
 
 ## MCP-based Agent Creation
 ```
