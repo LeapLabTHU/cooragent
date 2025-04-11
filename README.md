@@ -46,6 +46,14 @@ cp .env.example .env
 uv run cli.py # Adjust if your entry point is different
 ```
 
+## Configuration
+
+Create `.env` file in project root:
+
+```bash
+cp .env.example .env
+```
+
 ## What Makes Cooragent Different
 
 ## Feature Comparison
@@ -108,27 +116,21 @@ uv run cli.py # Adjust if your entry point is different
   </tr>
 </table>
 
-## Architecture
 
-Cooragent implements a hierarchical multi-agent system with a supervisor agent coordinating specialized agents to complete complex tasks:
-
-<p align="center">
-  <img src="./assets/cooragent.png" alt="cooragent architecture"  width="600"/>
-</p>
 
 ## One-Sentence Agent Creation
+Enter the cooragent command tool interface
 ```
 python cli.py
 ```
 <p align="center">
-<img src="./assets/help.png" alt="check help" />
+<img src="./assets/welcome.png" alt="welcome to cooragent" />
 </p>
+
+Create a Xiaomi stock analysis agent with a single sentence
 ```
 run -t agent_workflow -u <user> -m 'create a stock analysis expert agent, analyze the past month's Xiaomi stock price trend, predict the stock price trend of the next trading day, and give a buy or sell suggestion.'
 ```
-<p align="center">
-<img src="./assets/create_agent.png" alt="create agent" />
-</p>
 
 ## Edit Agent
 ```
@@ -181,15 +183,15 @@ MCPManager.register_agent("mcp_excel_agent", agent, agent_obj)
 Complete code see [src/mcp/excel_agent.py](./src/mcp/excel_agent.py)
 ## Edit Agents
 
-## Completing Complex Tasks with Agent Teams
+## Architecture
 
-### Configuration
+Cooragent implements a hierarchical multi-agent system with a supervisor agent coordinating specialized agents to complete complex tasks:
 
-Create `.env` file in project root:
+<p align="center">
+  <img src="./assets/cooragent.png" alt="cooragent architecture" width="600"/>
+</p>
 
-```bash
-cp .env.example .env
-```
+
 
 ## Web Interface
 

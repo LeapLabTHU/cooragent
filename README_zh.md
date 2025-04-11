@@ -46,6 +46,14 @@ cp .env.example .env
 uv run cli.py
 ```
 
+## 配置
+
+在项目根目录创建 `.env` 文件并配置以下环境变量：
+
+```bash
+cp .env.example .env
+```
+
 ## Cooragent 有什么不同
 
 ## 功能比较
@@ -109,29 +117,19 @@ uv run cli.py
 </table>
 
 
-## 架构
-
-cooragent 实现了一个分层的多智能体系统，其中有一个主管智能体协调专门的智能体来完成复杂任务：
-
-<p align="center">
-  <img src="./assets/cooragent.png" alt="cooragent architecture" width="600"/>
-</p>
-
-
 ## 一句话创建智能体
+进入 cooragent 命令工具界面
 ```
 python cli.py
 ```
 <p align="center">
-<img src="./assets/help.png" alt="查看帮助" />
+<img src="./assets/welcome.png" alt="欢迎使用 Cooragent" />
 </p>
 
+一句话创建小米股票分析智能体
 ```
 run -t agent_workflow -u <user> -m '创建一个股票分析专家 agent，分析过去一个月的小米股票走势，并预测下个交易日的股价走势，并给出买入或卖出的建议。'
 ```
-<p align="center">
-<img src="./assets/create_agent.png" alt="创建智能体" />
-</p>
 
 ## 编辑智能体
 ```
@@ -183,13 +181,13 @@ MCPManager.register_agent("mcp_excel_agent", agent, agent_obj)
 ```
 代码见 [src/mcp/excel_agent.py](./src/mcp/excel_agent.py)
 
-### 配置
+## 架构
 
-在项目根目录创建 `.env` 文件并配置以下环境变量：
+cooragent 实现了一个分层的多智能体系统，其中有一个主管智能体协调专门的智能体来完成复杂任务：
 
-```bash
-cp .env.example .env
-```
+<p align="center">
+  <img src="./assets/cooragent.png" alt="cooragent architecture" width="600"/>
+</p>
 
 
 
