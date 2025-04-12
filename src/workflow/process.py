@@ -139,7 +139,7 @@ async def _process_workflow(
 
     yield {
         "event": "start_of_workflow",
-        "data": {"workflow_id": workflow_id, "input": initial_state["messages"]},
+        "data": {"workflow_id": workflow_id, "input": [msg.dict() for msg in initial_state["messages"]]},
     }
     
     try:
@@ -172,16 +172,16 @@ async def _process_workflow(
                     if key == "messages" and isinstance(value, list) and value:
                         state["messages"] += value
                         last_message = value[-1]
-                        if hasattr(last_message, 'content') and last_message.content:
+                        if 'content' in last_message:
                             if agent_name == "coordinator":
-                                content = last_message.content
+                                content = last_message["content"]
                                 if content.startswith("handoff"):
                                     # mark handoff, do not send maesages
                                     global is_handoff_case
                                     is_handoff_case = True
                                     continue
                             
-                            content = last_message.content
+                            content = last_message["content"]
                             chunk_size = 10  # send 10 words for each chunk
                             for i in range(0, len(content), chunk_size):
                                 chunk = content[i:i+chunk_size]
@@ -201,8 +201,11 @@ async def _process_workflow(
                     if agent_name == "agent_factory" and key == "new_agent_name":
                         yield {
                             "event": "new_agent_created",
-                            "new_agent_name": value,
-                            "agent_obj": agent_manager.available_agents[value],
+                            "agent_name": value,
+                            "data": {
+                                "new_agent_name": value,
+                                "agent_obj": agent_manager.available_agents[value],
+                            },
                         }
                                                 
                             
@@ -223,8 +226,7 @@ async def _process_workflow(
             "data": {
                 "workflow_id": workflow_id,
                 "messages": [
-                    convert_message_to_dict(msg) if hasattr(msg, 'to_dict') else msg
-                    for msg in state.get("messages", [])
+                    {"role": "user", "content": "workflow completed"}
                 ],
             },
         }

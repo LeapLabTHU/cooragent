@@ -17,7 +17,7 @@ from src.service.session import UserSession
 from src.interface.agent_types import RemoveAgentRequest
 
 
-logging.basicConfig(filename='app.log', level=logging.INFO)
+logging.basicConfig(filename='app.log', level=logging.WARNING)
 
 
 class Server:
@@ -51,8 +51,27 @@ class Server:
             request.coor_agents
         )
         async for res in response:
-            yield res
-
+            try:
+                # 尝试直接序列化
+                event_type = res.get("event")
+                data = res.get("data", {})
+                if event_type == "new_agent_created":
+                    
+                    yield {
+                            "event": "new_agent_created",
+                            "agent_name": res["agent_name"],
+                            "data": {
+                                "new_agent_name": res["data"]["new_agent_name"],
+                                "agent_obj": res["data"]["agent_obj"].model_dump_json(),
+                            },
+                        }
+                else:
+                    yield json.dumps(res, ensure_ascii=False)+"\n"
+            except (TypeError, ValueError, json.JSONDecodeError) as e:
+                from traceback import print_stack
+                print_stack()
+                logging.error(f"Error serializing event: {e}", exc_info=True)
+                
     @staticmethod
     async def _list_agents(
          request: "listAgentRequest"
@@ -103,7 +122,7 @@ class Server:
         async def agent_workflow(request: AgentRequest):
             async def response_generator():
                 async for chunk in self._run_agent_workflow(request):
-                    yield json.dumps(chunk) + "\n"
+                    yield chunk
                     
             return StreamingResponse(
                 response_generator(),

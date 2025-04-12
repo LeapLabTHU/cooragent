@@ -462,7 +462,7 @@ async def list_agents(ctx, user_id, match):
         progress.update(task, description=f"[success]已获取 {count} 个Agent!")
         
         if count == 0:
-            stream_print(Panel(f"未找到匹配的Agent", title="结果", border_style="yellow"))
+            stream_print(Panel(f"未找_run_agent_workflow到匹配的Agent", title="结果", border_style="yellow"))
         else:
             stream_print(table)
 

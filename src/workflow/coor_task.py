@@ -47,10 +47,12 @@ def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
         update={
             "messages": [
                 HumanMessage(
-                    content='New agent {response["agent_name"]} created.'
-                )
+                    content=f'New agent {response["agent_name"]} created.',
+                    name="agent_factory"
+                ).dict()
             ],
             "new_agent_name": response["agent_name"],
+            "agent_name": "agent_factory",
         },
         goto="publisher",
     )
@@ -77,14 +79,14 @@ def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_factor
         logger.info(f"publisher delegating to: {agent}")
         return Command(goto=goto, 
                        update={
-                           "messages": [HumanMessage(content=f"Next step is delegating to: {agent}", name="publisher")],
+                           "messages": [HumanMessage(content=f"Next step is delegating to: {agent}", name="publisher").dict()],
                            "next": agent})
     else:
         goto = "agent_factory"
         logger.info(f"publisher delegating to: {agent}")
         return Command(goto=goto, 
                        update={
-                           "messages": [HumanMessage(content=f"Next step is delegating to: {agent}", name="publisher")],
+                           "messages": [HumanMessage(content=f"Next step is delegating to: {agent}", name="publisher").dict()],
                            "next": agent})
 
 
@@ -111,9 +113,10 @@ def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
                         state["next"], response["messages"][-1].content
                     ),
                     name=state["next"],
-                )
+                ).dict()
             ],
-            "processing_agent_name": _agent.agent_name
+            "processing_agent_name": _agent.agent_name,
+            "agent_name": _agent.agent_name
         },
         goto="publisher",
     )
@@ -152,7 +155,8 @@ def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
 
     return Command(
         update={
-            "messages": [HumanMessage(content=full_response, name="planner")],
+            "messages": [HumanMessage(content=full_response, name="planner").dict()],
+            "agent_name": "planner",
             "full_plan": full_response,
         },
         goto=goto,
@@ -170,6 +174,10 @@ def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
         goto = "planner"
 
     return Command(
+        update={
+            "messages": [HumanMessage(content=response.content, name="coordinator").dict()],
+            "agent_name": "coordinator",
+        },
         goto=goto,
     )
 

@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "lang-manus"
+name = "cooragent"
 version = "0.1.0"
-description = "Lang-Manus project"
+description = "Cooragent project"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

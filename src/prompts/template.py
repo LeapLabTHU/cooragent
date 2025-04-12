@@ -32,7 +32,7 @@ def apply_prompt_template(prompt_name: str, state: AgentState, template:str=None
         if isinstance(msg, HumanMessage):
             messages.append({"role": "user", "content": msg.content})
         else:
-            messages.append({"role": "assistant", "content": msg.content})
+            messages.append({"role": "assistant", "content": msg["content"]})
     state["messages"] = messages
     
     _template, _ = get_prompt_template(prompt_name) if not template else template
