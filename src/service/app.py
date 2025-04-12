@@ -52,9 +52,7 @@ class Server:
         )
         async for res in response:
             try:
-                # 尝试直接序列化
                 event_type = res.get("event")
-                data = res.get("data", {})
                 if event_type == "new_agent_created":
                     
                     yield {
@@ -66,7 +64,7 @@ class Server:
                             },
                         }
                 else:
-                    yield json.dumps(res, ensure_ascii=False)+"\n"
+                    yield res
             except (TypeError, ValueError, json.JSONDecodeError) as e:
                 from traceback import print_stack
                 print_stack()
@@ -122,7 +120,7 @@ class Server:
         async def agent_workflow(request: AgentRequest):
             async def response_generator():
                 async for chunk in self._run_agent_workflow(request):
-                    yield chunk
+                    yield json.dumps(chunk, ensure_ascii=False)+"\n"
                     
             return StreamingResponse(
                 response_generator(),
