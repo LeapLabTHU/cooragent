@@ -28,7 +28,8 @@ class BrowserTool(BaseTool):
     name: ClassVar[str] = "browser"
     args_schema: Type[BaseModel] = BrowserUseInput
     description: ClassVar[str] = (
-        "Use this tool to interact with web browsers. Input should be a natural language description of what you want to do with the browser, such as 'Go to google.com and search for browser-use', or 'Navigate to Reddit and find the top post about AI'."
+        "Use this tool to interact with web browsers. Input should be a natural language description of what you want to do with the browser, "
+        "such as 'Go to google.com and search for browser-use', or 'Navigate to Reddit and find the top post about AI'."
     )
 
     _agent: Optional[BrowserAgent] = None
