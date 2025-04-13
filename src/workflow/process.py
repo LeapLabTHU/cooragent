@@ -71,13 +71,6 @@ async def run_agent_workflow(
         enable_debug_logging()
 
     logger.info(f"Starting workflow with user input: {user_input_messages}")
-    
-    input_messages = []
-    for msg in user_input_messages:
-        if msg.get("role") == "user":
-            input_messages.append(HumanMessage(content=msg.get("content")))
-        else:
-            input_messages.append(SystemMessage(content=msg.get("content")))
 
     workflow_id = str(uuid.uuid4())
 
@@ -121,7 +114,7 @@ async def run_agent_workflow(
                 "user_id": user_id,
                 "TEAM_MEMBERS": TEAM_MEMBERS,
                 "TEAM_MEMBERS_DESCRIPTION": TEAM_MEMBERS_DESCRIPTION,
-                "messages": input_messages,
+                "messages": user_input_messages,
                 "deep_thinking_mode": deep_thinking_mode,
                 "search_before_planning": search_before_planning,
             },
@@ -139,7 +132,7 @@ async def _process_workflow(
 
     yield {
         "event": "start_of_workflow",
-        "data": {"workflow_id": workflow_id, "input": [msg.dict() for msg in initial_state["messages"]]},
+        "data": {"workflow_id": workflow_id, "input": initial_state["messages"]},
     }
     
     try:
@@ -189,7 +182,7 @@ async def _process_workflow(
                                     agent_name = state['processing_agent_name']
                   
                                 yield {
-                                    "event": "message",
+                                    "event": "messages",
                                     "agent_name": agent_name,
                                     "data": {
                                         "message_id": f"{workflow_id}_{agent_name}_msg_{i}",

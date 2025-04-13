@@ -20,7 +20,7 @@ import readline
 import atexit
 import logging
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
 from src.interface.agent_types import *
@@ -339,7 +339,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     console.print(f"[agent_name]<<< {agent_name} 执行完成[/agent_name]")
                     console.print("")
             
-            elif event_type == "message":
+            elif event_type == "messages":
                 delta = data.get("delta", {})
                 content = delta.get("content", "")
                 reasoning = delta.get("reasoning_content", "")
@@ -390,11 +390,11 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 
 
             elif event_type == "new_agent_created":
-                new_agent_name = chunk.get("new_agent_name", "")
-                agent_obj = chunk.get("agent_obj", None)
+                new_agent_name = data.get("new_agent_name", "")
+                agent_obj = data.get("agent_obj", None)
                 console.print(f"[new_agent_name]>>> {new_agent_name} 创建成功...")
                 console.print(f"[new_agent]>>> 配置: ")
-                syntax = Syntax(agent_obj.model_dump_json(indent=2), "json", theme="monokai", line_numbers=False)
+                syntax = Syntax(agent_obj, "json", theme="monokai", line_numbers=False)
                 console.print(syntax)
 
 
@@ -679,9 +679,9 @@ async def remove_agent(ctx, agent_name, user_id):
         async for result_json in server._remove_agent(request):
             result = json.loads(result_json)
             if result.get("result") == "success":
-                stream_print(Panel.fit(f"[success]✅ {result.get('message', 'Agent 删除成功!')}[/success]", border_style="green"))
+                stream_print(Panel.fit(f"[success]✅ {result.get('messages', 'Agent 删除成功!')}[/success]", border_style="green"))
             else:
-                stream_print(Panel.fit(f"[danger]❌ {result.get('message', 'Agent 删除失败!')}[/danger]", border_style="red"))
+                stream_print(Panel.fit(f"[danger]❌ {result.get('messages', 'Agent 删除失败!')}[/danger]", border_style="red"))
     except Exception as e:
         stream_print(Panel.fit(f"[danger]执行删除时发生错误: {str(e)}[/danger]", border_style="red"))
 

@@ -60,7 +60,7 @@ class Server:
                             "agent_name": res["agent_name"],
                             "data": {
                                 "new_agent_name": res["data"]["new_agent_name"],
-                                "agent_obj": res["data"]["agent_obj"].model_dump_json(),
+                                "agent_obj": res["data"]["agent_obj"].model_dump_json(indent=2),
                             },
                         }
                 else:
@@ -110,10 +110,10 @@ class Server:
         try:
 
             agent_manager._remove_agent(request.agent_name)
-            yield json.dumps({"result": "success", "message": f"Agent '{request.agent_name}' 已成功删除。"})
+            yield json.dumps({"result": "success", "messages": f"Agent '{request.agent_name}' 已成功删除。"})
         except Exception as e:
             logging.error(f"Error removing agent {request.agent_name}: {e}", exc_info=True)
-            yield json.dumps({"result": "error", "message": f"删除 Agent '{request.agent_name}' 时出错: {str(e)}"})
+            yield json.dumps({"result": "error", "messages": f"删除 Agent '{request.agent_name}' 时出错: {str(e)}"})
 
     def launch(self):
         @self.app.post("/v1/workflow", status_code=status.HTTP_200_OK)

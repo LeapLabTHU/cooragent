@@ -2,7 +2,6 @@ import logging
 import json
 from copy import deepcopy
 from typing import Literal
-from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 
 from src.llm import get_llm_by_type
@@ -20,7 +19,7 @@ RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please e
 
 def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Node for the create agent agent that creates a new agent."""
-    logger.info("Create agent agent starting task")
+    logger.info("Agent Factory Start to work \n")
     messages = apply_prompt_template("agent_factory", state)
     response = (
         get_llm_by_type(AGENT_LLM_MAP["agent_factory"])
@@ -45,11 +44,10 @@ def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
     return Command(
         update={
             "messages": [
-                HumanMessage(
-                    content=f'New agent {response["agent_name"]} created.'
-                )
+                {"content":f'New agent {response["agent_name"]} created. \n', "tool":"agent_factory", "role":"assistant"}
             ],
-           "new_agent_name": response["agent_name"],  
+            "new_agent_name": response["agent_name"],
+            "agent_name": "agent_factory",
         },
         goto="__end__",
     )
@@ -65,56 +63,55 @@ def publisher_node(state: State) -> Command[Literal["agent_factory", "agent_fact
         .invoke(messages)
     )
     agent = response["next"]
-
     
     if agent == "FINISH":
         goto = "__end__"
-        logger.info("Workflow completed")
+        logger.info("Workflow completed \n")
         return Command(goto=goto, update={"next": goto})
     elif agent != "agent_factory":
-        goto = "agent_factory"
-        logger.info(f"publisher delegating to: {agent}")
-        return Command(goto=goto, update={"next": agent})
+        goto = "agent_proxy"
     else:
         goto = "agent_factory"
-        logger.info(f"publisher delegating to: {agent}")
-        return Command(goto=goto, update={"next": agent})
+    logger.info(f"publisher delegating to: {agent}")
+    return Command(goto=goto, 
+                    update={
+                        "messages": [{"content":f"Next step is delegating to: {agent}\n", "tool":"publisher", "role":"assistant"}],
+                        "next": agent})
 
 
 def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
     """Planner node that generate the full plan."""
-    logger.info("Planner generating full plan")
+    logger.info("Planner generating full plan \n")
     messages = apply_prompt_template("planner", state)
     llm = get_llm_by_type(AGENT_LLM_MAP["planner"])
     if state.get("deep_thinking_mode"):
         llm = get_llm_by_type("reasoning")
     if state.get("search_before_planning"):
-        searched_content = tavily_tool.invoke({"query": state["messages"][-1].content})
+        searched_content = tavily_tool.invoke({"query": state["messages"][-1]["content"]})
         messages = deepcopy(messages)
         messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
-    stream = llm.stream(messages)
-    full_response = ""
-    for chunk in stream:
-        full_response += chunk.content
+    
+    reasponse = llm.invoke(messages)
+    content = reasponse.content
 
+    if content.startswith("```json"):
+        content = content.removeprefix("```json")
 
-    if full_response.startswith("```json"):
-        full_response = full_response.removeprefix("```json")
-
-    if full_response.endswith("```"):
-        full_response = full_response.removesuffix("```")
+    if content.endswith("```"):
+        content = content.removesuffix("```")
 
     goto = "publisher"
     try:
-        json.loads(full_response)
+        json.loads(content)
     except json.JSONDecodeError:
         logger.warning("Planner response is not a valid JSON")
         goto = "__end__"
 
     return Command(
         update={
-            "messages": [HumanMessage(content=full_response, name="planner")],
-            "full_plan": full_response,
+            "messages": [{"content":content, "tool":"planner", "role":"assistant"}],
+            "agent_name": "planner",
+            "full_plan": content,
         },
         goto=goto,
     )
@@ -122,18 +119,22 @@ def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
 
 def coordinator_node(state: State) -> Command[Literal["planner", "__end__"]]:
     """Coordinator node that communicate with customers."""
-    logger.info("Coordinator talking.")
+    logger.info("Coordinator talking. \n")
     messages = apply_prompt_template("coordinator", state)
     response = get_llm_by_type(AGENT_LLM_MAP["coordinator"]).invoke(messages)
-
 
     goto = "__end__"
     if "handoff_to_planner" in response.content:
         goto = "planner"
-
+        
     return Command(
+        update={
+            "messages": [{"content":response.content, "tool":"coordinator", "role":"assistant"}],
+            "agent_name": "coordinator",
+        },
         goto=goto,
     )
+
 
 def agent_factory_graph():
     workflow = AgentWorkflow()    
