@@ -24,17 +24,37 @@ Cooragent is an AI agent collaboration community where you can create specific-f
 
 ## Quick Installation
 
+1. Installation using conda
 ```bash
-# Clone repository
-git clone https://github.com/SeamLessAI-Inc/cooragent
+git clone https://github.com/LeapLabTHU/cooragent.git
 cd cooragent
 
-# Create and activate virtual environment with uv
+# Create and activate a conda environment
+conda create -n cooragent python=3.12
+conda activate cooragent
+
+# Install dependencies
+pip install -e .
+
+# Configure environment
+cp .env.example .env
+
+# Run the project (Example, assuming cli.py is the entry point)
+python cli.py # Adjust if your entry point is different
+```
+
+2. Installation using venv
+```bash
+# Clone repository
+git clone https://github.com/LeapLabTHU/cooragent.git
+cd cooragent
+
+# Create and activate a virtual environment with uv
 uv python install 3.12
 uv venv --python 3.12
 
 source .venv/bin/activate  # For Windows: .venv\Scripts\activate
-uv run src/service/app.py   # Note: This command seems incorrect, might be leftover. Typical activation is sufficient.
+
 # Install dependencies
 uv sync
 
@@ -42,9 +62,10 @@ uv sync
 cp .env.example .env
 # Edit .env file and fill in your API keys
 
-# Run the project (Example, assuming main.py is the entry point)
+# Run the project (Example, assuming cli.py is the entry point)
 uv run cli.py # Adjust if your entry point is different
 ```
+
 
 ## Configuration
 
