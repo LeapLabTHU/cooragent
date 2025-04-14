@@ -69,14 +69,12 @@ def publisher_node(state: State) -> Command[Literal["agent_factory", "agent_fact
         logger.info("Workflow completed \n")
         return Command(goto=goto, update={"next": goto})
     elif agent != "agent_factory":
-        goto = "agent_proxy"
+        logger.info(f"publisher delegating to: {agent}")
+        return Command(goto=goto, update={"next": agent})
     else:
         goto = "agent_factory"
-    logger.info(f"publisher delegating to: {agent}")
-    return Command(goto=goto, 
-                    update={
-                        "messages": [{"content":f"Next step is delegating to: {agent}\n", "tool":"publisher", "role":"assistant"}],
-                        "next": agent})
+        logger.info(f"publisher delegating to: {agent}")
+        return Command(goto=goto, update={"next": agent})
 
 
 def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
