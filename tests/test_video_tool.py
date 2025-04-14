@@ -1,18 +1,15 @@
 import os
 import base64
 import json
-from src.tools.video import video_tool, download_video_tool
+from src.tools.video import video_tool, download_video_tool, play_video_tool
 
 def test_video_tool():
     # 确保环境变量已设置
     if not os.getenv('SILICONFLOW_API_KEY'):
         print("请先设置 SILICONFLOW_API_KEY 环境变量")
         return
-    
-    # 准备测试数据
-    # 这里使用一个简单的测试图片，实际使用时需要替换为真实的base64编码图片
-    # 为了测试，可以使用一个小的示例图片
-    sample_image_path = "/Users/georgewang/Documents/code/cooragent/assets/walk.png"
+
+    sample_image_path = "/Users/georgewang/Downloads/walk.png"
     
     # 检查测试图片是否存在
     if not os.path.exists(sample_image_path):
@@ -83,6 +80,7 @@ def test_download_video_tool(request_id=None):
             video_url = response_data.get("videoUrl")
             if video_url:
                 print(f"视频URL: {video_url}")
+                return video_url
             else:
                 print("未找到视频URL")
         elif status == "FAILED":
@@ -93,11 +91,32 @@ def test_download_video_tool(request_id=None):
     except json.JSONDecodeError:
         print("无法解析响应JSON")
 
-if __name__ == "__main__":
-    # 方式1: 先生成视频，然后检查状态
-    # request_id = test_video_tool()
-    # if request_id:
-    #     test_download_video_tool(request_id)
+def test_play_video_tool(video_url=None):
+    """测试视频播放工具"""
+    if not video_url:
+        print("请提供有效的视频URL")
+        return
     
-    # 方式2: 直接检查已知请求ID的状态
-    test_download_video_tool("6602b9t0xnzi")
+    print(f"开始测试 PlayVideoTool，视频URL: {video_url}...")
+    
+    # 调用 play_video_tool
+    result = play_video_tool.run({"video_url": video_url})
+    
+    print("播放结果:")
+    print(result)
+
+if __name__ == "__main__":
+    # 方式1: 完整流程测试 - 生成视频，获取URL，播放视频
+    request_id = test_video_tool()
+    if request_id:
+        video_url = test_download_video_tool(request_id)
+        if video_url:
+            test_play_video_tool(video_url)
+    
+    # 方式2: 直接检查已知请求ID的状态并播放
+    # video_url = test_download_video_tool("6602b9t0xnzi")
+    # if video_url:
+    #     test_play_video_tool(video_url)
+    
+    # 方式3: 直接使用已知的视频URL进行播放测试
+    # test_play_video_tool("https://example.com/video.mp4")  # 替换为实际的视频URL

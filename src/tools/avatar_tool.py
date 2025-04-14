@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-# 初始化日志记录器
 logger = logging.getLogger(__name__)
 
 

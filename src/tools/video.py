@@ -4,10 +4,11 @@ from pydantic import BaseModel, Field
 from typing import ClassVar, Type
 from langchain.tools import BaseTool
 from src.tools.decorators import create_logged_tool
-
+import webbrowser
+import json
 logger = logging.getLogger(__name__)
 import os
-
+import time
 url = "https://api.siliconflow.cn/v1/video/submit"
 
 
@@ -61,7 +62,7 @@ class DownloadVideoTool(BaseTool):
     args_schema: Type[BaseModel] = VideoStatusInput
     description: ClassVar[str] = "Use this tool to check the status and download a video that was generated using the video tool."
 
-    def _run(self, request_id: str) -> str:
+    def _run(self, request_id: str, download_local: bool = False) -> str:
         """Check the status of a video generation task."""
         status_url = "https://api.siliconflow.cn/v1/video/status"
         
@@ -70,9 +71,23 @@ class DownloadVideoTool(BaseTool):
             "Authorization": f"Bearer {os.getenv('SILICONFLOW_API_KEY')}",
             "Content-Type": "application/json"
         }
+        status = 'InProgress'
+        while status == 'InProgress':
+            response = requests.request("POST", status_url, json=payload, headers=headers)
+            response_json = json.loads(response.text)
+            status = response_json["status"]
+            if status == 'Succeed':
+                video_url = response_json["results"]["videos"][0]["url"]
+                if download_local:
+                    response = requests.get(video_url)
+                    with open(f"{request_id}.mp4", "wb") as f:
+                        f.write(response.content)
+                return video_url
+            elif status == 'InProgress':
+                time.sleep(1)
+            else:
+                raise Exception(f"video Obtain failed: {response_json['error']}")
         
-        response = requests.request("POST", status_url, json=payload, headers=headers)
-        return response.text
     
     async def _arun(self, request_id: str) -> str:
         """Check the status of a video generation task asynchronously."""
@@ -82,3 +97,32 @@ class DownloadVideoTool(BaseTool):
 
 DownloadVideoTool = create_logged_tool(DownloadVideoTool)
 download_video_tool = DownloadVideoTool()
+
+
+class PlayVideoInput(BaseModel):
+    """Input for PlayVideoTool."""
+    
+    video_url: str = Field(..., description="The URL of the video to play")
+
+
+class PlayVideoTool(BaseTool):
+    name: ClassVar[str] = "play_video"
+    args_schema: Type[BaseModel] = PlayVideoInput
+    description: ClassVar[str] = "Use this tool to play a video in the default web browser using the video URL obtained from the download_video tool."
+
+    def _run(self, video_url: str) -> str:
+        """Play a video in the default web browser."""
+        try:
+            webbrowser.open(video_url)
+            return f"视频已在默认浏览器中打开: {video_url}"
+        except Exception as e:
+            logger.error(f"打开视频时出错: {str(e)}")
+            return f"打开视频时出错: {str(e)}"
+    
+    async def _arun(self, video_url: str) -> str:
+        """Play a video in the default web browser asynchronously."""
+        return self._run(video_url)
+
+
+PlayVideoTool = create_logged_tool(PlayVideoTool)
+play_video_tool = PlayVideoTool()
