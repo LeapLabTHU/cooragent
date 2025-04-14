@@ -36,6 +36,9 @@ conda activate cooragent
 # Install dependencies
 pip install -e .
 
+# Optional: If you need to use the browser tool
+playwright install
+
 # Configure environment
 cp .env.example .env
 
@@ -57,6 +60,9 @@ source .venv/bin/activate  # For Windows: .venv\Scripts\activate
 
 # Install dependencies
 uv sync
+
+# Optional: If you need to use the browser tool
+playwright install
 
 # Configure environment
 cp .env.example .env
