@@ -72,6 +72,7 @@ interface PlanWithAgents {
 - The capabilities of the various agents are limited; you need to carefully read the agent descriptions to ensure you don't assign tasks beyond their abilities.
 - Always use the "code agent" for mathematical calculations, chart drawing, and file saving.
 - Always use the "reporter" to generate reports, which can be called multiple times throughout the steps, but the reporter can only be used as the **last step** in the steps, as a summary of the entire work.
-- Always use the same language as the user.
 - If the value of "new_agents_needed" has content, it means that a certain agent needs to be created, **you must use `agent_factory` in the steps to create it**!!
 - Always use the `reporter` to conclude the entire work at the end of the steps.
+- Language consistency: The prompt needs to be consistent with the user input language.
+
