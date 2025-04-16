@@ -11,14 +11,10 @@
 
 Cooragent is an AI agent collaboration community where you can create specific-function agents with a single sentence and collaborate with other agents to complete complex tasks. Agents can be freely combined to create unlimited possibilities. Meanwhile, you can publish your agents to the community and share them with others.
 
-## Demo Videos
-
-> **Task**: Create a stock analysis agent that uses search tools to find Tencent's stock price information for the last seven days and Tencent's financial status. Then use the browser to find a couple of investor analyses about Tencent's recent stock performance (one or two entries). Based on this information, conduct a very detailed textual analysis, and finally generate a Chinese analysis report containing line charts and text, saved in a pdf file.
-
 
 <p align="center">
   <a href="./assets/demo.mp4">
-    <img src="./assets/demo.mp4" alt="Demo" />
+    <img src="./assets/introduction.gif" alt="Demo" width=60%/>
   </a>
 </p>
 
@@ -151,7 +147,7 @@ Enter the cooragent command tool interface
 python cli.py
 ```
 <p align="center">
-<img src="./assets/welcome.png" alt="welcome to cooragent" />
+<img src="./assets/welcome.png" alt="welcome to cooragent" width=70%/>
 </p>
 
 Create a Xiaomi stock analysis agent with a single sentence

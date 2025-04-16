@@ -106,14 +106,14 @@ class Server:
             raise HTTPException(status_code=500, detail=str(e))
 
     async def _remove_agent(self, request: RemoveAgentRequest):
-        """处理删除 Agent 的请求"""
+        """Handle the request to remove an Agent"""
         try:
 
             agent_manager._remove_agent(request.agent_name)
-            yield json.dumps({"result": "success", "messages": f"Agent '{request.agent_name}' 已成功删除。"})
+            yield json.dumps({"result": "success", "messages": f"Agent '{request.agent_name}' deleted successfully."})
         except Exception as e:
             logging.error(f"Error removing agent {request.agent_name}: {e}", exc_info=True)
-            yield json.dumps({"result": "error", "messages": f"删除 Agent '{request.agent_name}' 时出错: {str(e)}"})
+            yield json.dumps({"result": "error", "messages": f"Error removing Agent '{request.agent_name}': {str(e)}"})
 
     def launch(self):
         @self.app.post("/v1/workflow", status_code=status.HTTP_200_OK)

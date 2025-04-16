@@ -1,5 +1,4 @@
-# 新增用户会话管理模块
-# server/mentor/session_manager.py
+
 from typing import Dict
 from uuid import uuid4
 from datetime import datetime, timedelta
@@ -20,7 +19,7 @@ class UserSession:
             "content": content,
             "timestamp": datetime.now().isoformat()
         })
-        # 保持历史记录长度
+        # 
         if len(self.history) > self.max_history:
             self.history = self.history[-self.max_history:]
         self.last_active = datetime.now()

@@ -91,7 +91,6 @@ class DownloadVideoTool(BaseTool):
     
     async def _arun(self, request_id: str) -> str:
         """Check the status of a video generation task asynchronously."""
-        # 简单调用同步方法
         return self._run(request_id)
 
 
