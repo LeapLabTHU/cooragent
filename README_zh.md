@@ -120,7 +120,7 @@ cp .env.example .env
 python cli.py
 ```
 <p align="center">
-<img src="./assets/welcome.png" alt="欢迎使用 Cooragent" width=70%/>
+<img src="./assets/cli.png" alt="Cooragent cli 工具" width=70%/>
 </p>
 
 一句话创建小米股票分析智能体

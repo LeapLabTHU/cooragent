@@ -147,7 +147,7 @@ Enter the cooragent command tool interface
 python cli.py
 ```
 <p align="center">
-<img src="./assets/welcome.png" alt="welcome to cooragent" width=70%/>
+<img src="./assets/cli.png" alt="Cooragent cli tool" width=70%/>
 </p>
 
 Create a Xiaomi stock analysis agent with a single sentence

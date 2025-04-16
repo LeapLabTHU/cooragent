@@ -166,7 +166,7 @@ def print_banner():
 							    ╚═══════════════════════════════════════════════════════════════════════════════╝
     """
     console.print(Panel(Text(banner, style="bold cyan"), border_style="green"))
-    console.print("Welcome to [highlight]CoorAgent[/highlight]! CoorAgent is an AI agent collaboration community. Here, you can create specific agents with a single sentence and collaborate with other agents to complete complex tasks. Agents can be combined freely, creating infinite possibilities. You can also publish your agents to the community and share them with others!\n", justify="center")
+    console.print("Welcome to [highlight]CoorAgent[/highlight]! CoorAgent is an AI agent collaboration community. Here, you can create specific agents with a single sentence and collaborate with other agents to complete complex tasks. Agents can be combined freely, creating infinite possibilities. You can also publish your agents to the community and share them to anyone!\n", justify="center")
 
 
 def async_command(f):
