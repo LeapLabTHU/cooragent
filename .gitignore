@@ -18,3 +18,4 @@ agent_history.gif
 store
 .vscode/*
 config
+.DS_Store
