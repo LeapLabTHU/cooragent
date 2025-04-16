@@ -162,7 +162,7 @@ async def _process_workflow(
                     if key != "messages":
                         state[key] = value
                     
-                    if key == "messages" and isinstance(value, list) and value:
+                    if key == "messages" and agent_name in ["planner", "coordinator", "agent_proxy"] and isinstance(value, list) and value:
                         state["messages"] += value
                         last_message = value[-1]
                         if 'content' in last_message:

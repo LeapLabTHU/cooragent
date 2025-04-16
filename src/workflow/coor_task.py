@@ -16,7 +16,6 @@ from src.workflow.graph import AgentWorkflow
 
 logger = logging.getLogger(__name__)
 
-RESPONSE_FORMAT = "Response from {}:\n\n<response>\n{}\n</response>\n\n*Please execute the next step.*"
 
 def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Node for the create agent agent that creates a new agent."""
@@ -96,7 +95,7 @@ def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
 
     return Command(
         update={
-            "messages": [{"content": RESPONSE_FORMAT.format(state["next"], response["messages"][-1].content), "tool":state["next"], "role":"assistant"}],
+            "messages": [{"content": response["messages"][-1].content, "tool":state["next"], "role":"assistant"}],
             "processing_agent_name": _agent.agent_name,
             "agent_name": _agent.agent_name
         },
