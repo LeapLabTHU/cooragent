@@ -42,7 +42,7 @@ custom_theme = Theme({
     "assistant_msg": "bold black on green",
 })
 
-# 创建Rich控制台对象用于美化输出
+# Create Rich console object for beautified output
 console = Console(theme=custom_theme)
 
 _pending_line = ''
@@ -54,7 +54,7 @@ def direct_print(text):
         
     text_to_print = str(text)
     
-    # 处理特殊字符 (< 和 >)
+    # Handle special characters (< and >)
     if '<' in text_to_print or '>' in text_to_print:
         parts = []
         i = 0
@@ -90,7 +90,7 @@ def flush_pending():
         _pending_line = ''
 
 def stream_print(text, **kwargs):
-    """流式打印文本，确保立即显示。自动检测并渲染Markdown格式。"""
+    """Stream print text, ensuring immediate display. Automatically detects and renders Markdown format."""
     if kwargs.get("end", "\n") == "" and not kwargs.get("highlight", True):
         if text:
             sys.stdout.write(str(text))
@@ -112,7 +112,7 @@ def stream_print(text, **kwargs):
         sys.stdout.flush()
 
 def _is_likely_markdown(text):
-    """使用简单的启发式规则判断文本是否可能是Markdown。"""
+    """Use simple heuristics to determine if the text is likely Markdown."""
     return any(marker in text for marker in ['\n#', '\n*', '\n-', '\n>', '```', '**', '__', '`', '[', '](', '![', '](', '<a href', '<img src'])
 
 HISTORY_FILE = os.path.expanduser("~/.cooragent_history")
@@ -142,18 +142,17 @@ def _init_readline():
         atexit.register(_save_history)
         
     except Exception as e:
-        console.print(f"[warning]命令历史初始化失败: {str(e)}[/warning]")
+        console.print(f"[warning]Failed to initialize command history: {str(e)}[/warning]")
 
 def _save_history():
-    """安全保存历史记录"""
+    """Safely save command history"""
     try:
         readline.write_history_file(HISTORY_FILE)
     except Exception as e:
-        console.print(f"[warning]无法保存命令历史: {str(e)}[/warning]")
+        console.print(f"[warning]Unable to save command history: {str(e)}[/warning]")
 
 
 def print_banner():
-    """打印漂亮的横幅"""
     banner = """
 							    ╔═══════════════════════════════════════════════════════════════════════════════╗
 							    ║                                                                               ║
@@ -167,7 +166,7 @@ def print_banner():
 							    ╚═══════════════════════════════════════════════════════════════════════════════╝
     """
     console.print(Panel(Text(banner, style="bold cyan"), border_style="green"))
-    console.print("欢迎使用 [highlight]CoorAgent[/highlight] Cooragent 是一个 AI 智能体协作社区，在这个社区中，你可以通过一句话创建一个特定功能的智能体，并与其他智能体协作完成复杂任务。智能体可以自由组合，创造出无限可能。与此同时，你还可以将你的智能体发布到社区中，与其他人共享。！\n", justify="center")
+    console.print("Welcome to [highlight]CoorAgent[/highlight]! CoorAgent is an AI agent collaboration community. Here, you can create specific agents with a single sentence and collaborate with other agents to complete complex tasks. Agents can be combined freely, creating infinite possibilities. You can also publish your agents to the community and share them to anyone!\n", justify="center")
 
 
 def async_command(f):
@@ -180,22 +179,22 @@ def async_command(f):
 def init_server(ctx):
     """global init function"""
     if not ctx.obj.get('_initialized', False):
-        with console.status("[bold green]正在初始化服务器...[/]", spinner="dots"):
+        with console.status("[bold green]Initializing server...[/]", spinner="dots"):
             _init_readline()
             print_banner()
             ctx.obj['server'] = Server()
             ctx.obj['_initialized'] = True
-        console.print("[success]✓ 服务器初始化完成[/]")
+        console.print("[success]✓ Server initialized successfully[/]")
 
 @click.group(invoke_without_command=True)
 @click.pass_context
 def cli(ctx):
-    """CoorAgent 命令行工具"""
+    """CoorAgent command-line tool"""
     ctx.ensure_object(dict)
     init_server(ctx)
     
     if ctx.invoked_subcommand is None:
-        console.print("输入 'exit' 退出交互模式\n")
+        console.print("Enter 'exit' to quit interactive mode\n")
         should_exit = False
         while not should_exit:
             try:
@@ -205,9 +204,9 @@ def cli(ctx):
                     continue
                 
                 if command.lower() in ('exit', 'quit'):
-                    console.print("[success]再见！[/]")
+                    console.print("[success]Goodbye![/]")
                     should_exit = True
-                    flush_pending()  # 退出前刷新缓冲区
+                    flush_pending()  # Flush buffer before exiting
                     break
                 
                 if command and not command.lower().startswith(('exit', 'quit')):
@@ -218,38 +217,39 @@ def cli(ctx):
                     cli.invoke(sub_ctx)
                     
             except Exception as e:
-                console.print(f"[danger]错误: {str(e)}[/]")
+                console.print(f"[danger]Error: {str(e)}[/]")
         return
 
 
 @cli.command()
 @click.pass_context
-@click.option('--user-id', '-u', default="test", help='用户ID')
+@click.option('--user-id', '-u', default="test", help='User ID')
 @click.option('--task-type', '-t', required=True, 
               type=click.Choice([task_type.value for task_type in TaskType]), 
-              help='任务类型 (可选值: agent_factory, agent_workflow)')
-@click.option('--message', '-m', required=True, multiple=True, help='消息内容 (可多次使用此选项添加多条消息)')
-@click.option('--debug/--no-debug', default=False, help='是否开启调试模式')
-@click.option('--deep-thinking/--no-deep-thinking', default=True, help='是否开启深度思考模式')
-@click.option('--agents', '-a', multiple=True, help='协作Agent列表 (可多次使用此选项添加多个Agent)')
+              help='Task type (options: agent_factory, agent_workflow)')
+@click.option('--message', '-m', required=True, multiple=True, help='Message content (use multiple times for multiple messages)')
+@click.option('--debug/--no-debug', default=False, help='Enable debug mode')
+@click.option('--deep-thinking/--no-deep-thinking', default=True, help='Enable deep thinking mode')
+@click.option('--agents', '-a', multiple=True, help='List of collaborating Agents (use multiple times to add multiple Agents)')
 @async_command
 async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
+    """Run the agent workflow"""
     server = ctx.obj['server']
     
-    config_table = Table(title="工作流配置", show_header=True, header_style="bold magenta")
-    config_table.add_column("参数", style="cyan")
-    config_table.add_column("值", style="green")
-    config_table.add_row("用户ID", user_id)
-    config_table.add_row("任务类型", task_type)
-    config_table.add_row("调试模式", "✅ 开启" if debug else "❌ 关闭")
-    config_table.add_row("深度思考", "✅ 开启" if deep_thinking else "❌ 关闭")
+    config_table = Table(title="Workflow Configuration", show_header=True, header_style="bold magenta")
+    config_table.add_column("Parameter", style="cyan")
+    config_table.add_column("Value", style="green")
+    config_table.add_row("User ID", user_id)
+    config_table.add_row("Task Type", task_type)
+    config_table.add_row("Debug Mode", "✅ Enabled" if debug else "❌ Disabled")
+    config_table.add_row("Deep Thinking", "✅ Enabled" if deep_thinking else "❌ Disabled")
     console.print(config_table)
     
-    msg_table = Table(title="消息历史", show_header=True, header_style="bold magenta")
-    msg_table.add_column("角色", style="cyan")
-    msg_table.add_column("内容", style="green")
+    msg_table = Table(title="Message History", show_header=True, header_style="bold magenta")
+    msg_table.add_column("Role", style="cyan")
+    msg_table.add_column("Content", style="green")
     for i, msg in enumerate(message):
-        role = "用户" if i % 2 == 0 else "助手"
+        role = "User" if i % 2 == 0 else "Assistant"
         style = "user_msg" if i % 2 == 0 else "assistant_msg"
         msg_table.add_row(role, Text(msg, style=style))
     console.print(msg_table)
@@ -261,7 +261,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
     
     request = AgentRequest(
         user_id=user_id,
-        lang="zh",
+        lang="en",
         task_type=task_type,
         messages=messages,
         debug=debug,
@@ -270,7 +270,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
         coor_agents=list(agents)
     )
     
-    console.print(Panel.fit("[highlight]工作流开始执行[/highlight]", title="CoorAgent", border_style="cyan"))
+    console.print(Panel.fit("[highlight]Workflow execution started[/highlight]", title="CoorAgent", border_style="cyan"))
     
     current_content = ""
     json_buffer = ""  
@@ -285,7 +285,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
         transient=True,
         refresh_per_second=2
     ) as progress:
-        task = progress.add_task("[green]正在处理请求...", total=None)
+        task = progress.add_task("[green]Processing request...", total=None)
         
         async for chunk in server._run_agent_workflow(request):
             event_type = chunk.get("event")
@@ -311,8 +311,8 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 agent_name = data.get("agent_name", "")
                 if agent_name :
                     console.print("\n")
-                    progress.update(task, description=f"[green]开始执行: {agent_name}...")
-                    console.print(f"[agent_name]>>> {agent_name} 开始执行...[/agent_name]")
+                    progress.update(task, description=f"[green]Starting execution: {agent_name}...")
+                    console.print(f"[agent_name]>>> {agent_name} starting execution...[/agent_name]")
                     console.print("")
                     
             elif event_type == "end_of_agent":
@@ -335,8 +335,8 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 agent_name = data.get("agent_name", "")
                 if agent_name:
                     console.print("\n")
-                    progress.update(task, description=f"[green]执行完成: {agent_name}...")
-                    console.print(f"[agent_name]<<< {agent_name} 执行完成[/agent_name]")
+                    progress.update(task, description=f"[green]Execution finished: {agent_name}...")
+                    console.print(f"[agent_name]<<< {agent_name} execution finished[/agent_name]")
                     console.print("")
             
             elif event_type == "messages":
@@ -348,12 +348,10 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                 
                 if agent_name:
                     console.print("\n")
-                    progress.update(task, description=f"[green]正在执行: {agent_name}...")
-                    console.print(f"[agent_name]>>> {agent_name} 正在执行...[/agent_name]")
+                    progress.update(task, description=f"[green]Executing: {agent_name}...")
+                    progress.update(task, description=f"[agent_name]>>> {agent_name} executing...[/agent_name]")
                     console.print("")
-                # 优先检查是否是JSON内容
                 if content and (content.strip().startswith("{") or in_json_block):
-                    # JSON块处理
                     if not in_json_block:
                         in_json_block = True
                         json_buffer = ""
@@ -386,14 +384,14 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                         current_content += content
                 
                 if reasoning:
-                    stream_print(f"\n[info]思考过程: {reasoning}[/info]")
+                    stream_print(f"\n[info]Thinking process: {reasoning}[/info]")
                 
 
             elif event_type == "new_agent_created":
                 new_agent_name = data.get("new_agent_name", "")
                 agent_obj = data.get("agent_obj", None)
-                console.print(f"[new_agent_name]>>> {new_agent_name} 创建成功...")
-                console.print(f"[new_agent]>>> 配置: ")
+                console.print(f"[new_agent_name]>>> {new_agent_name} created successfully...")
+                console.print(f"[new_agent]>>> Configuration: ")
                 syntax = Syntax(agent_obj, "json", theme="monokai", line_numbers=False)
                 console.print(syntax)
 
@@ -416,21 +414,21 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, agents):
                     in_json_block = False
                 
                 console.print("")
-                progress.update(task, description="[success]工作流执行完成!")
-                console.print(Panel.fit("[success]工作流执行完成![/success]", title="CoorAgent", border_style="green"))
+                progress.update(task, description="[success]Workflow execution finished!")
+                console.print(Panel.fit("[success]Workflow execution finished![/success]", title="CoorAgent", border_style="green"))
                 
                     
     
-    console.print(Panel.fit("[success]工作流执行完成![/success]", title="CoorAgent", border_style="green"))
+    console.print(Panel.fit("[success]Workflow execution finished![/success]", title="CoorAgent", border_style="green"))
 
 
 @cli.command()
 @click.pass_context
-@click.option('--user-id', '-u', default="test", help='用户ID')
-@click.option('--match', '-m', default="", help='匹配字符串')
+@click.option('--user-id', '-u', default="test", help='User ID')
+@click.option('--match', '-m', default="", help='Match string')
 @async_command 
 async def list_agents(ctx, user_id, match):
-    """列出用户的Agent"""
+    """List user's Agents"""
     server = ctx.obj['server']
     
     with Progress(
@@ -438,14 +436,14 @@ async def list_agents(ctx, user_id, match):
         TextColumn("[progress.description]{task.description}"),
         console=console
     ) as progress:
-        task = progress.add_task("[green]正在获取Agent列表...", total=None)
+        task = progress.add_task("[green]Fetching Agent list...", total=None)
         
         request = listAgentRequest(user_id=user_id, match=match)
         
-        table = Table(title=f"用户 [highlight]{user_id}[/highlight] 的Agent列表", show_header=True, header_style="bold magenta", border_style="cyan")
-        table.add_column("名称", style="agent_name")
-        table.add_column("描述", style="agent_desc")
-        table.add_column("工具", style="agent_type")
+        table = Table(title=f"Agent list for user [highlight]{user_id}[/highlight]", show_header=True, header_style="bold magenta", border_style="cyan")
+        table.add_column("Name", style="agent_name")
+        table.add_column("Description", style="agent_desc")
+        table.add_column("Tools", style="agent_type")
         
         count = 0
         async for agent_json in server._list_agents(request):
@@ -457,12 +455,12 @@ async def list_agents(ctx, user_id, match):
                 table.add_row(agent.get("agent_name", ""), agent.get("description", ""), ', '.join(tools))
                 count += 1
             except:
-                stream_print(f"[danger]解析错误: {agent_json}[/danger]")
+                stream_print(f"[danger]Parsing error: {agent_json}[/danger]")
         
-        progress.update(task, description=f"[success]已获取 {count} 个Agent!")
+        progress.update(task, description=f"[success]Fetched {count} Agents!")
         
         if count == 0:
-            stream_print(Panel(f"未找_run_agent_workflow到匹配的Agent", title="结果", border_style="yellow"))
+            stream_print(Panel(f"No matching Agents found", title="Result", border_style="yellow"))
         else:
             stream_print(table)
 
@@ -471,6 +469,7 @@ async def list_agents(ctx, user_id, match):
 @click.pass_context
 @async_command 
 async def list_default_agents(ctx):
+    """List default Agents"""
     server = ctx.obj['server']
     
     with Progress(
@@ -478,11 +477,11 @@ async def list_default_agents(ctx):
         TextColumn("[progress.description]{task.description}"),
         console=console
     ) as progress:
-        task = progress.add_task("[green]正在获取默认Agent列表...", total=None)
+        task = progress.add_task("[green]Fetching default Agent list...", total=None)
         
-        table = Table(title="默认Agent列表", show_header=True, header_style="bold magenta", border_style="cyan")
-        table.add_column("名称", style="agent_name")
-        table.add_column("描述", style="agent_desc")
+        table = Table(title="Default Agent List", show_header=True, header_style="bold magenta", border_style="cyan")
+        table.add_column("Name", style="agent_name")
+        table.add_column("Description", style="agent_desc")
         
         count = 0
         async for agent_json in server._list_default_agents():
@@ -491,9 +490,9 @@ async def list_default_agents(ctx):
                 table.add_row(agent.get("agent_name", ""), agent.get("description", ""))
                 count += 1
             except:
-                stream_print(f"[danger]解析错误: {agent_json}[/danger]")
+                stream_print(f"[danger]Parsing error: {agent_json}[/danger]")
         
-        progress.update(task, description=f"[success]已获取 {count} 个默认Agent!")
+        progress.update(task, description=f"[success]Fetched {count} default Agents!")
         stream_print(table)
 
 
@@ -501,7 +500,7 @@ async def list_default_agents(ctx):
 @click.pass_context
 @async_command  
 async def list_default_tools(ctx):
-    """列出默认工具"""
+    """List default tools"""
     server = ctx.obj['server']
     
     with Progress(
@@ -509,11 +508,11 @@ async def list_default_tools(ctx):
         TextColumn("[progress.description]{task.description}"),
         console=console
     ) as progress:
-        task = progress.add_task("[green]正在获取默认工具列表...", total=None)
+        task = progress.add_task("[green]Fetching default tool list...", total=None)
         
-        table = Table(title="默认工具列表", show_header=True, header_style="bold magenta", border_style="cyan")
-        table.add_column("名称", style="tool_name")
-        table.add_column("描述", style="tool_desc")
+        table = Table(title="Default Tool List", show_header=True, header_style="bold magenta", border_style="cyan")
+        table.add_column("Name", style="tool_name")
+        table.add_column("Description", style="tool_desc")
         
         count = 0
         async for tool_json in server._list_default_tools():
@@ -522,21 +521,22 @@ async def list_default_tools(ctx):
                 table.add_row(tool.get("name", ""), tool.get("description", ""))
                 count += 1
             except:
-                stream_print(f"[danger]解析错误: {tool_json}[/danger]")
+                stream_print(f"[danger]Parsing error: {tool_json}[/danger]")
         
-        progress.update(task, description=f"[success]已获取 {count} 个默认工具!")
+        progress.update(task, description=f"[success]Fetched {count} default tools!")
         stream_print(table)
 
 
 @cli.command()
 @click.pass_context
-@click.option('--agent-name', '-n', required=True, help='要编辑的Agent名称')
-@click.option('--user-id', '-u', required=True, help='用户ID')
-@click.option('--interactive/--no-interactive', '-i/-I', default=True, help='是否使用交互模式')
+@click.option('--agent-name', '-n', required=True, help='Name of the Agent to edit')
+@click.option('--user-id', '-u', required=True, help='User ID')
+@click.option('--interactive/--no-interactive', '-i/-I', default=True, help='Use interactive mode')
 @async_command
 async def edit_agent(ctx, agent_name, user_id, interactive):
+    """Edit an existing Agent interactively"""
     server = ctx.obj['server']
-    stream_print(Panel.fit(f"[highlight]正在获取 {agent_name} 的配置...[/highlight]", border_style="cyan"))
+    stream_print(Panel.fit(f"[highlight]Fetching configuration for {agent_name}...[/highlight]", border_style="cyan"))
     original_config = None
     try:
         async for agent_json in server._list_agents(listAgentRequest(user_id=user_id, match=agent_name)):
@@ -545,20 +545,20 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
                 original_config = agent
                 break
         if not original_config:
-            stream_print(f"[danger]未找到Agent: {agent_name}[/danger]")
+            stream_print(f"[danger]Agent not found: {agent_name}[/danger]")
             return
     except Exception as e:
-        stream_print(f"[danger]获取配置失败: {str(e)}[/danger]")
+        stream_print(f"[danger]Failed to fetch configuration: {str(e)}[/danger]")
         return
 
     def show_current_config():
         stream_print(Panel.fit(
-            f"[agent_name]名称:[/agent_name] {original_config.get('agent_name', '')}\n"
-            f"[agent_nick_name]昵称:[/agent_nick_name] {original_config.get('nick_name', '')}\n"
-            f"[agent_desc]描述:[/agent_desc] {original_config.get('description', '')}\n"
-            f"[tool_name]工具:[/tool_name] {', '.join([t.get('name', '') for t in original_config.get('selected_tools', [])])}\n"
-            f"[highlight]提示词:[/highlight]\n{original_config.get('prompt', '')}",
-            title="当前配置",
+            f"[agent_name]Name:[/agent_name] {original_config.get('agent_name', '')}\n"
+            f"[agent_nick_name]Nickname:[/agent_nick_name] {original_config.get('nick_name', '')}\n"
+            f"[agent_desc]Description:[/agent_desc] {original_config.get('description', '')}\n"
+            f"[tool_name]Tools:[/tool_name] {', '.join([t.get('name', '') for t in original_config.get('selected_tools', [])])}\n"
+            f"[highlight]Prompt:[/highlight]\n{original_config.get('prompt', '')}",
+            title="Current Configuration",
             border_style="blue"
         ))
     
@@ -566,23 +566,23 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
 
     modified_config = original_config.copy()
     while interactive:
-        console.print("\n请选择要修改的内容：")
-        console.print("1 - 修改昵称")
-        console.print("2 - 修改描述")
-        console.print("3 - 修改工具列表")
-        console.print("4 - 修改提示词")
-        console.print("5 - 预览修改")
-        console.print("0 - 保存退出")
+        console.print("\nSelect content to modify:")
+        console.print("1 - Modify Nickname")
+        console.print("2 - Modify Description")
+        console.print("3 - Modify Tool List")
+        console.print("4 - Modify Prompt")
+        console.print("5 - Preview Changes")
+        console.print("0 - Save and Exit")
         
         choice = Prompt.ask(
-            "请输入选项",
+            "Enter option",
             choices=["0", "1", "2", "3", "4", "5"],
             show_choices=False
         )
         
         if choice == "1":
             new_name = Prompt.ask(
-                "输入新昵称", 
+                "Enter new nickname", 
                 default=modified_config.get('nick_name', ''),
                 show_default=True
             )
@@ -590,7 +590,7 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
         
         elif choice == "2":
             new_desc = Prompt.ask(
-                "输入新描述", 
+                "Enter new description", 
                 default=modified_config.get('description', ''),
                 show_default=True
             )
@@ -598,9 +598,9 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
         
         elif choice == "3":
             current_tools = [t.get('name') for t in modified_config.get('selected_tools', [])]
-            stream_print(f"当前工具: {', '.join(current_tools)}")
+            stream_print(f"Current tools: {', '.join(current_tools)}")
             new_tools = Prompt.ask(
-                "输入新工具列表（逗号分隔）",
+                "Enter new tool list (comma-separated)",
                 default=", ".join(current_tools),
                 show_default=True
             )
@@ -611,7 +611,7 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
             ]
         
         elif choice == "4":
-            console.print("输入新提示词（输入'END'结束）:")
+            console.print("Enter new prompt (type 'END' to finish):")
             lines = []
             while True:
                 line = Prompt.ask("> ", default="")
@@ -623,17 +623,17 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
         elif choice == "5":
             show_current_config()
             stream_print(Panel.fit(
-                f"[agent_name]新名称:[/agent_name] {modified_config.get('agent_name', '')}\n"
-                f"[nick_name]新昵称:[/nick_name] {modified_config.get('nick_name', '')}\n"
-                f"[agent_desc]新描述:[/agent_desc] {modified_config.get('description', '')}\n"
-                f"[tool_name]新工具:[/tool_name] {', '.join([t.get('name', '') for t in modified_config.get('selected_tools', [])])}\n"
-                f"[highlight]新提示词:[/highlight]\n{modified_config.get('prompt', '')}",
-                title="修改后的配置",
+                f"[agent_name]New Name:[/agent_name] {modified_config.get('agent_name', '')}\n"
+                f"[nick_name]New Nickname:[/nick_name] {modified_config.get('nick_name', '')}\n"
+                f"[agent_desc]New Description:[/agent_desc] {modified_config.get('description', '')}\n"
+                f"[tool_name]New Tools:[/tool_name] {', '.join([t.get('name', '') for t in modified_config.get('selected_tools', [])])}\n"
+                f"[highlight]New Prompt:[/highlight]\n{modified_config.get('prompt', '')}",
+                title="Modified Configuration Preview",
                 border_style="yellow"
             ))
         
         elif choice == "0":
-            if Confirm.ask("确认保存修改吗？"):
+            if Confirm.ask("Confirm saving changes?"):
                 try:
                     agent_request = Agent(
                         user_id=original_config.get('user_id', ''),
@@ -648,81 +648,82 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
                     async for result in server._edit_agent(agent_request):
                         res = json.loads(result)
                         if res.get("result") == "success":
-                            stream_print(Panel.fit("[success]Agent 更新成功![/success]", border_style="green"))
+                            stream_print(Panel.fit("[success]Agent updated successfully![/success]", border_style="green"))
                         else:
-                            stream_print(f"[danger]更新失败: {res.get('result', '未知错误')}[/danger]")
+                            stream_print(f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
                     return
                 except Exception as e:
-                    stream_print(f"[danger]保存时发生错误: {str(e)}[/danger]")
+                    stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
             else:
-                stream_print("[warning]修改已取消[/warning]")
+                stream_print("[warning]Modifications cancelled[/warning]")
             return
 
 
 @cli.command(name="remove-agent")
 @click.pass_context
-@click.option('--agent-name', '-n', required=True, help='要删除的Agent名称')
-@click.option('--user-id', '-u', required=True, help='用户ID')
+@click.option('--agent-name', '-n', required=True, help='Name of the Agent to remove')
+@click.option('--user-id', '-u', required=True, help='User ID')
 @async_command
 async def remove_agent(ctx, agent_name, user_id):
-    """删除指定的Agent"""
+    """Remove the specified Agent"""
     server = ctx.obj['server']
     
-    if not Confirm.ask(f"[warning]确定要删除 Agent '{agent_name}' 吗？此操作不可撤销！[/warning]", default=False):
-        stream_print("[info]操作已取消[/info]")
+    if not Confirm.ask(f"[warning]Are you sure you want to delete Agent '{agent_name}'? This action cannot be undone![/warning]", default=False):
+        stream_print("[info]Operation cancelled[/info]")
         return
         
-    stream_print(Panel.fit(f"[highlight]正在删除 Agent: {agent_name}...[/highlight]", border_style="cyan"))
+    stream_print(Panel.fit(f"[highlight]Deleting Agent: {agent_name}...[/highlight]", border_style="cyan"))
 
     try:
         request = RemoveAgentRequest(user_id=user_id, agent_name=agent_name)
         async for result_json in server._remove_agent(request):
             result = json.loads(result_json)
             if result.get("result") == "success":
-                stream_print(Panel.fit(f"[success]✅ {result.get('messages', 'Agent 删除成功!')}[/success]", border_style="green"))
+                stream_print(Panel.fit(f"[success]✅ {result.get('messages', 'Agent deleted successfully!')}[/success]", border_style="green"))
             else:
-                stream_print(Panel.fit(f"[danger]❌ {result.get('messages', 'Agent 删除失败!')}[/danger]", border_style="red"))
+                stream_print(Panel.fit(f"[danger]❌ {result.get('messages', 'Agent deletion failed!')}[/danger]", border_style="red"))
     except Exception as e:
-        stream_print(Panel.fit(f"[danger]执行删除时发生错误: {str(e)}[/danger]", border_style="red"))
+        stream_print(Panel.fit(f"[danger]Error occurred during deletion: {str(e)}[/danger]", border_style="red"))
 
 
 @cli.command()
 def help():
-    """显示帮助信息"""
-    help_table = Table(title="帮助信息", show_header=False, border_style="cyan", width=100)
+    """Display help information"""
+    help_table = Table(title="Help Information", show_header=False, border_style="cyan", width=100)
     help_table.add_column(style="bold cyan")
     help_table.add_column(style="green")
     
-    help_table.add_row("[命令] run", "运行工作流")
-    help_table.add_row("  -u/--user-id", "用户ID")
-    help_table.add_row("  -t/--task-type", "任务类型 (agent_factory/agent_workflow)")
-    help_table.add_row("  -m/--message", "消息内容 (可多次使用)")
-    help_table.add_row("  --debug", "开启调试模式")
-    help_table.add_row("  --no-deep-thinking", "关闭深度思考模式")
-    help_table.add_row("  -a/--agents", "协作Agent列表")
+    help_table.add_row("[Command] run", "Run the agent workflow")
+    help_table.add_row("  -u/--user-id", "User ID")
+    help_table.add_row("  -t/--task-type", "Task type (agent_factory/agent_workflow)")
+    help_table.add_row("  -m/--message", "Message content (use multiple times)")
+    help_table.add_row("  --debug/--no-debug", "Enable/disable debug mode")
+    help_table.add_row("  --deep-thinking/--no-deep-thinking", "Enable/disable deep thinking mode")
+    help_table.add_row("  -a/--agents", "List of collaborating Agents")
     help_table.add_row()
     
-    help_table.add_row("[命令] list-agents", "列出用户Agent")
-    help_table.add_row("  -u/--user-id", "用户ID (必填)")
-    help_table.add_row("  -m/--match", "匹配字符串")
+    help_table.add_row("[Command] list-agents", "List user's Agents")
+    help_table.add_row("  -u/--user-id", "User ID (required)")
+    help_table.add_row("  -m/--match", "Match string")
     help_table.add_row()
     
-    help_table.add_row("[命令] list-default-agents", "列出默认Agent")
-    help_table.add_row("[命令] list-default-tools", "列出默认工具")
+    help_table.add_row("[Command] list-default-agents", "List default Agents")
+    help_table.add_row("[Command] list-default-tools", "List default tools")
     help_table.add_row()
     
-    help_table.add_row("[命令] edit-agent", "交互式编辑Agent")
-    help_table.add_row("  -n/--agent-name", "Agent名称 (必填)")
-    help_table.add_row("  -i/--interactive", "交互模式")
+    help_table.add_row("[Command] edit-agent", "Interactively edit an Agent")
+    help_table.add_row("  -n/--agent-name", "Agent name (required)")
+    help_table.add_row("  -u/--user-id", "User ID (required)")
+    help_table.add_row("  -i/--interactive", "Interactive mode (default: on)")
     help_table.add_row()
     
-    help_table.add_row("[命令] remove-agent", "删除指定的Agent")
-    help_table.add_row("  -n/--agent-name", "Agent名称 (必填)")
-    help_table.add_row("  -u/--user-id", "用户ID (必填)")
+    help_table.add_row("[Command] remove-agent", "Remove the specified Agent")
+    help_table.add_row("  -n/--agent-name", "Agent name (required)")
+    help_table.add_row("  -u/--user-id", "User ID (required)")
     help_table.add_row()
 
-    help_table.add_row("[交互模式]", "直接运行 cli.py 进入")
-    help_table.add_row("  exit/quit", "退出交互模式")
+    help_table.add_row("[Interactive Mode]", "Run cli.py directly to enter")
+    help_table.add_row("  exit/quit", "Exit interactive mode")
     
     console.print(help_table)
 
@@ -731,10 +732,10 @@ if __name__ == "__main__":
     try:
         cli()
     except KeyboardInterrupt:
-        stream_print("\n[warning]操作已取消[/warning]")
+        stream_print("\n[warning]Operation cancelled[/warning]")
         flush_pending()
     except Exception as e:
-        stream_print(f"\n[danger]发生错误: {str(e)}[/danger]")
+        stream_print(f"\n[danger]An error occurred: {str(e)}[/danger]")
         flush_pending()
     finally:
         flush_pending()

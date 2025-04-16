@@ -45,7 +45,6 @@ class AgentManager:
         if not self.tools_dir.exists() or not self.agents_dir.exists() or not self.prompt_dir.exists():
             raise FileNotFoundError("One or more provided directories do not exist.")
 
-        # self.available_agents = {}
         self.available_agents = {
             "researcher": self._create_mcp_agent(user_id="share", 
                                                  name="researcher", 
@@ -88,8 +87,7 @@ class AgentManager:
             python_repl_tool.name: python_repl_tool,
             tavily_tool.name: tavily_tool,
         }
-        # for agent_name in self.available_agents.keys():
-        #     self._save_agent(self.available_agents[agent_name], flush=True)
+
         self._load_agents(USR_AGENT, MCP_AGENT)
         
     def _create_mcp_agent(self, user_id: str, name: str, nick_name: str, llm_type: str, tools: list[tool], prompt: str, description: str):
@@ -170,14 +168,14 @@ class AgentManager:
             logger.error(f"Error removing agent definition file {agent_path}: {e}")
 
         try:
-            agent_prompt_path.unlink(missing_ok=True) # delete prompt file
+            agent_prompt_path.unlink(missing_ok=True) 
             logger.info(f"Removed agent prompt file: {agent_prompt_path}")
         except Exception as e:
             logger.error(f"Error removing agent prompt file {agent_prompt_path}: {e}")
 
         try:
             if agent_name in self.available_agents:
-                del self.available_agents[agent_name] # remove from memory dict
+                del self.available_agents[agent_name] 
                 logger.info(f"Removed agent '{agent_name}' from available agents.")
         except Exception as e:
              logger.error(f"Error removing agent '{agent_name}' from available_agents dictionary: {e}")
