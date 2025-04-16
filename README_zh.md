@@ -11,15 +11,12 @@
 
 Cooragent 是一个 AI 智能体协作社区。在这个社区中，你可以通过一句话创建一个具备强大功能的智能体，并与其他智能体协作完成复杂任务。智能体可以自由组合，创造出无限可能。与此同时，你还可以将你的智能体发布到社区中，与其他人共享。
 
-## 演示视频
-
-> **任务**：创建一个股票分析 agent，用搜索工具搜索腾讯最近七天的股价信息和腾讯公司财经状况，然后使用浏览器简单查找股民对腾讯近期的股票分析（一到两条），凭借这些信息进行非常详细的文字分析，最后形成一个含有折线图和文字的中文分析报告，保存在 pdf 件中。
-
 <p align="center">
   <a href="./assets/demo.mp4">
-    <img src="./assets/demo.mp4" alt="Demo" />
+    <img src="./assets/introduction.gif" alt="Demo" width=60%/>
   </a>
 </p>
+
 
 
 ## 快速安装
@@ -117,13 +114,13 @@ cp .env.example .env
 </table>
 
 
-## 一句话创建智能体
+## 使用 Cli 工具一句话创建智能体
 进入 cooragent 命令工具界面
 ```
 python cli.py
 ```
 <p align="center">
-<img src="./assets/welcome.png" alt="欢迎使用 Cooragent" />
+<img src="./assets/welcome.png" alt="欢迎使用 Cooragent" width=70%/>
 </p>
 
 一句话创建小米股票分析智能体
