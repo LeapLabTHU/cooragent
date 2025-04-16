@@ -84,7 +84,4 @@ interface AgentBuilder {
 - Prompt writing: Should be very detailed, starting from task decomposition, then to what tools are selected, tool descriptions, steps to complete the task, and matters needing attention.
 - Capability customization: Adjust agent expertise according to requirements.
 - Language consistency: The prompt needs to be consistent with the user input language.
-- LLM type matching:
- - Simple tasks → basic
- - Complex reasoning → reasoning (cannot call tools)
- - Image tasks → vision
+

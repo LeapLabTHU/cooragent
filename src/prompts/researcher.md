@@ -39,4 +39,4 @@ Firstly, you need to search for your task description on your own. The steps are
 - Do not try to interact with the page. The crawl tool can only be used to crawl content.
 - Do not perform any mathematical calculations.
 - Do not attempt any file operations.
-- Always use the same language as the initial question.
+- Language consistency: The prompt needs to be consistent with the user input language.
