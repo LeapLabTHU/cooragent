@@ -39,17 +39,14 @@ python cli.py
 
 2. Installation using venv
 ```bash
-# Clone repository
 git clone https://github.com/LeapLabTHU/cooragent.git
 cd cooragent
 
-# Create and activate a virtual environment with uv
 uv python install 3.12
 uv venv --python 3.12
 
-source .venv/bin/activate  # For Windows: .venv\Scripts\activate
+source .venv/bin/activate   # For Windows: .venv\Scripts\activate
 
-# Install dependencies
 uv sync
 
 # Optional: If you need to use the browser tool
