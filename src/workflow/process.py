@@ -6,7 +6,7 @@ from langchain_community.adapters.openai import convert_message_to_dict
 from src.manager import agent_manager
 from src.interface.agent_types import TaskType
 import uuid
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from src.interface.agent_types import State
@@ -103,6 +103,14 @@ async def run_agent_workflow(
     global is_handoff_case
     is_handoff_case = False
 
+    workflow_input_messages = []
+    for user_input_message in user_input_messages:
+        if user_input_message['role'] == 'user':
+            workflow_input_messages.append(HumanMessage(content=user_input_message['content']))
+        else:
+            workflow_input_messages.append(AIMessage(content=user_input_message['content']))
+
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -114,7 +122,7 @@ async def run_agent_workflow(
                 "user_id": user_id,
                 "TEAM_MEMBERS": TEAM_MEMBERS,
                 "TEAM_MEMBERS_DESCRIPTION": TEAM_MEMBERS_DESCRIPTION,
-                "messages": user_input_messages,
+                "messages": workflow_input_messages,
                 "deep_thinking_mode": deep_thinking_mode,
                 "search_before_planning": search_before_planning,
             },

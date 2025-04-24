@@ -13,6 +13,7 @@ from src.prompts.template import apply_prompt
 from langgraph.prebuilt import create_react_agent
 from src.mcp.register import MCPManager
 from src.workflow.graph import AgentWorkflow
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,8 @@ def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
     if state.get("deep_thinking_mode"):
         llm = get_llm_by_type("reasoning")
     if state.get("search_before_planning"):
-        searched_content = tavily_tool.invoke({"query": [''.join(message["content"]) for message in state["messages"] if message["role"] == "user"][0]})
+        searched_content = tavily_tool.invoke(
+            {"query": [''.join(message.content) for message in state["messages"] if isinstance(message, HumanMessage)][0]})
         messages = deepcopy(messages)
         messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
     
