@@ -69,6 +69,21 @@ class Router(TypedDict):
     """Worker to route to next. If no workers needed, route to FINISH."""
     next: str
 
+class AgentTool(TypedDict):
+    name: str
+    description: str
+
+class AgentBuilder(TypedDict):
+    """
+        For building an agent with specified properties and capabilities
+    """
+    agent_name: str
+    agent_description: str
+    thought: str
+    llm_type: str
+    selected_tools: List[AgentTool]
+    prompt: str
+
 
 class State(MessagesState):
     """State for the agent system, extends MessagesState with next field."""
