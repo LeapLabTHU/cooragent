@@ -8,7 +8,7 @@ from src.llm.llm import get_llm_by_type
 from src.llm.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
-from src.interface.agent_types import State, Router
+from src.interface.agent_types import State, Router, AgentBuilder
 from src.manager import agent_manager
 from src.workflow.graph import AgentWorkflow
 
@@ -23,7 +23,7 @@ async def agent_factory_node(state: State) -> Command[Literal["publisher","__end
     messages = apply_prompt_template("agent_factory", state)
     response = (
         get_llm_by_type(AGENT_LLM_MAP["agent_factory"])
-        .with_structured_output(Router)
+        .with_structured_output(AgentBuilder)
         .invoke(messages)
     )
     

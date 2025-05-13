@@ -87,10 +87,16 @@ def get_llm_by_type(llm_type: LLMType) -> ChatOpenAI | ChatDeepSeek:
             api_key=CODE_API_KEY,
         )
     elif llm_type == "basic":
+        extra_body = None
+        # basic model :Disable the reasoning capability of the Qwen3 model by default.
+        if 'qwen3' in BASIC_MODEL:
+            extra_body = {"chat_template_kwargs": {"enable_thinking": False}}
+
         llm = create_openai_llm(
             model=BASIC_MODEL,
             base_url=BASIC_BASE_URL,
             api_key=BASIC_API_KEY,
+            extra_body=extra_body
         )
     elif llm_type == "vision":
         llm = create_openai_llm(
