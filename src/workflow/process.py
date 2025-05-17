@@ -124,6 +124,7 @@ async def run_agent_workflow(
                     "TEAM_MEMBERS_DESCRIPTION": TEAM_MEMBERS_DESCRIPTION,
                     "TOOLS": TOOLS_DESCRIPTION,
                     "messages": user_input_messages,
+                    "user_original_messages": user_input_messages,
                     "deep_thinking_mode": deep_thinking_mode,
                     "search_before_planning": search_before_planning,
                 },

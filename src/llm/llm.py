@@ -79,6 +79,7 @@ def get_llm_by_type(llm_type: LLMType) -> ChatOpenAI | ChatDeepSeek:
             model=REASONING_MODEL,
             base_url=REASONING_BASE_URL,
             api_key=REASONING_API_KEY,
+            extra_body={"enable_thinking":True}
         )
     elif llm_type == "code":
         llm = create_openai_llm(
@@ -103,6 +104,19 @@ def get_llm_by_type(llm_type: LLMType) -> ChatOpenAI | ChatDeepSeek:
 
     _llm_cache[llm_type] = llm
     return llm
+
+
+def parse_json(model_response) -> str:
+    content = ''
+    for chunk in model_response:
+        content += chunk.content
+
+    if content.startswith("```json"):
+        content = content.removeprefix("```json")
+
+    if content.endswith("```"):
+        content = content.removesuffix("```")
+    return content
 
 
 # Initialize LLMs for different purposes - now these will be cached

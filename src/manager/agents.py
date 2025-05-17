@@ -177,40 +177,39 @@ class AgentManager:
         return
     
     async def _load_default_agents(self):
-        self._create_agent_by_prebuilt(user_id="share", 
-                                        name="researcher", 
-                                        nick_name="researcher", 
-                                        llm_type=AGENT_LLM_MAP["researcher"], 
-                                        tools=[tavily_tool, crawl_tool], 
-                                        prompt=get_prompt_template("researcher"),
+        self._create_agent_by_prebuilt(user_id="share",
+                                        name="researcher",
+                                        nick_name="researcher",
+                                        llm_type=AGENT_LLM_MAP["researcher"],
+                                        tools=[tavily_tool, crawl_tool],
+                                        prompt=get_prompt_template("researcher")[0],
                                         description="This agent specializes in research tasks by utilizing search engines and web crawling. It can search for information using keywords, crawl specific URLs to extract content, and synthesize findings into comprehensive reports. The agent excels at gathering information from multiple sources, verifying relevance and credibility, and presenting structured conclusions based on collected data."),
-        
+
         self._create_agent_by_prebuilt(user_id="share", 
                                         name="coder", 
                                         nick_name="coder", 
                                         llm_type=AGENT_LLM_MAP["coder"], 
                                         tools=[python_repl_tool, bash_tool], 
-                                        prompt=get_prompt_template("coder"),
-                                        description="This agent specializes in software engineering tasks using Python and bash scripting. It can analyze requirements, implement efficient solutions, and provide clear documentation. The agent excels at data analysis, algorithm implementation, system resource management, and environment queries. It follows best practices, handles edge cases, and integrates Python with bash when needed for comprehensive problem-solving."),
-        
+                                        prompt=get_prompt_template("coder")[0],
+                                        description="This agent specializes in software engineering tasks using Python scripts. This agent excels in data analysis and algorithm implementation. Can complete some statistical calculations, computations, and tasks that can be solved with Python code. Please note that this agent is unable to operate the system, view, create, or modify any files."),
+
         
         self._create_agent_by_prebuilt(user_id="share", 
                                         name="browser", 
                                         nick_name="browser", 
                                         llm_type=AGENT_LLM_MAP["browser"], 
                                         tools=[browser_tool], 
-                                        prompt=get_prompt_template("browser"), 
+                                        prompt=get_prompt_template("browser")[0],
                                         description="This agent specializes in interacting with web browsers. It can navigate to websites, perform actions like clicking, typing, and scrolling, and extract information from web pages. The agent is adept at handling tasks such as searching specific websites, interacting with web elements, and gathering online data. It is capable of operations like logging in, form filling, clicking buttons, and scraping content."),
     
-        self._create_agent_by_prebuilt(user_id="share", 
-                                        name="reporter", 
-                                        nick_name="reporter", 
-                                        llm_type=AGENT_LLM_MAP["reporter"], 
-                                        tools=[], 
-                                        prompt=get_prompt_template("reporter"), 
-                                        description="This agent specializes in creating clear, comprehensive reports based solely on provided information and verifiable facts. It presents data objectively, organizes information logically, and highlights key findings using professional language. The agent structures reports with executive summaries, detailed analysis, and actionable conclusions while maintaining strict data integrity and never fabricating information.")
+        self._create_agent_by_prebuilt(user_id="share",
+                                        name="reporter",
+                                        nick_name="reporter",
+                                        llm_type=AGENT_LLM_MAP["reporter"],
+                                        tools=[],
+                                        prompt=get_prompt_template("reporter")[0],
+                                        description="This agent specializes in creating clear and comprehensive reports based on the provided information and verifiable facts. It objectively presents data, logically organizes information, and highlights key findings using professional language. But its ability is limited, it can only generate text and cannot perform other advanced operations such as generating Word.")
 
-                    
     async def _load_agents(self, user_agent_flag):
         await self._load_default_agents()
         load_tasks = []

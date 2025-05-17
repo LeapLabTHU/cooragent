@@ -21,10 +21,10 @@ async def agent_factory_node(state: State) -> Command[Literal["publisher","__end
     """Node for the create agent agent that creates a new agent."""
     logger.info("Agent Factory Start to work \n")
     messages = apply_prompt_template("agent_factory", state)
-    response = (
+    response = await (
         get_llm_by_type(AGENT_LLM_MAP["agent_factory"])
         .with_structured_output(Router)
-        .invoke(messages)
+        .ainvoke(messages)
     )
     
     tools = [agent_manager.available_tools[tool["name"]] for tool in response["selected_tools"]]

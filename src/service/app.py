@@ -124,7 +124,7 @@ class Server:
         if agent_manager is None:
              raise HTTPException(status_code=503, detail="Service not ready, AgentManager not initialized.")
         try:
-            result = agent_manager._edit_agent(request)
+            result = await agent_manager._edit_agent(request)
             yield json.dumps({"result": result}) + "\n"
         except NotFoundAgentError as e:
             logger.warning(f"Edit agent failed: {e}")
