@@ -1,14 +1,16 @@
 import logging
-import uuid
+import hashlib
 import asyncio
 from typing import Optional, Dict, Any, AsyncGenerator
 from src.workflow import build_graph, agent_factory_graph
 from src.manager import agent_manager
-from src.interface.agent_types import TaskType
+from src.interface.agent import TaskType
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from src.interface.agent_types import State
+from src.interface.agent import State
 from src.service.env import USE_BROWSER
+from src.workflow.cache import workflow_cache as cache
+from src.interface.agent import WorkMode
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,6 +58,9 @@ async def run_agent_workflow(
     deep_thinking_mode: bool = False,
     search_before_planning: bool = False,
     coor_agents: Optional[list[str]] = None,
+    polish_id: str = None,
+    lap: int = 0,
+    workmode: WorkMode = "launch"
 ):
     """Run the agent workflow with the given user input.
 
@@ -66,6 +71,33 @@ async def run_agent_workflow(
     Returns:
         The final state after the workflow completes
     """
+    workmode = "production"
+    if not polish_id:
+        if workmode == "launch":
+            msg = f"{user_id}_{task_type}_{user_input_messages}_{deep_thinking_mode}_{search_before_planning}_{coor_agents}"
+            polish_id = hashlib.md5(msg.encode('utf-8')).hexdigest()
+        else:
+            polish_id = cache.get_latest_polish_id(user_id)
+    
+            
+    workflow_id = f'{user_id}:{polish_id}'
+    lap = cache.get_lap(workflow_id) if workmode != "launch" else 0
+    
+    if workmode != "production":
+        lap = lap + 1
+    
+    cache.init_cache(user_id=user_id,
+                        mode=workmode, 
+                        workflow_id=workflow_id,
+                        lap=lap,
+                        version=1,
+                        user_input_messages=user_input_messages.copy(), 
+                        deep_thinking_mode=deep_thinking_mode,
+                        search_before_planning=search_before_planning,
+                        coor_agents=coor_agents, 
+                    )
+
+    
     if task_type == TaskType.AGENT_FACTORY:
         graph = agent_factory_graph()
     else:
@@ -77,9 +109,6 @@ async def run_agent_workflow(
         enable_debug_logging()
 
     logger.info(f"Starting workflow with user input: {user_input_messages}")
-
-    workflow_id = str(uuid.uuid4())
-
 
     TEAM_MEMBERS_DESCRIPTION_TEMPLATE = """
     - **`{agent_name}`**: {agent_description}
@@ -126,23 +155,25 @@ async def run_agent_workflow(
                     "messages": user_input_messages,
                     "deep_thinking_mode": deep_thinking_mode,
                     "search_before_planning": search_before_planning,
+                    "workflow_id": workflow_id,
+                    "work_mode": workmode
                 },
-                workflow_id,
             ):
                 yield event_data
 
 async def _process_workflow(
     workflow, 
-    initial_state: Dict[str, Any], 
-    workflow_id: str,
+    initial_state: Dict[str, Any] 
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """处理自定义工作流的事件流"""
     current_node = None
 
+    workflow_id = initial_state["workflow_id"]
     yield {
         "event": "start_of_workflow",
         "data": {"workflow_id": workflow_id, "input": initial_state["messages"]},
     }
+    
     
     try:
         current_node = workflow.start_node
@@ -161,7 +192,6 @@ async def _process_workflow(
                 },
             }
             node_func = workflow.nodes[current_node]
-
             command = await node_func(state)
             
             if hasattr(command, 'update') and command.update:
@@ -230,6 +260,8 @@ async def _process_workflow(
                 ],
             },
         }
+        
+        cache.dump(workflow_id, initial_state["work_mode"])
     
     except Exception as e:
         import traceback

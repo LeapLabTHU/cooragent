@@ -9,12 +9,12 @@ import json
 
 load_dotenv()
 import logging
-from src.interface.agent_types import *
+from src.interface.agent import *
 from src.workflow.process import run_agent_workflow
 from src.manager import agent_manager 
 from src.manager.agents import NotFoundAgentError
 from src.service.session import UserSession
-from src.interface.agent_types import RemoveAgentRequest
+from src.interface.agent import RemoveAgentRequest
 from src.utils.path_utils import get_project_root
 
 logger = logging.getLogger(__name__)

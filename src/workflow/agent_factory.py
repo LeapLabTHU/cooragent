@@ -8,7 +8,7 @@ from src.llm.llm import get_llm_by_type
 from src.llm.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
-from src.interface.agent_types import State, Router
+from src.interface.agent import State, Router
 from src.manager import agent_manager
 from src.workflow.graph import AgentWorkflow
 

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
-from .mcp_types import Tool
+from .mcp import Tool
 from enum import Enum, unique
 from typing_extensions import TypedDict
 from langgraph.graph import MessagesState
@@ -25,7 +25,14 @@ class LLMType(str, Enum):
 class TaskType(str, Enum):
     AGENT_FACTORY = "agent_factory"
     AGENT_WORKFLOW = "agent_workflow"
-    
+
+class WorkMode(str, Enum):
+    LAUNCH = "launch"
+    POLISH = "polish"
+    PRODUCTION = "production"
+    AUTO = "auto"
+
+
     
 class Agent(BaseModel):
     """Definition for an agent the client can call."""
@@ -79,7 +86,8 @@ class State(MessagesState):
     full_plan: str
     deep_thinking_mode: bool
     search_before_planning: bool
-
+    workflow_id: str
+    workflow_mode: WorkMode="auto"
 
 class RemoveAgentRequest(BaseModel):
     user_id: str
