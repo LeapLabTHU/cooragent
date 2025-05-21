@@ -23,7 +23,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
-from src.interface.agent_types import *
+from src.interface.agent import *
 from src.service.app import Server
 
 if platform.system() == "Windows":
@@ -286,7 +286,6 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_bef
     current_content = ""
     json_buffer = ""  
     in_json_block = False
-    last_agent_name = ""
     live_mode = True
     
     with Progress(
