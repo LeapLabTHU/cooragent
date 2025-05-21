@@ -12,7 +12,7 @@ from src.interface.agent_types import State, Router
 from src.interface.serialize_types import AgentBuilder
 from src.manager import agent_manager
 from src.workflow.graph import AgentWorkflow
-
+from src.utils.content_process import remove_think_tags
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
         messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
     
     response = await llm.ainvoke(messages)
-    content = response.content
+    content = remove_think_tags(response.content)
 
     if content.startswith("```json"):
         content = content.removeprefix("```json")
@@ -121,7 +121,6 @@ async def coordinator_node(state: State) -> Command[Literal["planner", "__end__"
     logger.info("Coordinator talking. \n")
     messages = apply_prompt_template("coordinator", state)
     response = await get_llm_by_type(AGENT_LLM_MAP["coordinator"]).ainvoke(messages)
-
     goto = "__end__"
     if "handover_to_planner" in response.content:
         goto = "planner"
