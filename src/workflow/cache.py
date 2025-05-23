@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 class WorkflowCache:
     _instance = None
 
+
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super(WorkflowCache, cls).__new__(cls)
@@ -29,43 +30,51 @@ class WorkflowCache:
             self.initialized = True
         
     def init_cache(self, user_id: str, lap: int, mode: str, workflow_id: str, version: int, user_input_messages: list, deep_thinking_mode: bool, search_before_planning: bool, coor_agents: list[str], load_user_workflow: bool = True):
-        user_workflow_dir = self.workflow_dir / user_id
-        if not user_workflow_dir.exists():
-            logger.info(f"path {user_workflow_dir} does not exist when user {user_id} workflow cache initializing, gona to create...")
-            user_workflow_dir.mkdir(parents=True, exist_ok=True)
-        if load_user_workflow:
-            user_workflow_files = user_workflow_dir.glob("*.json")
-            for workflow_file in user_workflow_files:
-                with open(workflow_file, "r") as f:
-                    workflow = json.load(f)
-                    self.cache[workflow["workflow_id"]] = workflow
-                    
-                    
-        self.queue[workflow_id] = deque()
-        for agent in self.cache[workflow_id]["graph"]:
-            if agent["node_type"] == "execution_agent":
-                self.queue[workflow_id].append(agent)
-        if mode == "launch":
-            self.cache[workflow_id] = WORKFLOW_TEMPLATE.copy()
-            self.cache[workflow_id]["mode"] = mode
-            self.cache[workflow_id]["lap"] = lap
-            self.cache[workflow_id]["workflow_id"] = workflow_id
-            self.cache[workflow_id]["version"] = version
-            self.cache[workflow_id]["user_input_messages"] = user_input_messages
-            self.cache[workflow_id]["deep_thinking_mode"] = deep_thinking_mode
-            self.cache[workflow_id]["search_before_planning"] = search_before_planning
-            self.cache[workflow_id]["coor_agents"] = coor_agents
-        else:
-            try:
-                if workflow_id not in self.cache:
-                    user_id, polish_id = workflow_id.split(":")
-                    user_workflow_file = user_workflow_dir / polish_id
-                    with open(user_workflow_file, 'r') as f:
+        try:
+            user_workflow_dir = self.workflow_dir / user_id
+            if not user_workflow_dir.exists():
+                logger.info(f"path {user_workflow_dir} does not exist when user {user_id} workflow cache initializing, gona to create...")
+                user_workflow_dir.mkdir(parents=True, exist_ok=True)
+            if load_user_workflow:
+                user_workflow_files = user_workflow_dir.glob("*.json")
+                for workflow_file in user_workflow_files:
+                    with open(workflow_file, "r") as f:
                         workflow = json.load(f)
                         self.cache[workflow["workflow_id"]] = workflow
-            except Exception as e:
-                logger.error(f"Error initializing workflow cache: {e}")
-                raise e
+                        
+            if mode == "launch":
+                self.cache[workflow_id] = WORKFLOW_TEMPLATE.copy()
+                self.cache[workflow_id]["mode"] = mode
+                self.cache[workflow_id]["lap"] = lap
+                self.cache[workflow_id]["workflow_id"] = workflow_id
+                self.cache[workflow_id]["version"] = version
+                self.cache[workflow_id]["user_input_messages"] = user_input_messages
+                self.cache[workflow_id]["deep_thinking_mode"] = deep_thinking_mode
+                self.cache[workflow_id]["search_before_planning"] = search_before_planning
+                self.cache[workflow_id]["coor_agents"] = coor_agents
+            else:
+                try:                  
+                    if workflow_id not in self.cache:
+                        user_id, polish_id = workflow_id.split(":")
+                        user_workflow_file = user_workflow_dir / polish_id
+                        with open(user_workflow_file, 'r') as f:
+                            workflow = json.load(f)
+                            if workflow:
+                                self.cache[workflow["workflow_id"]] = workflow
+                            else:
+                                logger.error(f"Error loading workflow {user_workflow_file} for user {user_id}: {e}")
+                                raise Exception(f"Error loading workflow {user_workflow_file} for user {user_id}")
+                            
+                    self.queue[workflow_id] = deque()
+                    for agent in self.cache[workflow_id]["graph"]:
+                        if agent["node_type"] == "execution_agent":
+                            self.queue[workflow_id].append(agent)
+                except Exception as e:
+                    logger.error(f"Error initializing workflow cache: {e}")
+                    raise e
+        except Exception as e:
+            logger.error(f"Error initializing workflow cache: {e}")
+            raise e
             
     def get_latest_polish_id(self, user_id: str):
         if user_id not in self.latest_polish_id or not self.latest_polish_id[user_id]:
@@ -87,19 +96,18 @@ class WorkflowCache:
                             logger.warning(f"Could not get mtime for {workflow_file}: {e}")
                     
                     if latest_file:
-                        polish_id = latest_file.stem # filename without extension
-                        if polish_id not in self.cache:
-                            try:
-                                with open(latest_file, "r") as f:
-                                    workflow_data = json.load(f)
-                                    workflow_id = user_id + ":" + polish_id
-                                    self.cache[workflow_id] = workflow_data
-                                logger.info(f"Loaded latest polish workflow {polish_id_to_set} for user {user_id} from {latest_file}")
-                            except Exception as e:
-                                logger.error(f"Error loading latest polish workflow {latest_file} for user {user_id}: {e}")
-                                polish_id_to_set = None # Failed to load
+                        polish_id_to_set = latest_file.stem # filename without extension
+                        try:
+                            with open(latest_file, "r") as f:
+                                workflow_data = json.load(f)
+                                workflow_id = user_id + ":" + polish_id_to_set
+                                self.cache[workflow_id] = workflow_data
+                            logger.info(f"Loaded latest polish workflow {polish_id_to_set} for user {user_id} from {latest_file}")
+                        except Exception as e:
+                            logger.error(f"Error loading latest polish workflow {latest_file} for user {user_id}: {e}")
+                            polish_id_to_set = None # Failed to load
             
-            self.latest_polish_id[user_id] = polish_id
+                        self.latest_polish_id[user_id] = polish_id_to_set
             if polish_id_to_set is None:
                 logger.info(f"No suitable polish workflow found for user {user_id} in {user_workflow_dir}")
 

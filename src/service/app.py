@@ -15,7 +15,7 @@ from src.manager import agent_manager
 from src.manager.agents import NotFoundAgentError
 from src.service.session import UserSession
 from src.interface.agent import RemoveAgentRequest
-from src.utils.path_utils import get_project_root
+from src.workflow.cache import workflow_cache as cache
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -53,7 +53,10 @@ class Server:
             request.debug,
             request.deep_thinking_mode,
             request.search_before_planning,
-            request.coor_agents
+            request.coor_agents,
+            request.polish_id,
+            request.lap,
+            request.workflow_mode
         )
 
         async for res in response_stream:
