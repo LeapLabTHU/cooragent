@@ -53,7 +53,10 @@ class Server:
             request.debug,
             request.deep_thinking_mode,
             request.search_before_planning,
-            request.coor_agents
+            request.coor_agents,
+            request.polish_id,
+            request.lap,
+            request.workflow_mode
         )
 
         async for res in response_stream:
