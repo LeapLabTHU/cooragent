@@ -1,0 +1,180 @@
+{
+    "workflow_id": "<polish_id>-<lap>",
+    "mode": "agent_workflow",
+    "version": 1,
+    "user_input_messages": [],
+    "deep_thinking_mode": false,
+    "search_before_planning": false,
+    "coor_agents": [],
+    "plannig_steps": [                                                                                                                                                                                            
+            {                                                                                                                                                                                                                          
+              "agent_name": "researcher",                                                                                                                                                                                              
+              "title": "搜索北京最热门旅游景点及交通方式",                                                                                                                                                                             
+              "description": "使用搜索引擎查找北京当前最热门的旅游景点，并查询从北京西站前往该景点的公共交通方式（如地铁或公交线路）。",                                                                                               
+              "note": "确保输出包含景点名称、简要介绍以及具体交通指引。"                                                                                                                                                               
+            },                                                                                                                                                                                                                         
+            {                                                                                                                                                                                                                          
+              "agent_name": "reporter",                                                                                                                                                                                                
+              "title": "撰写推荐报告",                                                                                                                                                                                                 
+              "description": "根据前一步的研究结果，整理并输出一份报告，内容包括推荐的景点名称、从北京西站到景点的交通方式，以及推荐理由。",                                                                                           
+              "note": "报告应以清晰易懂的语言呈现。"                                                                                                                                                                                   
+            }                                                                                                                                                                                                                          
+    ],
+    "global_variables": {
+        "has_lauched":"",
+        "user_input":"",
+        "history_messages":[]
+    },
+    "glabal_functions": [
+        {"function_name": "is_planner_needed",
+        "description": "check if the planner is needed",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "has_lauched": {"type": "boolean"}
+            }
+        },
+        "output_schema": {
+            "type": "object",
+            "properties": {
+                "is_planner_needed": {"type": "boolean"}
+            }
+        }
+    }],
+    "memory": {
+        "cache": {},
+        "vector_store": {},
+        "database": {},
+        "file_store": {}
+    },
+    "agent_nodes": {
+        "coordinator": {
+            "type": "system_agent",
+            "name": "coordinator",
+            "description": "Coordinator node that communicate with customers."
+        },
+        "planner": {
+            "type": "system_agent",
+            "name": "planner",
+            "description": "Planner node that plan the task."
+        },
+        "publisher": {
+            "type": "system_agent",
+            "name": "publisher",
+            "description": "Publisher node that publish the task."
+        },
+        "agent_factory": {
+            "type": "system_agent",
+            "name": "agent_factory",
+            "description": "Agent factory node that create the agent."
+        },
+        "researcher": {
+            "type": "execution_agent",
+            "name": "researcher",
+            "agent": {
+                "user_id": "test",
+                "agent_name": "researcher",
+                "nick_name": "researcher",
+                "description": "",
+                "llm_type": "basic",
+                "selected_tools": [],
+                "prompt": ""
+            }
+        },
+        "reporter": {
+            "type": "execution_agent",
+            "name": "reporter",
+            "agent": {
+                "user_id": "test",
+                "agent_name": "reporter",
+                "nick_name": "reporter",
+                "description": "",
+                "llm_type": "basic",
+                "selected_tools": [],
+                "prompt": ""
+            }
+        },
+        "coder": {
+            "type": "execution_agent",
+            "name": "coder",
+            "agent": {
+                "user_id": "test",
+                "agent_name": "coder",
+                "nick_name": "coder",
+                "description": "",
+                "llm_type": "basic",
+                "selected_tools": [],
+                "prompt": ""
+            }
+        },
+        "browser": {
+            "type": "execution_agent",
+            "name": "browser",
+            "agent": {
+                "user_id": "test",
+                "agent_name": "browser",
+                "nick_name": "browser",
+                "description": "",
+                "llm_type": "basic",
+                "selected_tools": [],
+                "prompt": ""
+            }
+        }
+    },
+    "graph": [
+        {
+            "node_name": "coordinator",
+            "node_type": "system_agent",
+            "next_to":["planner", "publisher"],
+            "condition":{
+                "type": "function",
+                "function": "is_planner_needed",
+                "branches": {
+                    "true": "planner",
+                    "false": "publisher"
+                }
+            }
+        },
+        {
+            "node_name": "planner",
+            "node_type": "system_agent",
+            "next_to":["publisher"],
+            "condition":{}    
+        },
+        {
+            "node_name": "publisher",
+            "node_type": "system_agent",
+            "next_to":["agent_factory"],
+            "condition":{
+                "type": "function",
+                "function": "is_factory_needed",
+                "branches": {
+                    "true": "agent_factory",
+                    "false": "agent_proxy"
+                }
+            }
+        },
+        {
+            "node_name": "agent_factory",
+            "node_type": "system_agent",
+            "next_to":["agent_proxy"],
+            "condition":{}    
+        },
+        {
+            "node_name": "researcher",
+            "node_type": "execution_agent",
+            "next_to":["reporter", "coder", "browser"],
+            "condition":{
+                "type": "supervised"
+            }    
+        },
+        {
+            "node_name": "reporter",
+            "node_type": "execution_agent",
+            "next_to":["coder", "browser"],
+            "condition":{
+                "type": "supervised"
+            }    
+        }
+    ]
+}

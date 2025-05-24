@@ -7,40 +7,49 @@ from src.llm.llm import get_llm_by_type
 from src.llm.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
 from src.tools.search import tavily_tool
-from src.interface.agent_types import State, Router
+from src.interface.agent import State, Router
 from src.manager import agent_manager
 from src.prompts.template import apply_prompt
 from langgraph.prebuilt import create_react_agent
 from src.workflow.graph import AgentWorkflow
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from src.manager.mcp import mcp_client_config
+from src.workflow.cache import workflow_cache as cache
+
 
 logger = logging.getLogger(__name__)
 
 
 async def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Node for the create agent agent that creates a new agent."""
-    logger.info("Agent Factory Start to work \n")
-    messages = apply_prompt_template("agent_factory", state)
-    response = (
-        get_llm_by_type(AGENT_LLM_MAP["agent_factory"])
-        .with_structured_output(Router)
-        .invoke(messages)
-    )
+    logger.info("Agent Factory Start to work in {} workmode \n".format(state["work_mode"]))
     
-    tools = [agent_manager.available_tools[tool["name"]] for tool in response["selected_tools"]]
+    if state["work_mode"] == "launch":
+        messages = apply_prompt_template("agent_factory", state)
+        response = (
+            get_llm_by_type(AGENT_LLM_MAP["agent_factory"])
+            .with_structured_output(Router)
+            .invoke(messages)
+        )
+        
+        tools = [agent_manager.available_tools[tool["name"]] for tool in response["selected_tools"]]
 
-    agent_manager._create_agent_by_prebuilt(
-        user_id=state["user_id"],
-        name=response["agent_name"],
-        nick_name=response["agent_name"],
-        llm_type=response["llm_type"],
-        tools=tools,
-        prompt=response["prompt"],
-        description=response["agent_description"],
-    )
+        agent_manager._create_agent_by_prebuilt(
+            user_id=state["user_id"],
+            name=response["agent_name"],
+            nick_name=response["agent_name"],
+            llm_type=response["llm_type"],
+            tools=tools,
+            prompt=response["prompt"],
+            description=response["agent_description"],
+        )
+        
+        state["TEAM_MEMBERS"].append(response["agent_name"])
+        
+    elif state["work_mode"] == "polish":
+        # this will be support soon
+        pass
     
-    state["TEAM_MEMBERS"].append(response["agent_name"])
 
     return Command(
         update={
@@ -56,24 +65,41 @@ async def agent_factory_node(state: State) -> Command[Literal["publisher","__end
 
 async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_factory", "__end__"]]:
     """publisher node that decides which agent should act next."""
-    logger.info("publisher evaluating next action")
-    messages = apply_prompt_template("publisher", state)
-    response = await (
-        get_llm_by_type(AGENT_LLM_MAP["publisher"])
-        .with_structured_output(Router)
-        .ainvoke(messages)
-    )
-    agent = response["next"]
+    logger.info("publisher evaluating next action in {} mode \n".format(state["work_mode"]))
     
-    if agent == "FINISH":
-        goto = "__end__"
-        logger.info("Workflow completed \n")
-        return Command(goto=goto, update={"next": goto})
-    elif agent != "agent_factory":
-        goto = "agent_proxy"
-    else:
-        goto = "agent_factory"
-    logger.info(f"publisher delegating to: {agent} \n")
+    if state["work_mode"] == "launch":
+        messages = apply_prompt_template("publisher", state)
+        response = await (
+            get_llm_by_type(AGENT_LLM_MAP["publisher"])
+            .with_structured_output(Router)
+            .ainvoke(messages)
+        )
+        agent = response["next"]
+        
+        if agent == "FINISH":
+            goto = "__end__"
+            logger.info("Workflow completed \n")
+            cache.restore_node(state["workflow_id"], goto)
+            return Command(goto=goto, update={"next": goto})
+        elif agent != "agent_factory":
+            goto = "agent_proxy"
+        else:
+            goto = "agent_factory"
+        logger.info(f"publisher delegating to: {agent} \n")
+        
+        cache.restore_node(state["workflow_id"], agent)
+        
+    elif state["work_mode"] in ["production", "polish"]:
+        # todo add polish history 
+        agent = cache.get_next_node(state["workflow_id"])
+        if agent == "FINISH":
+            goto = "__end__"
+            logger.info("Workflow completed \n")
+            return Command(goto=goto, update={"next": goto})
+        else:
+            goto = "agent_proxy"
+
+    
     return Command(goto=goto, 
                     update={
                         "messages": [{"content":f"Next step is delegating to: {agent}\n", "tool":"publisher", "role":"assistant"}],
@@ -87,6 +113,7 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
         mcp_tools = client.get_tools()
         for _tool in mcp_tools:
             agent_manager.available_tools[_tool.name] = _tool
+            
         agent = create_react_agent(
             get_llm_by_type(_agent.llm_type),
             tools=[agent_manager.available_tools[tool.name] for tool in _agent.selected_tools],
@@ -94,6 +121,11 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
         )
 
         response = await agent.ainvoke(state)
+        
+        if state["work_mode"] == "launch":
+            cache.restore_node(state["workflow_id"], _agent)
+        elif state["work_mode"] == "production":
+            cache.update_stack(state["workflow_id"], _agent)
 
     return Command(
         update={
@@ -107,25 +139,38 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
 
 async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]:
     """Planner node that generate the full plan."""
-    logger.info("Planner generating full plan \n")
-    messages = apply_prompt_template("planner", state)
-    llm = get_llm_by_type(AGENT_LLM_MAP["planner"])
-    if state.get("deep_thinking_mode"):
-        llm = get_llm_by_type("reasoning")
-    if state.get("search_before_planning"):
-        searched_content = tavily_tool.invoke({"query": [''.join(message["content"]) for message in state["messages"] if message["role"] == "user"][0]})
-        messages = deepcopy(messages)
-        messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
     
-    response = await llm.ainvoke(messages)
-    content = response.content
+    logger.info("Planner generating full plan in {} mode\n".format(state["work_mode"]))
 
-    if content.startswith("```json"):
-        content = content.removeprefix("```json")
+    if state["work_mode"] == "launch":
+        messages = apply_prompt_template("planner", state)
+        llm = get_llm_by_type(AGENT_LLM_MAP["planner"])
+        if state.get("deep_thinking_mode"):
+            llm = get_llm_by_type("reasoning")
+        if state.get("search_before_planning"):
+            searched_content = tavily_tool.invoke({"query": [''.join(message["content"]) for message in state["messages"] if message["role"] == "user"][0]})
+            messages = deepcopy(messages)
+            messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
 
-    if content.endswith("```"):
-        content = content.removesuffix("```")
+        response = await llm.ainvoke(messages)
+        content = response.content
 
+        if content.startswith("```json"):
+            content = content.removeprefix("```json")
+
+        if content.endswith("```"):
+            content = content.removesuffix("```")
+
+        cache.restore_planning_steps(state["workflow_id"], content)
+        
+    elif state["work_mode"] == "production":
+        # watch out the json style
+        content = cache.get_planning_steps(state["workflow_id"])
+    
+    elif state["work_mode"] == "polish":
+        # this will be support soon
+        pass
+    
     goto = "publisher"
     try:
         json.loads(content)
