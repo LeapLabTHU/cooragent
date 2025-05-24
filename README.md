@@ -1,9 +1,12 @@
-# cooragent
+<p align="center">
+  <img src="assets/logo.png" width="300"/>
+</p>
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Wechat](https://img.shields.io/badge/WeChat-cooragent-brightgreen?logo=wechat&logoColor=white)](./assets/wechat_community.jpg)
 [![Discord Follow](https://dcbadge.vercel.app/api/server/ZU6p5nEYgB?style=flat)](https://discord.gg/ZU6p5nEYgB)
-
+[![GitHub stars](https://img.shields.io/github/stars/LeapLabTHU/Cooragent?style=social)](https://github.com/LeapLabTHU/Cooragent/stargazers)
+&ensp;
 [English](./README.md) | [简体中文](./README_zh.md)
 
 # What is Cooragent
@@ -277,22 +280,6 @@ Expand the capabilities of Agents to handle and understand multiple types of inf
 ### **👥 Community Engagement Enhancement**
 
 Enhance interaction methods within the Agent community. This may include an Agent sharing marketplace, collaborative challenges, and other initiatives aimed at encouraging users to share, discover, and collectively improve Agents.
-
-
-## **ToDoList to be coming soon**
-
-- ✅ **MCP Scaling Up**  
-  More MCP Server/Tool test and support in Cooragent
-
-- ⏳ **SandBox Support**  
-  Use Daytona to support sandbox for python and shell
-
-- ⏳ **Visualized drag/drop workflow editing**  
-  Provide visual workflow editing capabilities, allowing users to edit workflows quickly and accurately through drag and drop operations. 
-
-- ⏳ **Long Memmory Support:**  
-  Use Redis and Vector Base to remember Long Memory of User .
-
 
 
 ## Contribution
