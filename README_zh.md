@@ -16,11 +16,24 @@ Cooragent 是一个 AI 智能体协作社区。在这个社区中，你可以通
 </h5>
 
 
-# 无限可能
-Cooragent 有两种工作模式：**Agent Factory** 和 **Agent Workflow**。
+# 自动创建 Agent，创造无限可能
+Cooragent 有两种任务模式：**Agent Factory** 和 **Agent Workflow**。
 - **Agent Factory** 模式下，你只需要你对智能体做出描述，Cooragent 就会根据你的需求生成一个智能体。Agent Factory 模式下，系统的会自动分析用户需求，通过记忆和扩展深入理解用户，省去纷繁复杂的 Prompt 设计。Planner 会在深入理解用户需求的基础上，挑选合适的工具，自动打磨 Prompt，逐步完成智能体构建。智能体构建完成后，可以立即投入使用，但你仍然可以对智能体进行编辑，优化其行为和功能。
 - **Agent Workflow** 模式下你只需要描述你想要完成的目标任务，Cooragent 会自动分析任务的需求，挑选合适的智能体进行协作。Planner 根据各个智能体擅长的领域，对其进行组合并规划任务步骤和完成顺序，随后交由任务分发节点 publish 发布任务。各个智能领取自身任务，并协作完成任务。
 Cooragent 可以在两种模式下不断演进，从而创造出无限可能。
+
+# 高效构建 Workflow
+如何高效构建 Workflow 是提升 Agent 在生产场景落地的关键。传统的 Workflow 构建完全依赖于开发人员的经验。无论是工具的选择，Prompt 打磨还是结构选择都耗费大量的人工和时间成本。Cooragent 创造性的提供三种 Workflow 工作方式 - Launch, polish, production。
+- **Launch** 模式下，用户只需描述想要完成的目标任务，Cooragent 自动分析任务的需求，挑选合适的 Agent，构建完整工作流。且在任务结束后将工作流保存在本地存储中（通常在 store/workflow 下），支持后续复用与二次编辑。
+- **Polish** 模式下，用户可以手动调整 workflow 的执行顺序，Agent 的工具选择，Agent 的 LLM 配置以及相关 Prompt。用户也可以通过自然语言指令交由 Cooragent 针对性的对某些部分进行调整。例如用户可以告诉 Cooragent：“调整股票分析 agent 的工具选择， 使用 tavily 工具代替 browser 工具以便更快速的搜索信息“。Cooragent 会基于类似 [APE](!https://arxiv.org/abs/2211.01910), [Absolute-Zero-Reasoner](!https://andrewzh112.github.io/absolute-zero-reasoner/)等技术框架自动化地调整 Agent 使用的提示词、工具和其他流程。
+- **Production** 模式下，Cooragent 根据已经打磨好的 Workflow 高效执行，避免过多的运行干预，同时使用 Supervisor 对运行结果进行兜底。
+
+**最佳实践**，Launch 模式用于自动化快速构建可运行的 Workflow。Polish 模式用于 Workflow 的精细化打磨。Production 模式用于生产场景，追求稳定运行。
+
+**使用方式**，在 `agent_workflow` 运行时指定 work_mode. 
+
+注意：Polish 模式的自动化打磨流程尚未完全实现！
+
 
 # 快速安装
 

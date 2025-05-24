@@ -15,11 +15,23 @@ Cooragent is an AI agent collaboration community. In this community, you can cre
 <video src="https://github.com/user-attachments/assets/9af611e3-aed6-4a2f-8663-428a7707fe8d" width="70%" alt="introduce cooragent" controls></video>
 </h5>
 
-# Infinite Possibilities
-Cooragent has two working mode : **Agent Factory** and **Agent Workflow**.
-- **Agent Factory** : You only need to describe the agent, and Cooragent will generate an agent based on your needs. In Agent Factory mode, the system automatically analyzes user requirements and gains a deep understanding of the user through memory and expansion, eliminating the need for complex Prompt design. Based on a deep understanding of user needs, the Planner selects appropriate tools, automatically refines the Prompt, and gradually completes the agent construction. After construction, the agent can be used immediately, but you can still edit it to optimize its behavior and functionality.
-- **Agent Workflow** : You only need to describe the target task you want to complete, and Cooragent will automatically analyze the task requirements and select suitable agents for collaboration. The Planner combines agents based on their areas of expertise, plans the task steps and completion order, and then hands over the task to the task distribution node 'publish' for task release. Each agent receives its own task and collaborates to complete it.
-Cooragent can continuously evolve in these two modes, thus creating infinite possibilities.
+# Auto-Create Agents, Unlock Infinite Possibilities
+Cooragent has two task modes: **Agent Factory** and **Agent Workflow**.
+- In **Agent Factory** mode, you only need to describe the agent, and Cooragent will generate an agent based on your needs. In Agent Factory mode, the system automatically analyzes user needs, deeply understands the user through memory and expansion, and saves the complicated Prompt design. The Planner will select appropriate tools, automatically polish the Prompt, and gradually complete the agent construction based on a deep understanding of user needs. After the agent is constructed, it can be put into use immediately, but you can still edit the agent to optimize its behavior and functions.
+- In **Agent Workflow** mode, you only need to describe the target task you want to complete, and Cooragent will automatically analyze the task requirements and select suitable agents for collaboration. The Planner combines agents based on their areas of expertise, plans task steps and completion order, and then hands them over to the task distribution node publish to release tasks. Each agent receives its own tasks and collaborates to complete them.
+Cooragent can continuously evolve in both modes, thereby creating infinite possibilities.
+
+# Efficiently Build Workflows
+Streamlining workflow construction is crucial for leveraging Agents effectively in production environments. Traditional methods rely heavily on developer expertise, making tool selection, prompt engineering, and architectural decisions time-consuming and labor-intensive. Cooragent introduces an innovative approach with three distinct workflow modes: Launch, Polish, and Production.
+
+-   **Launch Mode**: Users simply outline their desired task. Cooragent then automatically analyzes requirements, selects appropriate Agents, and constructs a complete workflow. Upon task completion, the workflow is saved locally (typically in `store/workflow`) for future reuse and modification.
+-   **Polish Mode**: This mode offers granular control. Users can manually refine workflow execution order, Agent tool selection, LLM configurations, and associated prompts. Alternatively, natural language commands can direct Cooragent to make specific adjustments. For instance, a user might instruct: "Refine the stock analysis Agent: replace the browser tool with Tavily for faster information retrieval." Cooragent, leveraging frameworks such as [APE](https://arxiv.org/abs/2211.01910) and [Absolute-Zero-Reasoner](https://andrewzh112.github.io/absolute-zero-reasoner/), will then autonomously adjust the Agent's prompts, tools, and other operational parameters.
+-   **Production Mode**: In this mode, Cooragent executes the fine-tuned workflow with maximal efficiency, minimizing operational overhead. A Supervisor module is employed to ensure output reliability and handle exceptions.
+
+**Best Practices**: Employ Launch mode for rapid, automated generation of functional workflows. Utilize Polish mode for meticulous refinement and optimization. Reserve Production mode for stable, real-world deployment.
+**Usage**: Specify work_mode when running `agent_workflow`.
+
+Note: The automated refinement capabilities of Polish mode are still under active development.
 
 # Quick Installation
 
