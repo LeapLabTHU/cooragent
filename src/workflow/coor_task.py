@@ -109,6 +109,7 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
 async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Proxy node that acts as a proxy for the agent."""
     _agent = agent_manager.available_agents[state["next"]]
+    logger.info(f"Agent Proxy has been called by {_agent.agent_name} \n")
     async with MultiServerMCPClient(mcp_client_config()) as client:
         mcp_tools = client.get_tools()
         for _tool in mcp_tools:

@@ -243,7 +243,7 @@ def cli(ctx):
 @click.option('--agents', '-a', multiple=True, help='List of collaborating Agents (use multiple times to add multiple Agents)')
 @click.option('--polish-id', '-p', help='Polish ID')
 @click.option('--lap', '-l', help='Lap')
-@click.option('--workflow-mode', '-w', default="launch", help='Workflow mode')
+@click.option('--workflow-mode', '-w', default="launch", type=click.Choice([mode.value for mode in WorkMode]), help='Workflow mode')
 @async_command
 async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_before_planning, agents, polish_id, lap, workflow_mode):
     """Run the agent workflow"""

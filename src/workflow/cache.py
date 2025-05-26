@@ -131,7 +131,10 @@ class WorkflowCache:
     
     def get_next_node(self, workflow_id: str):
         try:
-            return self.queue[workflow_id][0]["next_to"][0] if self.queue[workflow_id][0]["next_to"] else "FINISH"
+            if not self.queue[workflow_id][0]["next_to"] or self.queue[workflow_id][0]["next_to"][0] == "__end__":
+                return "FINISH"
+            else:
+                return self.queue[workflow_id][0]["next_to"][0]
              
         except Exception as e:
             logger.error(f"Error getting next node: {e}")
