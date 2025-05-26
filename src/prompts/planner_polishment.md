@@ -39,7 +39,14 @@ You can break down the main topic into subtopics and expand the depth and breadt
 - Combine consecutive small steps assigned to the same agent into one larger step.
 - Generate the plan in the same language as the user.
 
-<<PLAN_POLISH_INSTRUCTION>>
+## Plan Adjustment Based on History and Instructions
+
+- If historical plan information (`historical_plan`) and user adjustment instructions (`adjustment_instruction`) are provided, you must consider them.
+- First, carefully analyze the `historical_plan` to understand the previous plan's structure, agent assignments, and steps.
+- Next, analyze the `adjustment_instruction` to understand the specific changes the user wants to make to the `historical_plan`. This could involve adding, removing, or modifying steps, changing agent assignments, or altering the overall goal.
+- Based on this analysis, generate a new plan that incorporates the user's adjustments while adhering to all other planning standards mentioned above.
+- If `adjustment_instruction` conflicts with other planning standards (e.g., try not to use a non-reporter agent multiple times), prioritize the general planning standards and try to fulfill the user's intent in a compliant way, possibly by rephrasing the step or selecting a different agent.
+- Restate how you are adjusting the plan in your `thought` process.
 
 # Output Format
 ```ts

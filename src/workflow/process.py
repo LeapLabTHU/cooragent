@@ -60,7 +60,8 @@ async def run_agent_workflow(
     coor_agents: Optional[list[str]] = None,
     polish_id: str = None,
     lap: int = 0,
-    workmode: WorkMode = "launch"
+    workmode: WorkMode = "launch",
+    polish_instruction: str = None
 ):
     """Run the agent workflow with the given user input.
 
@@ -154,7 +155,8 @@ async def run_agent_workflow(
                     "deep_thinking_mode": deep_thinking_mode,
                     "search_before_planning": search_before_planning,
                     "workflow_id": workflow_id,
-                    "work_mode": workmode
+                    "work_mode": workmode,
+                    "polish_instruction": polish_instruction
                 },
             ):
                 yield event_data

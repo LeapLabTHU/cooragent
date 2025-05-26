@@ -244,8 +244,9 @@ def cli(ctx):
 @click.option('--polish-id', '-p', help='Polish ID')
 @click.option('--lap', '-l', help='Lap')
 @click.option('--workflow-mode', '-w', default="launch", type=click.Choice([mode.value for mode in WorkMode]), help='Workflow mode')
+@click.option('--polish-instruction', '-pi', help='Polish instruction')
 @async_command
-async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_before_planning, agents, polish_id, lap, workflow_mode):
+async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_before_planning, agents, polish_id, lap, workflow_mode, polish_instruction):
     """Run the agent workflow"""
     server = ctx.obj['server']
     

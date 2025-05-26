@@ -105,6 +105,7 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
                         "messages": [{"content":f"Next step is delegating to: {agent}\n", "tool":"publisher", "role":"assistant"}],
                         "next": agent})
 
+
 async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Proxy node that acts as a proxy for the agent."""
     _agent = agent_manager.available_agents[state["next"]]

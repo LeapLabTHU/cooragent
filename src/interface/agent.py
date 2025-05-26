@@ -69,6 +69,7 @@ class AgentRequest(BaseModel):
     polish_id: Optional[str]
     lap: Optional[int]
     workflow_mode: Optional[WorkMode]=WorkMode.LAUNCH
+    polish_instruction: Optional[str]
 
     
 class listAgentRequest(BaseModel):

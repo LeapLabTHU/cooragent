@@ -56,7 +56,8 @@ class Server:
             request.coor_agents,
             request.polish_id,
             request.lap,
-            request.workflow_mode
+            request.workflow_mode,
+            request.polish_instruction
         )
 
         async for res in response_stream:
