@@ -3,20 +3,23 @@ import logging
 from src.workflow.template import WORKFLOW_TEMPLATE
 from typing import Union
 from src.interface.agent import Agent
+from src.config import agents_dir
 import os
 from pathlib import Path
 from collections import deque
+import re
 
 logger = logging.getLogger(__name__)
 
 class WorkflowCache:
     _instance = None
-
+    
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super(WorkflowCache, cls).__new__(cls)
         return cls._instance
+    
 
     def __init__(self, workflow_dir):
         if not hasattr(self, 'initialized'): 
@@ -24,24 +27,26 @@ class WorkflowCache:
                 logger.info(f"path {workflow_dir} does not exist when workflow cache initializing, gona to create...")
                 workflow_dir.mkdir(parents=True, exist_ok=True)
             self.workflow_dir = workflow_dir
-            self.cache = {}
             self.queue = {}
+            self.cache = {}
             self.latest_polish_id = {}
             self.initialized = True
-        
+            
+    def _load_workflow(self, user_id: str):
+        user_workflow_dir = self.workflow_dir / user_id
+        if not user_workflow_dir.exists():
+            logger.info(f"path {user_workflow_dir} does not exist when user {user_id} workflow cache initializing, gona to create...")
+            user_workflow_dir.mkdir(parents=True, exist_ok=True)
+
+        user_workflow_files = user_workflow_dir.glob("*.json")
+        for workflow_file in user_workflow_files:
+            with open(workflow_file, "r") as f:
+                workflow = json.load(f)
+                self.cache[workflow["workflow_id"]] = workflow        
+
     def init_cache(self, user_id: str, lap: int, mode: str, workflow_id: str, version: int, user_input_messages: list, deep_thinking_mode: bool, search_before_planning: bool, coor_agents: list[str], load_user_workflow: bool = True):
         try:
-            user_workflow_dir = self.workflow_dir / user_id
-            if not user_workflow_dir.exists():
-                logger.info(f"path {user_workflow_dir} does not exist when user {user_id} workflow cache initializing, gona to create...")
-                user_workflow_dir.mkdir(parents=True, exist_ok=True)
-            if load_user_workflow:
-                user_workflow_files = user_workflow_dir.glob("*.json")
-                for workflow_file in user_workflow_files:
-                    with open(workflow_file, "r") as f:
-                        workflow = json.load(f)
-                        self.cache[workflow["workflow_id"]] = workflow
-                        
+            self._load_workflow(user_id)
             if mode == "launch":
                 self.cache[workflow_id] = WORKFLOW_TEMPLATE.copy()
                 self.cache[workflow_id]["mode"] = mode
@@ -56,6 +61,7 @@ class WorkflowCache:
                 try:                  
                     if workflow_id not in self.cache:
                         user_id, polish_id = workflow_id.split(":")
+                        user_workflow_dir = self.workflow_dir / user_id
                         user_workflow_file = user_workflow_dir / polish_id
                         with open(user_workflow_file, 'r') as f:
                             workflow = json.load(f)
@@ -75,6 +81,20 @@ class WorkflowCache:
         except Exception as e:
             logger.error(f"Error initializing workflow cache: {e}")
             raise e
+    
+    def list_workflows(self, user_id: str, match: str = None):
+        self._load_workflow(user_id)
+        user_workflow_dir = self.workflow_dir / user_id
+        user_workflow_files = user_workflow_dir.glob("*.json")
+        workflows = []
+        for workflow_file in user_workflow_files:
+            filename = workflow_file.stem
+            if match:
+                if re.match(match, filename):
+                    workflows.append(self.cache[user_id + ":" + filename])
+            else:
+                workflows.append(self.cache[user_id + ":" + filename])
+        return workflows
             
     def get_latest_polish_id(self, user_id: str):
         if user_id not in self.latest_polish_id or not self.latest_polish_id[user_id]:
@@ -188,10 +208,23 @@ class WorkflowCache:
                 self.queue[workflow_id] = []
         except Exception as e:
             logger.error(f"Error dumping workflow: {e}")
+            
+    def get_editable_agents(self, workflow_id: str):
+        try:
+            agents = []
+            for node in self.cache[workflow_id]["graph"]:
+                agent_path = agents_dir / f"{node.node_name}.json"
+                with open(agent_path, "r") as f:
+                    json_str = f.read()
+                    _agent = Agent.model_validate_json(json_str)                
+                agents.append(_agent)
+            return agents
+        except Exception as e:
+            logger.error(f"Error getting agents: {e}")
+            return []
          
         
         
-from src.utils.path_utils import get_project_root
-        
-workflow_dir = get_project_root() / "store" / "workflow"
-workflow_cache = WorkflowCache(workflow_dir=workflow_dir)
+from config.global_variables import workflows_dir
+
+workflow_cache = WorkflowCache(workflow_dir=workflows_dir)

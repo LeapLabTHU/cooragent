@@ -21,6 +21,7 @@ from src.service.env import USR_AGENT, USE_BROWSER,USE_MCP_TOOLS
 from src.manager.mcp import mcp_client_config
 import logging
 import re
+import json
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -246,11 +247,7 @@ class AgentManager:
         agents = [agent for agent in self.available_agents.values() if agent.user_id == "share"]
         return agents
     
-from src.utils.path_utils import get_project_root
-
-tools_dir = get_project_root() / "store" / "tools"
-agents_dir = get_project_root() / "store" / "agents"
-prompts_dir = get_project_root() / "store" / "prompts"
+from config.global_variables import tools_dir, agents_dir, prompts_dir
 
 agent_manager = AgentManager(tools_dir, agents_dir, prompts_dir)
 asyncio.run(agent_manager.initialize())

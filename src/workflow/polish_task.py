@@ -20,47 +20,6 @@ from src.workflow.cache import workflow_cache as cache
 logger = logging.getLogger(__name__)
 
 
-async def agent_factory_node(state: State) -> Command[Literal["publisher","__end__"]]:
-    """Node for the create agent agent that creates a new agent."""
-    logger.info("Agent Factory Start to work in {} workmode \n".format(state["work_mode"]))
-    
-    if state["work_mode"] == "launch":
-        messages = apply_prompt_template("agent_factory", state)
-        response = (
-            get_llm_by_type(AGENT_LLM_MAP["agent_factory"])
-            .with_structured_output(Router)
-            .invoke(messages)
-        )
-        
-        tools = [agent_manager.available_tools[tool["name"]] for tool in response["selected_tools"]]
-
-        agent_manager._create_agent_by_prebuilt(
-            user_id=state["user_id"],
-            name=response["agent_name"],
-            nick_name=response["agent_name"],
-            llm_type=response["llm_type"],
-            tools=tools,
-            prompt=response["prompt"],
-            description=response["agent_description"],
-        )
-        
-        state["TEAM_MEMBERS"].append(response["agent_name"])
-        
-    elif state["work_mode"] == "polish":
-        # this will be support soon
-        pass
-    
-
-    return Command(
-        update={
-            "messages": [
-                {"content":f'New agent {response["agent_name"]} created. \n', "tool":"agent_factory", "role":"assistant"}
-            ],
-            "new_agent_name": response["agent_name"],
-            "agent_name": "agent_factory",
-        },
-        goto="publisher",
-    )
 
 
 async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_factory", "__end__"]]:
@@ -105,8 +64,46 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
                         "messages": [{"content":f"Next step is delegating to: {agent}\n", "tool":"publisher", "role":"assistant"}],
                         "next": agent})
 
+async def polish_node(state: State) -> Command[Literal["publisher","__end__"]]:
+    """Node for the create agent agent that creates a new agent."""
+    logger.info("Agent Factory Start to work in {} workmode \n".format(state["work_mode"]))
+    _agent = agent_manager.available_agents[state["next"]]
+    
+    if state["polish_target"] == _agent.agent_name:
+        messages = apply_prompt_template("agent_factory", state)
+        response = (
+            get_llm_by_type(AGENT_LLM_MAP["agent_factory"])
+            .with_structured_output(Router)
+            .invoke(messages)
+        )
+        
+        tools = [agent_manager.available_tools[tool["name"]] for tool in response["selected_tools"]]
 
-async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__"]]:
+        agent_manager._create_agent_by_prebuilt(
+            user_id=state["user_id"],
+            name=response["agent_name"],
+            nick_name=response["agent_name"],
+            llm_type=response["llm_type"],
+            tools=tools,
+            prompt=response["prompt"],
+            description=response["agent_description"],
+        )
+        
+        state["TEAM_MEMBERS"].append(response["agent_name"])
+
+    return Command(
+        update={
+            "messages": [
+                {"content":f'New agent {response["agent_name"]} created. \n', "tool":"agent_factory", "role":"assistant"}
+            ],
+            "new_agent_name": response["agent_name"],
+            "agent_name": "agent_factory",
+        },
+        goto="publisher",
+    )
+
+
+async def polish_node(state: State) -> Command[Literal["publisher","__end__"]]:
     """Proxy node that acts as a proxy for the agent."""
     _agent = agent_manager.available_agents[state["next"]]
     logger.info(f"Agent Proxy Start to work in {state['work_mode']} workmode \n")

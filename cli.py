@@ -680,6 +680,145 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
             return
 
 
+@cli.command()
+@click.pass_context
+@click.option('--user-id', '-u', required=True, help='User ID')
+@click.option('--match', '-m', help='Match string')
+@click.option('--interactive/--no-interactive', '-i/-I', default=True, help='Use interactive mode')
+@async_command
+async def polish_workflow(ctx, user_id, match, interactive):
+    """Edit an existing Agent interactively"""
+    server = ctx.obj['server']
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console
+    ) as progress:
+        task = progress.add_task("[green]Fetching Workflow list...", total=None)
+        
+        request = listAgentRequest(user_id=user_id, match=match)
+        
+        table = Table(title=f"Workflow list for user [highlight]{user_id}[/highlight]", show_header=True, header_style="bold magenta", border_style="cyan")
+        table.add_column("ID", style="sequence_id")
+        table.add_column("Workflow ID", style="workflow_id")
+        table.add_column("Lap", style="workflow_lap")
+        table.add_column("Version", style="workflow_version")
+        table.add_column("Graph", style="workflow_graph")
+        table.add_column("Planning Steps", style="workflow_planning_steps")
+
+        
+        count = 0
+        async for workflow_json in server._list_workflow(request):
+            try:
+                workflow = json.loads(workflow_json)
+
+                table.add_row(workflow.get("workflow_id", ""), workflow.get("lap", ""), workflow.get("planning_steps", ""),  workflow.get("graph", ""),', '.join(workflow))
+                count += 1
+            except:
+                stream_print(f"[danger]Parsing error: {workflow}[/danger]")
+        
+        progress.update(task, description=f"[success]Fetched {count} workflow!")
+        
+        if count == 0:
+            stream_print(Panel(f"No matching workflow found", title="Result", border_style="yellow"))
+        else:
+            stream_print(table)    
+    
+    
+    while interactive:
+        console.print("\nSelect content to modify:")
+        console.print("1 - Modify Nickname")
+        console.print("2 - Modify Description")
+        console.print("3 - Modify Tool List")
+        console.print("4 - Modify Prompt")
+        console.print("5 - Preview Changes")
+        console.print("0 - Save and Exit")
+        
+        choice = Prompt.ask(
+            "Enter option",
+            choices=["0", "1", "2", "3", "4", "5"],
+            show_choices=False
+        )
+        
+        if choice == "1":
+            new_name = Prompt.ask(
+                "Enter new nickname", 
+                default=modified_config.get('nick_name', ''),
+                show_default=True
+            )
+            modified_config['nick_name'] = new_name
+        
+        elif choice == "2":
+            new_desc = Prompt.ask(
+                "Enter new description", 
+                default=modified_config.get('description', ''),
+                show_default=True
+            )
+            modified_config['description'] = new_desc
+        
+        elif choice == "3":
+            current_tools = [t.get('name') for t in modified_config.get('selected_tools', [])]
+            stream_print(f"Current tools: {', '.join(current_tools)}")
+            new_tools = Prompt.ask(
+                "Enter new tool list (comma-separated)",
+                default=", ".join(current_tools),
+                show_default=True
+            )
+            modified_config['selected_tools'] = [
+                {"name": t.strip(), "description": ""} 
+                for t in new_tools.split(',') 
+                if t.strip()
+            ]
+        
+        elif choice == "4":
+            console.print("Enter new prompt (type 'END' to finish):")
+            lines = []
+            while True:
+                line = Prompt.ask("> ", default="")
+                if line == "END":
+                    break
+                lines.append(line)
+            modified_config['prompt'] = "\n".join(lines)
+        
+        elif choice == "5":
+            show_current_config()
+            stream_print(Panel.fit(
+                f"[agent_name]New Name:[/agent_name] {modified_config.get('agent_name', '')}\n"
+                f"[nick_name]New Nickname:[/nick_name] {modified_config.get('nick_name', '')}\n"
+                f"[agent_desc]New Description:[/agent_desc] {modified_config.get('description', '')}\n"
+                f"[tool_name]New Tools:[/tool_name] {', '.join([t.get('name', '') for t in modified_config.get('selected_tools', [])])}\n"
+                f"[highlight]New Prompt:[/highlight]\n{modified_config.get('prompt', '')}",
+                title="Modified Configuration Preview",
+                border_style="yellow"
+            ))
+        
+        elif choice == "0":
+            if Confirm.ask("Confirm saving changes?"):
+                try:
+                    agent_request = Agent(
+                        user_id=original_config.get('user_id', ''),
+                        nick_name=modified_config['nick_name'],
+                        agent_name=modified_config['agent_name'],
+                        description=modified_config['description'],
+                        selected_tools=modified_config['selected_tools'],
+                        prompt=modified_config['prompt'],
+                        llm_type=original_config.get('llm_type', 'basic')
+                    )
+                    
+                    async for result in server._edit_agent(agent_request):
+                        res = json.loads(result)
+                        if res.get("result") == "success":
+                            stream_print(Panel.fit("[success]Agent updated successfully![/success]", border_style="green"))
+                        else:
+                            stream_print(f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
+                    return
+                except Exception as e:
+                    stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
+            else:
+                stream_print("[warning]Modifications cancelled[/warning]")
+            return
+
 @cli.command(name="remove-agent")
 @click.pass_context
 @click.option('--agent-name', '-n', required=True, help='Name of the Agent to remove')
