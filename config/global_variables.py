@@ -1,4 +1,11 @@
+from src.utils.path_utils import get_project_root
 
+workflow_dir = get_project_root() / "store" / "workflows"
+
+tools_dir = get_project_root() / "store" / "tools"
+agents_dir = get_project_root() / "store" / "agents"
+prompts_dir = get_project_root() / "store" / "prompts"
+workflows_dir = get_project_root() / "store" / "workflows"
 
 context_variables = {
     "has_lauched": False
