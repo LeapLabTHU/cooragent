@@ -65,7 +65,7 @@ def apply_prompt(state: AgentState, template:str=None) -> list:
     return _prompt
 
 
-def apply_polish_template(_agent: Agent, instruction: str, part_to_edit: str['prompt', 'tools']):
+def apply_polish_template(_agent: Agent, instruction: str, part_to_edit: str):
     template_dir = get_project_root() / "src" / "prompts"
     polish_template = open(os.path.join(template_dir, "agent_polish.md")).read()
     polish_template = re.sub(r"<<([^>>]+)>>", r"{\1}", polish_template)

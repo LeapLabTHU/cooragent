@@ -98,7 +98,7 @@ class Server:
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
-    async def _list_workflow(
+    def _list_workflow(
          request: "listAgentRequest"
     ) -> AsyncGenerator[str, None]:
         if workflow_cache is None:

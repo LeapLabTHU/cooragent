@@ -681,13 +681,13 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
             return
 
 
-@cli.command()
+@cli.command(name="polish")
 @click.pass_context
 @click.option('--user-id', '-u', required=True, help='User ID')
 @click.option('--match', '-m', help='Match string')
 @click.option('--interactive/--no-interactive', '-i/-I', default=True, help='Use interactive mode')
 @async_command
-async def polish_workflow(ctx, user_id, match, interactive):
+async def polish(ctx, user_id, match, interactive):
     """Edit an existing Agent interactively"""
     server = ctx.obj['server']
     
@@ -710,11 +710,9 @@ async def polish_workflow(ctx, user_id, match, interactive):
 
         
         count = 0
-        async for workflow_json in server._list_workflow(request):
+        for workflow in server._list_workflow(request):
             try:
-                workflow = json.loads(workflow_json)
-
-                table.add_row(count, workflow.get("workflow_id", ""), workflow.get("lap", ""), workflow.get("planning_steps", ""),  workflow.get("graph", ""),', '.join(workflow))
+                table.add_row(str(count), workflow.get("workflow_id", ""), workflow.get("lap", ""), workflow.get("planning_steps", ""),  workflow.get("graph", ""),', '.join(workflow))
                 count += 1
             except:
                 stream_print(f"[danger]Parsing error: {workflow}[/danger]")

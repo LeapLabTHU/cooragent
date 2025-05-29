@@ -3,7 +3,7 @@ import logging
 from src.workflow.template import WORKFLOW_TEMPLATE
 from typing import Union
 from src.interface.agent import Agent
-from src.config import agents_dir
+from config.global_variables import agents_dir
 import os
 from pathlib import Path
 from collections import deque
@@ -211,7 +211,6 @@ class WorkflowCache:
             
     def get_editable_agents(self, workflow_id: str):
         try:
-            from config.global_variables import agents_dir
             agents = []
             for node in self.cache[workflow_id]["graph"]:
                 agent_path = agents_dir / f"{node.node_name}.json"
