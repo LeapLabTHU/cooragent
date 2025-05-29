@@ -213,7 +213,7 @@ class WorkflowCache:
         try:
             agents = []
             for node in self.cache[workflow_id]["graph"]:
-                agent_path = agents_dir / f"{node.node_name}.json"
+                agent_path = agents_dir / f"{node["node_name"]}.json"
                 with open(agent_path, "r") as f:
                     json_str = f.read()
                     _agent = Agent.model_validate_json(json_str)                

@@ -49,7 +49,7 @@ custom_theme = Theme({
     "tool_name": "bold blue",
     "tool_desc": "green",
     "user_msg": "bold white on blue",
-    "assistant_msg": "bold black on green",
+    "assistant_msg": "bold black on green"
 })
 
 # Create Rich console object for beautified output
@@ -701,18 +701,21 @@ async def polish(ctx, user_id, match, interactive):
         request = listAgentRequest(user_id=user_id, match=match)
         
         table = Table(title=f"Workflow list for user [highlight]{user_id}[/highlight]", show_header=True, header_style="bold magenta", border_style="cyan")
-        table.add_column("ID", style="sequence_id")
-        table.add_column("Workflow ID", style="workflow_id")
-        table.add_column("Lap", style="workflow_lap")
-        table.add_column("Version", style="workflow_version")
-        table.add_column("Graph", style="workflow_graph")
-        table.add_column("Planning Steps", style="workflow_planning_steps")
+        table.add_column("ID", style="tool_desc")
+        table.add_column("Workflow ID", style="tool_desc")
+        table.add_column("Lap", style="tool_desc")
+        table.add_column("Version", style="tool_desc")
+        table.add_column("Graph", style="tool_desc")
+        table.add_column("Planning Steps", style="agent_nick_name")
 
         
         count = 0
-        for workflow in server._list_workflow(request):
+        workflow_list = server._list_workflow(request)
+        for workflow in workflow_list:
             try:
-                table.add_row(str(count), workflow.get("workflow_id", ""), workflow.get("lap", ""), workflow.get("planning_steps", ""),  workflow.get("graph", ""),', '.join(workflow))
+                planning = json.loads(workflow.get("planning_steps", ""))
+                steps = planning['steps']
+                table.add_row(str(count), workflow.get("workflow_id", ""), str(workflow.get("lap", "")), str(workflow.get("version", "")), json.dumps(workflow.get("graph", ""), indent=2, ensure_ascii=False), json.dumps(steps, indent=2, ensure_ascii=False))
                 count += 1
             except:
                 stream_print(f"[danger]Parsing error: {workflow}[/danger]")
@@ -726,27 +729,42 @@ async def polish(ctx, user_id, match, interactive):
     
     
     while interactive:
-        console.print("\nSelect workflow to polish:")
+        console.print("\nSelect workflow by index to polish:")
         
         choice = Prompt.ask(
             "Enter workflow ID",
             choices=[str(i) for i in range(count)],
-            show_choices=False
+            show_choices=True
         )
         
-        workflow_id = table.rows[int(choice)]["workflow_id"]
-        part_to_edit = Prompt.ask(
-            "Enter part to edit",
-            choices=["graph", "planning_steps"],
+        workflow_id = workflow_list[int(choice)]["workflow_id"]
+        
+        parts_to_edit_options = ["graph", "planning_steps"]
+        console.print("Select part to edit:")
+        for i, part_option in enumerate(parts_to_edit_options):
+            console.print(f"{i+1} - {part_option}")
+
+        part_choice_idx_str = Prompt.ask(
+            "Enter part number",
+            choices=[str(i+1) for i in range(len(parts_to_edit_options))],
             show_choices=False
         )
+        part_to_edit = parts_to_edit_options[int(part_choice_idx_str) - 1]
+
         if part_to_edit == "graph":
             agents = workflow_cache.get_editable_agents((workflow_id))
-            agent_to_edit = Prompt.ask(
-                "choose agent to edit",
-                choices=[agent.agent_name for agent in agents],
-                show_choices=False
+            
+            console.print("Select agent to edit:")
+            for i, agent in enumerate(agents):
+                console.print(f"{i+1} - {agent.agent_name}")
+
+            agent_choice_idx_str = Prompt.ask(
+                "Enter agent number",
+                choices=[str(i+1) for i in range(len(agents))],
+                show_choices=False 
             )
+            agent_to_edit = agents[int(agent_choice_idx_str) - 1].agent_name
+            
             from config.global_variables import agents_dir
             from src.workflow.polish_task import polish_agent
             
@@ -770,14 +788,6 @@ async def polish(ctx, user_id, match, interactive):
             
             show_current_config()
 
-            # graph_to_edit = json.dumps(graph_to_edit, indent=4)
-            # stream_print(graph_to_edit)
-            
-            part_to_edit = Prompt.ask(
-                "Enter part to edit",
-            choices=["nick_name", "description", "tools", "prompt"],
-            show_choices=True
-        )
             instruction = Prompt.ask(
                 "Enter your instruction",
                 show_default=True
