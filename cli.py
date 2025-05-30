@@ -731,7 +731,7 @@ async def polish(ctx, user_id, match, interactive):
     
     
     while interactive:
-        console.print("\nSelect workflow by index to polish:")
+        console.print("\n Select workflow by index to polish:")
         
         choice = Prompt.ask(
             "Enter workflow ID",
@@ -774,62 +774,53 @@ async def polish(ctx, user_id, match, interactive):
                 json_str = f.read()
                 _agent = Agent.model_validate_json(json_str)
 
-            def show_current_config():
+            def show_current_config(agent):
                 stream_print(Panel.fit(
-                    f"[agent_name]Name:[/agent_name] {_agent.agent_name}\n"
-                    f"[agent_nick_name]Nickname:[/agent_nick_name] {_agent.nick_name}\n"
-                    f"[agent_desc]Description:[/agent_desc] {_agent.description}\n"
-                    f"[tool_name]Tools:[/tool_name] {', '.join([t.name for t in _agent.selected_tools])}\n"
-                    f"[highlight]Prompt:[/highlight]\n{_agent.prompt}",
+                    f"[agent_name]Name:[/agent_name] {agent.agent_name}\n"
+                    f"[agent_nick_name]Nickname:[/agent_nick_name] {agent.nick_name}\n"
+                    f"[agent_desc]Description:[/agent_desc] {agent.description}\n"
+                    f"[tool_name]Tools:[/tool_name] {', '.join([t.name for t in agent.selected_tools])}\n"
+                    f"[highlight]Prompt:[/highlight]\n{agent.prompt}",
                     title="Current Configuration",
                     border_style="blue"
                 ))
             
-            show_current_config()
+            show_current_config(_agent)
             
-            agent_part_options = ["tools", "prompt"]
-            console.print("Select part to edit:")
-            for i, part_option in enumerate(agent_part_options):
-                console.print(f"{i+1} - {part_option}")
+            stop_polishing = False
+            while not stop_polishing:
+                agent_part_options = ["tools", "prompt"]
+                console.print("Select part to edit:")
+                for i, part_option in enumerate(agent_part_options):
+                    console.print(f"{i+1} - {part_option}")
 
-            part_choice_idx_str = Prompt.ask(
-                "Enter part number",
-                choices=[str(i+1) for i in range(len(agent_part_options))],
-                show_choices=False
-            )
-            part_to_edit = agent_part_options[int(part_choice_idx_str) - 1]            
-            
-            instruction = Prompt.ask(
-                "Enter your instruction",
-                show_default=True
-            )
-            _agent = await polish_agent(user_id, _agent, instruction, part_to_edit)
-            
-            stream_print(f"polished: \n {_agent[part_to_edit]}")
-            
-            stream_print(Panel.fit(
-                f"[agent_name]Name:[/agent_name] {_agent.get('agent_name', '')}\n"
-                f"[agent_nick_name]Nickname:[/agent_nick_name] {_agent.get('nick_name', '')}\n"
-                f"[agent_desc]Description:[/agent_desc] {_agent.get('description', '')}\n"
-                f"[tool_name]Tools:[/tool_name] {', '.join([t.get('name', '') for t in _agent.get('selected_tools', [])])}\n"
-                f"[highlight]Prompt:[/highlight]\n{_agent.get('prompt', '')}",
-                title="Current Configuration",
-                border_style="blue"
-            ))            
+                part_choice_idx_str = Prompt.ask(
+                    "Enter part number",
+                    choices=[str(i+1) for i in range(len(agent_part_options))],
+                    show_choices=False
+                )
+                part_to_edit = agent_part_options[int(part_choice_idx_str) - 1]            
+                
+
+                while True:
+                    instruction = Prompt.ask(
+                        "Enter your instruction",
+                        show_default=True
+                    )
+                    content = await polish_agent(_agent, instruction, part_to_edit)
+                    stream_print(f"polished {part_to_edit}: \n {content}")
+                    if Confirm.ask("Confirm saving changes?"):
+                        if Confirm.ask("Stop polishing?"):
+                            stop_polishing = True
+                        _agent.prompt = content
+                        # agent_manager.update_agent(_agent)
+                        break
+
+            show_current_config(_agent)       
             
             if Confirm.ask("Confirm saving changes?"):
                     try:
-                        agent_request = Agent(
-                            user_id=_agent.get('user_id', ''),
-                            nick_name=_agent['nick_name'],
-                            agent_name=_agent['agent_name'],
-                            description=_agent['description'],
-                            selected_tools=_agent['selected_tools'],
-                            prompt=_agent['prompt'],
-                            llm_type=_agent.get('llm_type', 'basic')
-                        )
-                        
-                        async for result in server._edit_agent(agent_request):
+                        async for result in server._edit_agent(_agent):
                             res = json.loads(result)
                             if res.get("result") == "success":
                                 stream_print(Panel.fit("[success]Agent updated successfully![/success]", border_style="green"))
