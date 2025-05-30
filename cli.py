@@ -244,12 +244,8 @@ def cli(ctx):
 @click.option('--deep-thinking/--no-deep-thinking', default=True, help='Enable deep thinking mode')
 @click.option('--search-before-planning/--no-search-before-planning', default=False, help='Enable search before planning')
 @click.option('--agents', '-a', multiple=True, help='List of collaborating Agents (use multiple times to add multiple Agents)')
-@click.option('--polish-id', '-p', help='Polish ID')
-@click.option('--lap', '-l', help='Lap')
-@click.option('--workflow-mode', '-w', default="launch", type=click.Choice([mode.value for mode in WorkMode]), help='Workflow mode')
-@click.option('--polish-instruction', '-pi', help='Polish instruction')
 @async_command
-async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_before_planning, agents, polish_id, lap, workflow_mode, polish_instruction):
+async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_before_planning, agents):
     """Run the agent workflow"""
     server = ctx.obj['server']
     
@@ -259,10 +255,8 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_bef
     config_table.add_row("User ID", user_id)
     config_table.add_row("Task Type", task_type)
     config_table.add_row("Debug Mode", "✅ Enabled" if debug else "❌ Disabled")
+    config_table.add_row("Deep Thinking", "✅ Enabled" if deep_thinking else "❌ Disabled")
     config_table.add_row("Search Before Planning", "✅ Enabled" if search_before_planning else "❌ Disabled")
-    config_table.add_row("Workflow Mode", workflow_mode)
-    config_table.add_row("Polish ID", polish_id) if polish_id else None
-    config_table.add_row("Lap", lap) if lap else None
     console.print(config_table)
     
     msg_table = Table(title="Message History", show_header=True, header_style="bold magenta")
@@ -287,10 +281,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_bef
         debug=debug,
         deep_thinking_mode=deep_thinking,
         search_before_planning=search_before_planning,
-        coor_agents=list(agents),
-        polish_id=polish_id,
-        lap=lap,
-        workflow_mode=workflow_mode
+        coor_agents=list(agents)
     )
     
     console.print(Panel.fit("[highlight]Workflow execution started[/highlight]", title="CoorAgent", border_style="cyan"))

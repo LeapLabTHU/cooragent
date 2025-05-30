@@ -45,7 +45,6 @@ class Server:
         for message in request.messages:
             session.add_message(message.role, message.content)
         session_messages = session.history[-3:]
-
         response_stream = run_agent_workflow(
             request.user_id,
             request.task_type,
@@ -53,11 +52,7 @@ class Server:
             request.debug,
             request.deep_thinking_mode,
             request.search_before_planning,
-            request.coor_agents,
-            request.polish_id,
-            request.lap,
-            request.workflow_mode,
-            request.polish_instruction
+            request.coor_agents
         )
 
         async for res in response_stream:
