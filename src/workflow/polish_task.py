@@ -20,13 +20,34 @@ from src.interface.agent import Agent
 
 logger = logging.getLogger(__name__)
 
+TOOLS_DESCRIPTION_TEMPLATE = "- **`{tool_name}`**: {tool_description}"
+TOOLS_DESCRIPTION = ""
 
-def polish_agent(_agent: Agent, instruction: str, part_to_edit: str['prompt', 'tools']):
-    messages = apply_polish_template(_agent, instruction, part_to_edit)
-    _agent = (
+async def load_tools():
+    global TOOLS_DESCRIPTION
+    await agent_manager.load_tools()
+    for tool_name, tool in agent_manager.available_tools.items():
+        TOOLS_DESCRIPTION += '\n' + TOOLS_DESCRIPTION_TEMPLATE.format(tool_name=tool_name,tool_description=tool.description)
+    
+async def polish_agent(user_id, _agent: Agent, instruction: str, part_to_edit: str):
+    await load_tools()
+    messages = apply_polish_template(_agent, instruction, part_to_edit, TOOLS_DESCRIPTION)
+    response = (
         get_llm_by_type(AGENT_LLM_MAP["polisher"])
         .with_structured_output(AgentBuilder)
         .invoke(messages)
     )
-    agent_manager._save_agent(_agent)
+    
+    tools = [agent_manager.available_tools[tool["name"]] for tool in response["selected_tools"]]
+
+    _agent = Agent(
+        user_id=user_id,
+        agent_name=response["agent_name"],
+        nick_name=response["agent_name"],
+        llm_type=response["llm_type"],
+        selected_tools=tools,
+        prompt=response["prompt"],
+        description=response["description"])
+    
+    agent_manager._edit_agent(_agent)
     return _agent

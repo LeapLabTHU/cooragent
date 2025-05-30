@@ -1,5 +1,6 @@
 import os
 import re
+import json
 from datetime import datetime
 import copy
 from langchain_core.prompts import PromptTemplate
@@ -65,15 +66,30 @@ def apply_prompt(state: AgentState, template:str=None) -> list:
     return _prompt
 
 
-def apply_polish_template(_agent: Agent, instruction: str, part_to_edit: str):
-    template_dir = get_project_root() / "src" / "prompts"
-    polish_template = open(os.path.join(template_dir, "agent_polish.md")).read()
-    polish_template = re.sub(r"<<([^>>]+)>>", r"{\1}", polish_template)
-    polish_template = PromptTemplate(
-        input_variables=["CURRENT_TIME", "agent_to_modify", "part_to_edit", "user_instruction"],
-        template=polish_template,
-    ).format(CURRENT_TIME=datetime.now().strftime("%a %b %d %Y %H:%M:%S %z"), 
-             agent_to_modify=_agent.to_json(),
-             part_to_edit=part_to_edit,
-             user_instruction=instruction)
-    return polish_template
+def apply_polish_template(_agent: Agent, instruction: str, part_to_edit: str, available_tools):
+    try:
+        template_dir = get_project_root() / "src" / "prompts"
+        polish_template = open(os.path.join(template_dir, "agent_polish.md")).read()
+        # First, escape all literal curly braces in the template
+        polish_template = polish_template.replace("{", "{{").replace("}", "}}")
+        # Then, unescape the <<VAR>> style placeholders by converting them to single brace {VAR}
+        polish_template = re.sub(r"<<([^>>]+)>>", r"{\1}", polish_template)
+        
+        # Create the PromptTemplate instance
+        prompt_instance = PromptTemplate(
+            input_variables=["CURRENT_TIME", "agent_to_modify", "part_to_edit", "available_tools", "user_instruction"],
+            template=polish_template,
+        )
+        # Format the prompt
+        formatted_prompt = prompt_instance.format(
+            CURRENT_TIME=datetime.now().strftime("%a %b %d %Y %H:%M:%S %z"), 
+            agent_to_modify=_agent.model_dump_json(),
+            part_to_edit=part_to_edit,
+            available_tools=available_tools,
+            user_instruction=instruction
+        )
+    except Exception as e:
+        from traceback import print_exc
+        print_exc()
+        return None
+    return formatted_prompt

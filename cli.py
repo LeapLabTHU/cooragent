@@ -20,6 +20,8 @@ import shlex
 import platform
 import atexit
 import logging
+from config.global_variables import agents_dir
+from src.workflow.polish_task import polish_agent
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
@@ -765,9 +767,6 @@ async def polish(ctx, user_id, match, interactive):
             )
             agent_to_edit = agents[int(agent_choice_idx_str) - 1].agent_name
             
-            from config.global_variables import agents_dir
-            from src.workflow.polish_task import polish_agent
-            
             agent_path = agents_dir / f"{agent_to_edit}.json"
             if not agent_path.exists():
                 raise FileNotFoundError(f"agent {agent_to_edit} not found.")
@@ -777,22 +776,34 @@ async def polish(ctx, user_id, match, interactive):
 
             def show_current_config():
                 stream_print(Panel.fit(
-                    f"[agent_name]Name:[/agent_name] {_agent.get('agent_name', '')}\n"
-                    f"[agent_nick_name]Nickname:[/agent_nick_name] {_agent.get('nick_name', '')}\n"
-                    f"[agent_desc]Description:[/agent_desc] {_agent.get('description', '')}\n"
-                    f"[tool_name]Tools:[/tool_name] {', '.join([t.get('name', '') for t in _agent.get('selected_tools', [])])}\n"
-                    f"[highlight]Prompt:[/highlight]\n{_agent.get('prompt', '')}",
+                    f"[agent_name]Name:[/agent_name] {_agent.agent_name}\n"
+                    f"[agent_nick_name]Nickname:[/agent_nick_name] {_agent.nick_name}\n"
+                    f"[agent_desc]Description:[/agent_desc] {_agent.description}\n"
+                    f"[tool_name]Tools:[/tool_name] {', '.join([t.name for t in _agent.selected_tools])}\n"
+                    f"[highlight]Prompt:[/highlight]\n{_agent.prompt}",
                     title="Current Configuration",
                     border_style="blue"
                 ))
             
             show_current_config()
+            
+            agent_part_options = ["tools", "prompt"]
+            console.print("Select part to edit:")
+            for i, part_option in enumerate(agent_part_options):
+                console.print(f"{i+1} - {part_option}")
 
+            part_choice_idx_str = Prompt.ask(
+                "Enter part number",
+                choices=[str(i+1) for i in range(len(agent_part_options))],
+                show_choices=False
+            )
+            part_to_edit = agent_part_options[int(part_choice_idx_str) - 1]            
+            
             instruction = Prompt.ask(
                 "Enter your instruction",
                 show_default=True
             )
-            _agent = polish_agent(_agent, instruction, part_to_edit)
+            _agent = await polish_agent(user_id, _agent, instruction, part_to_edit)
             
             stream_print(f"polished: \n {_agent[part_to_edit]}")
             

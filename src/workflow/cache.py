@@ -33,16 +33,20 @@ class WorkflowCache:
             self.initialized = True
             
     def _load_workflow(self, user_id: str):
-        user_workflow_dir = self.workflow_dir / user_id
-        if not user_workflow_dir.exists():
-            logger.info(f"path {user_workflow_dir} does not exist when user {user_id} workflow cache initializing, gona to create...")
-            user_workflow_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            user_workflow_dir = self.workflow_dir / user_id
+            if not user_workflow_dir.exists():
+                logger.info(f"path {user_workflow_dir} does not exist when user {user_id} workflow cache initializing, gona to create...")
+                user_workflow_dir.mkdir(parents=True, exist_ok=True)
 
-        user_workflow_files = user_workflow_dir.glob("*.json")
-        for workflow_file in user_workflow_files:
-            with open(workflow_file, "r") as f:
-                workflow = json.load(f)
-                self.cache[workflow["workflow_id"]] = workflow        
+            user_workflow_files = user_workflow_dir.glob("*.json")
+            for workflow_file in user_workflow_files:
+                with open(workflow_file, "r") as f:
+                    workflow = json.load(f)
+                    self.cache[workflow["workflow_id"]] = workflow        
+        except Exception as e:
+            logger.error(f"Error loading workflow: {e}")
+            raise e
 
     def init_cache(self, user_id: str, lap: int, mode: str, workflow_id: str, version: int, user_input_messages: list, deep_thinking_mode: bool, search_before_planning: bool, coor_agents: list[str], load_user_workflow: bool = True):
         try:
