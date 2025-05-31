@@ -21,8 +21,7 @@ from src.interface.agent import Agent
 logger = logging.getLogger(__name__)
 
     
-async def polish_agent(_agent: Agent, instruction: str):
-    print(_agent)
+async def polish_agent(_agent: Agent, instruction: str, part_to_edit: str):
     messages = apply_polish_template(_agent, instruction)
     response = (
         get_llm_by_type(AGENT_LLM_MAP["polisher"])
