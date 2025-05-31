@@ -281,7 +281,7 @@ async def edit_agent_option(_agent: Agent,edit_option:list[str], original_config
         return False
 
     elif choice_option == 'Preview':
-        show_current_config(original_config)
+        show_agent_config(original_config)
         stream_print(Panel.fit(
             f"[agent_name]New Name:[/agent_name] {modified_config.get('agent_name', '')}\n"
             f"[nick_name]New Nickname:[/nick_name] {modified_config.get('nick_name', '')}\n"
@@ -325,128 +325,6 @@ async def edit_agent_option(_agent: Agent,edit_option:list[str], original_config
         else:
             return False
 
-def show_agent_config(config):
-    stream_print(Panel.fit(
-        f"[agent_name]Name:[/agent_name] {config.get('agent_name', '')}\n"
-        f"[agent_nick_name]NickName:[/agent_nick_name] {config.get('nick_name', '')}\n"
-        f"[agent_desc]Description:[/agent_desc] {config.get('description', '')}\n"
-        f"[tool_name]Tools:[/tool_name] {', '.join([t.get('name', '') for t in config.get('selected_tools', [])])}\n"
-        f"[highlight]Prompt:[/highlight]\n{config.get('prompt', '')}",
-        title="Current Configuration",
-        border_style="blue"
-    ))
-
-async def edit_agent_option(edit_option:list[str], original_config, modified_config, server):
-    all_edit_option = {
-        'NickName': 'Modify NickName',
-        'Description': 'Modify Description',
-        'Tool': 'Modify Tool List',
-        'Prompt': 'Modify Prompt',
-        'Preview': 'Preview Changes',
-        'Save': 'Save and Exit',
-        'Exit': 'Only Exit'
-    }
-    choices = []
-    console.print("\nSelect content to modify:")
-    edit_option += ['Preview', 'Save', 'Exit']
-    for index, option in enumerate(edit_option):
-        console.print(f"{index + 1} - {all_edit_option[option]}")
-        choices.append(str(index + 1))
-    choice = Prompt.ask(
-        "Enter option",
-        choices=choices,
-        show_choices=False
-    )
-    choice_option = edit_option[int(choice)-1]
-    if choice_option == 'NickName':
-        new_name = Prompt.ask(
-            "Enter new NickName",
-            default=modified_config.get('nick_name', ''),
-            show_default=True
-        )
-        modified_config['agent_name'] = new_name
-        modified_config['nick_name'] = new_name
-        return False
-
-    elif choice_option == 'Description':
-        new_desc = Prompt.ask(
-            "Enter new description",
-            default=modified_config.get('description', ''),
-            show_default=True
-        )
-        modified_config['description'] = new_desc
-        return False
-
-    elif choice_option == 'Tool':
-        current_tools = [t.get('name') for t in modified_config.get('selected_tools', [])]
-        stream_print(f"Current tools: {', '.join(current_tools)}")
-        new_tools = Prompt.ask(
-            "Enter new tool list (comma-separated)",
-            default=", ".join(current_tools),
-            show_default=True
-        )
-        modified_config['selected_tools'] = [
-            {"name": t.strip(), "description": ""}
-            for t in new_tools.split(',')
-            if t.strip()
-        ]
-        return False
-
-    elif choice_option == 'Prompt':
-        console.print("Enter new prompt (type 'END' to finish):")
-        lines = []
-        while True:
-            line = Prompt.ask("> ", default="")
-            if line == "END":
-                break
-            lines.append(line)
-        modified_config['prompt'] = "\n".join(lines)
-        return False
-
-    elif choice_option == 'Preview':
-        show_agent_config(original_config)
-        stream_print(Panel.fit(
-            f"[agent_name]New Name:[/agent_name] {modified_config.get('agent_name', '')}\n"
-            f"[nick_name]New NickName:[/nick_name] {modified_config.get('nick_name', '')}\n"
-            f"[agent_desc]New Description:[/agent_desc] {modified_config.get('description', '')}\n"
-            f"[tool_name]New Tools:[/tool_name] {', '.join([t.get('name', '') for t in modified_config.get('selected_tools', [])])}\n"
-            f"[highlight]New Prompt:[/highlight]\n{modified_config.get('prompt', '')}",
-            title="Modified Configuration Preview",
-            border_style="yellow"
-        ))
-        return False
-
-    elif choice_option == 'Save':
-        if Confirm.ask("Confirm saving changes and exit?"):
-            try:
-                agent_request = Agent(
-                    user_id=original_config.get('user_id', ''),
-                    nick_name=modified_config['nick_name'],
-                    agent_name=modified_config['agent_name'],
-                    description=modified_config['description'],
-                    selected_tools=modified_config['selected_tools'],
-                    prompt=modified_config['prompt'],
-                    llm_type=original_config.get('llm_type', 'basic')
-                )
-
-                async for result in server._edit_agent(agent_request):
-                    res = json.loads(result)
-                    if res.get("result") == "success":
-                        stream_print(Panel.fit("[success]Agent updated successfully![/success]", border_style="green"))
-                    else:
-                        stream_print(f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
-                return True
-            except Exception as e:
-                stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
-                return True
-        else:
-            stream_print("[warning]Modifications cancelled[/warning]")
-            return False
-    elif choice_option == 'Exit':
-        if Confirm.ask("Abandon any changes and exit?"):
-            return True
-        else:
-            return False
 
 def _is_likely_markdown(text):
     """Use simple heuristics to determine if the text is likely Markdown."""
