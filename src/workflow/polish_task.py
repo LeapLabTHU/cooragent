@@ -21,12 +21,27 @@ from src.interface.agent import Agent
 logger = logging.getLogger(__name__)
 
     
-async def polish_agent(_agent: Agent, instruction: str, part_to_edit: str):
-    messages = apply_polish_template(_agent, instruction)
-    response = (
-        get_llm_by_type(AGENT_LLM_MAP["polisher"])
-        .with_structured_output(Router)
-        .invoke(messages)
-    )
+async def polish_agent(_agent: Agent, instruction: str, tools: list, part_to_edit: str):
+    if part_to_edit in ['prompt', 'tool']:
+        if part_to_edit == 'prompt':
+            messages = apply_polish_template(_agent, instruction)
+        else:
+            TOOLS_DESCRIPTION_TEMPLATE = """
+            - **`{tool_name}`**: {tool_description}
+            """
+            TOOLS_DESCRIPTION = """
+            """
+            for tool in tools:
+                TOOLS_DESCRIPTION += '\n' + TOOLS_DESCRIPTION_TEMPLATE.format(tool_name=tool["name"],
+                                                                              tool_description=tool["description"])
+            instruction = f'I have selected a new set of tools:{TOOLS_DESCRIPTION}. Please rewrite the prompt according to the new tool list, and it must include all tools'
+            messages = apply_polish_template(_agent, instruction)
+        response = (
+            get_llm_by_type(AGENT_LLM_MAP["polisher"])
+            .with_structured_output(Router)
+            .invoke(messages)
+        )
+        return response
+    else:
+        raise ValueError(f'The expectation for part_to_edit is prompt or tool,but get {part_to_edit}')
 
-    return response

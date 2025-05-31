@@ -17,7 +17,7 @@ You will receive the following input:
 * **Clear**: avoid ambiguity; Provide clear instructions.
 * **Details**: The prompts should be very detailed, including task decomposition, tool selection principles, step-by-step instructions, and key considerations.
 * **Tool selection**: Ensure that you make good use of each tool
-* **Language consistency**: The language prompted must be consistent with the input language used by the user when initially creating or modifying the proxy.
+* **Language consistency**: The language prompted must be consistent with the input language used by the user when initially creating the agent.
 
 2.**prompt structure - specific chapters**:
 * **Role Definition**: The role definition, main functions, and tasks that an agent can perform.
