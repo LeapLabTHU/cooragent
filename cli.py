@@ -155,9 +155,9 @@ async def edit_agent_option(_agent: Agent,edit_option:list[str], original_config
         show_choices=False
     )
     choice_option = edit_option[int(choice)-1]
-    if choice_option == 'Nickname':
+    if choice_option == 'NickName':
         new_name = Prompt.ask(
-            "Enter new nickname",
+            "Enter new NickName",
             default=modified_config.get('nick_name', ''),
             show_default=True
         )
@@ -284,7 +284,7 @@ async def edit_agent_option(_agent: Agent,edit_option:list[str], original_config
         show_agent_config(original_config)
         stream_print(Panel.fit(
             f"[agent_name]New Name:[/agent_name] {modified_config.get('agent_name', '')}\n"
-            f"[nick_name]New Nickname:[/nick_name] {modified_config.get('nick_name', '')}\n"
+            f"[nick_name]New NickName:[/nick_name] {modified_config.get('nick_name', '')}\n"
             f"[agent_desc]New Description:[/agent_desc] {modified_config.get('description', '')}\n"
             f"[tool_name]New Tools:[/tool_name] {', '.join([t.get('name', '') for t in modified_config.get('selected_tools', [])])}\n"
             f"[highlight]New Prompt:[/highlight]\n{modified_config.get('prompt', '')}",
