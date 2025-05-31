@@ -170,7 +170,7 @@ class WorkflowCache:
         except Exception as e:
             logger.error(f"Error getting lap: {e}")
                  
-    def restore_node(self, workflow_id: str, node: Union[Agent, str]):
+    def restore_node(self, workflow_id: str, node: Union[Agent, str], workflow_initialized: bool):
         try:
             if isinstance(node, Agent):
                 _agent = node
@@ -187,9 +187,7 @@ class WorkflowCache:
                     "condition": "supervised"
                 })
                 
-                self.queue[workflow_id].append(node)
-
-            elif isinstance(node, str):
+            elif isinstance(node, str) and workflow_initialized:
                 _next_to = node
                 if self.cache[workflow_id]["graph"][-1]["node_type"] == "execution_agent":
                     if not self.cache[workflow_id]["graph"][-1]["next_to"]:
