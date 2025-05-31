@@ -123,19 +123,20 @@ def stream_print(text, **kwargs):
             console.print(text, **kwargs)
         sys.stdout.flush()
 
-def show_current_config(original_config):
+def show_agent_config(config):
     stream_print(Panel.fit(
-        f"[agent_name]Name:[/agent_name] {original_config.get('agent_name', '')}\n"
-        f"[agent_nick_name]Nickname:[/agent_nick_name] {original_config.get('nick_name', '')}\n"
-        f"[agent_desc]Description:[/agent_desc] {original_config.get('description', '')}\n"
-        f"[tool_name]Tools:[/tool_name] {', '.join([t.get('name', '') for t in original_config.get('selected_tools', [])])}\n"
-        f"[highlight]Prompt:[/highlight]\n{original_config.get('prompt', '')}",
+        f"[agent_name]Name:[/agent_name] {config.get('agent_name', '')}\n"
+        f"[agent_nick_name]NickName:[/agent_nick_name] {config.get('nick_name', '')}\n"
+        f"[agent_desc]Description:[/agent_desc] {config.get('description', '')}\n"
+        f"[tool_name]Tools:[/tool_name] {', '.join([t.get('name', '') for t in config.get('selected_tools', [])])}\n"
+        f"[highlight]Prompt:[/highlight]\n{config.get('prompt', '')}",
         title="Current Configuration",
         border_style="blue"
     ))
+    
 async def edit_agent_option(edit_option:list[str], original_config, modified_config, server):
     all_edit_option = {
-        'Nickname': 'Modify Nickname',
+        'NickName': 'Modify NickName',
         'Description': 'Modify Description',
         'Tool': 'Modify Tool List',
         'Prompt': 'Modify Prompt',
@@ -155,9 +156,9 @@ async def edit_agent_option(edit_option:list[str], original_config, modified_con
         show_choices=False
     )
     choice_option = edit_option[int(choice)-1]
-    if choice_option == 'Nickname':
+    if choice_option == 'NickName':
         new_name = Prompt.ask(
-            "Enter new nickname",
+            "Enter new NickName",
             default=modified_config.get('nick_name', ''),
             show_default=True
         )
@@ -201,10 +202,10 @@ async def edit_agent_option(edit_option:list[str], original_config, modified_con
         return False
 
     elif choice_option == 'Preview':
-        show_current_config(original_config)
+        show_agent_config(original_config)
         stream_print(Panel.fit(
             f"[agent_name]New Name:[/agent_name] {modified_config.get('agent_name', '')}\n"
-            f"[nick_name]New Nickname:[/nick_name] {modified_config.get('nick_name', '')}\n"
+            f"[nick_name]New NickName:[/nick_name] {modified_config.get('nick_name', '')}\n"
             f"[agent_desc]New Description:[/agent_desc] {modified_config.get('description', '')}\n"
             f"[tool_name]New Tools:[/tool_name] {', '.join([t.get('name', '') for t in modified_config.get('selected_tools', [])])}\n"
             f"[highlight]New Prompt:[/highlight]\n{modified_config.get('prompt', '')}",
@@ -577,7 +578,7 @@ async def list_agents(ctx, user_id, match):
         
         table = Table(title=f"Agent list for user [highlight]{user_id}[/highlight]", show_header=True, header_style="bold magenta", border_style="cyan")
         table.add_column("Name", style="agent_name")
-        table.add_column("Nickname", style="agent_nick_name")
+        table.add_column("NickName", style="agent_nick_name")
         table.add_column("Description", style="agent_desc")
         table.add_column("Tools", style="agent_type")
         
@@ -617,7 +618,7 @@ async def list_default_agents(ctx):
         
         table = Table(title="Default Agent List", show_header=True, header_style="bold magenta", border_style="cyan")
         table.add_column("Name", style="agent_name")
-        table.add_column("Nickname", style="agent_nick_name")
+        table.add_column("NickName", style="agent_nick_name")
         table.add_column("Description", style="agent_desc")
         
         count = 0
@@ -688,13 +689,13 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
         stream_print(f"[danger]Failed to fetch configuration: {str(e)}[/danger]")
         return
     
-    show_current_config(original_config)
+    show_agent_config(original_config)
 
     modified_config = original_config.copy()
     stop_editing = False
     if interactive:
         while not stop_editing:
-            edit_option_list = ['Nickname', 'Description', 'Tool', 'Prompt']
+            edit_option_list = ['NickName', 'Description', 'Tool', 'Prompt']
             stop_editing = await edit_agent_option(edit_option_list,original_config,modified_config,server)
 
 
@@ -788,9 +789,9 @@ async def polish(ctx, user_id, match, interactive):
             with open(agent_path, "r") as f:
                 json_str = f.read()
                 _agent = Agent.model_validate_json(json_str)
-                original_config = json.loads(json_str)
+                config = json.loads(json_str)
             
-            show_current_config(original_config)
+            show_agent_config(config)
             
             stop_polishing = False
             while not stop_polishing:
@@ -807,7 +808,7 @@ async def polish(ctx, user_id, match, interactive):
                 part_to_edit = agent_part_options[int(part_choice_idx_str) - 1]            
 
                 if part_to_edit == "prompt":
-                    polish_prompt_mode = ['AI','Artificial']
+                    polish_prompt_mode = ['AI Assistant','Manually Edit']
                     console.print("Select mode to edit:")
                     for i, part_option in enumerate(polish_prompt_mode):
                         console.print(f"{i + 1} - {part_option}")
@@ -817,7 +818,7 @@ async def polish(ctx, user_id, match, interactive):
                         choices=[str(i + 1) for i in range(len(polish_prompt_mode))],
                         show_choices=False
                     )
-                    if polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "AI":
+                    if polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "AI Assistant":
                         instruction = Prompt.ask(
                             "Enter your instruction",
                             show_default=True
@@ -847,12 +848,10 @@ async def polish(ctx, user_id, match, interactive):
                             if Confirm.ask("Stop polishing?"):
                                 stop_polishing = True
                             break
-                    if polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "Artificial":
-                        modified_config = original_config.copy()
-                        edit_option_list = ['Nickname', 'Description', 'Prompt']
-                        stop_polishing = await edit_agent_option(edit_option_list, original_config, modified_config, server)
-                                 
-    
+                    elif polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "Manually Edit":
+                        modified_config = config.copy()
+                        edit_option_list = ['NickName', 'Description', 'Prompt']
+                        stop_polishing = await edit_agent_option(edit_option_list, config, modified_config, server)
             return
 
 @cli.command(name="remove-agent")
