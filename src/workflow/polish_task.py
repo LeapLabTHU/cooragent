@@ -20,21 +20,13 @@ from src.interface.agent import Agent
 
 logger = logging.getLogger(__name__)
 
-TOOLS_DESCRIPTION_TEMPLATE = "- **`{tool_name}`**: {tool_description}"
-TOOLS_DESCRIPTION = ""
-
-async def load_tools():
-    global TOOLS_DESCRIPTION
-    await agent_manager.load_tools()
-    for tool_name, tool in agent_manager.available_tools.items():
-        TOOLS_DESCRIPTION += '\n' + TOOLS_DESCRIPTION_TEMPLATE.format(tool_name=tool_name,tool_description=tool.description)
     
 async def polish_agent(_agent: Agent, instruction: str, part_to_edit: str):
-    await load_tools()
-    messages = apply_polish_template(_agent, instruction, part_to_edit, TOOLS_DESCRIPTION)
+    messages = apply_polish_template(_agent, instruction)
     response = (
         get_llm_by_type(AGENT_LLM_MAP["polisher"])
         .with_structured_output(Router)
         .invoke(messages)
     )
-    return response[part_to_edit]
+
+    return response
