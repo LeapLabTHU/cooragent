@@ -14,16 +14,19 @@ from rich.text import Text
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt, Confirm
 from dotenv import load_dotenv
+from src.workflow.cache import workflow_cache
 import functools
 import shlex
 import platform
 import atexit
 import logging
+from config.global_variables import agents_dir
+from src.workflow.polish_task import polish_agent
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
-from src.interface.agent_types import *
+from src.interface.agent import *
 from src.service.app import Server
 
 if platform.system() == "Windows":
@@ -48,7 +51,7 @@ custom_theme = Theme({
     "tool_name": "bold blue",
     "tool_desc": "green",
     "user_msg": "bold white on blue",
-    "assistant_msg": "bold black on green",
+    "assistant_msg": "bold black on green"
 })
 
 # Create Rich console object for beautified output
@@ -119,6 +122,129 @@ def stream_print(text, **kwargs):
         else:
             console.print(text, **kwargs)
         sys.stdout.flush()
+
+def show_agent_config(config):
+    stream_print(Panel.fit(
+        f"[agent_name]Name:[/agent_name] {config.get('agent_name', '')}\n"
+        f"[agent_nick_name]NickName:[/agent_nick_name] {config.get('nick_name', '')}\n"
+        f"[agent_desc]Description:[/agent_desc] {config.get('description', '')}\n"
+        f"[tool_name]Tools:[/tool_name] {', '.join([t.get('name', '') for t in config.get('selected_tools', [])])}\n"
+        f"[highlight]Prompt:[/highlight]\n{config.get('prompt', '')}",
+        title="Current Configuration",
+        border_style="blue"
+    ))
+    
+async def edit_agent_option(edit_option:list[str], original_config, modified_config, server):
+    all_edit_option = {
+        'NickName': 'Modify NickName',
+        'Description': 'Modify Description',
+        'Tool': 'Modify Tool List',
+        'Prompt': 'Modify Prompt',
+        'Preview': 'Preview Changes',
+        'Save': 'Save and Exit',
+        'Exit': 'Only Exit'
+    }
+    choices = []
+    console.print("\nSelect content to modify:")
+    edit_option += ['Preview', 'Save', 'Exit']
+    for index, option in enumerate(edit_option):
+        console.print(f"{index + 1} - {all_edit_option[option]}")
+        choices.append(str(index + 1))
+    choice = Prompt.ask(
+        "Enter option",
+        choices=choices,
+        show_choices=False
+    )
+    choice_option = edit_option[int(choice)-1]
+    if choice_option == 'NickName':
+        new_name = Prompt.ask(
+            "Enter new NickName",
+            default=modified_config.get('nick_name', ''),
+            show_default=True
+        )
+        modified_config['agent_name'] = new_name
+        modified_config['nick_name'] = new_name
+        return False
+
+    elif choice_option == 'Description':
+        new_desc = Prompt.ask(
+            "Enter new description",
+            default=modified_config.get('description', ''),
+            show_default=True
+        )
+        modified_config['description'] = new_desc
+        return False
+
+    elif choice_option == 'Tool':
+        current_tools = [t.get('name') for t in modified_config.get('selected_tools', [])]
+        stream_print(f"Current tools: {', '.join(current_tools)}")
+        new_tools = Prompt.ask(
+            "Enter new tool list (comma-separated)",
+            default=", ".join(current_tools),
+            show_default=True
+        )
+        modified_config['selected_tools'] = [
+            {"name": t.strip(), "description": ""}
+            for t in new_tools.split(',')
+            if t.strip()
+        ]
+        return False
+
+    elif choice_option == 'Prompt':
+        console.print("Enter new prompt (type 'END' to finish):")
+        lines = []
+        while True:
+            line = Prompt.ask("> ", default="")
+            if line == "END":
+                break
+            lines.append(line)
+        modified_config['prompt'] = "\n".join(lines)
+        return False
+
+    elif choice_option == 'Preview':
+        show_agent_config(original_config)
+        stream_print(Panel.fit(
+            f"[agent_name]New Name:[/agent_name] {modified_config.get('agent_name', '')}\n"
+            f"[nick_name]New NickName:[/nick_name] {modified_config.get('nick_name', '')}\n"
+            f"[agent_desc]New Description:[/agent_desc] {modified_config.get('description', '')}\n"
+            f"[tool_name]New Tools:[/tool_name] {', '.join([t.get('name', '') for t in modified_config.get('selected_tools', [])])}\n"
+            f"[highlight]New Prompt:[/highlight]\n{modified_config.get('prompt', '')}",
+            title="Modified Configuration Preview",
+            border_style="yellow"
+        ))
+        return False
+
+    elif choice_option == 'Save':
+        if Confirm.ask("Confirm saving changes and exit?"):
+            try:
+                agent_request = Agent(
+                    user_id=original_config.get('user_id', ''),
+                    nick_name=modified_config['nick_name'],
+                    agent_name=modified_config['agent_name'],
+                    description=modified_config['description'],
+                    selected_tools=modified_config['selected_tools'],
+                    prompt=modified_config['prompt'],
+                    llm_type=original_config.get('llm_type', 'basic')
+                )
+
+                async for result in server._edit_agent(agent_request):
+                    res = json.loads(result)
+                    if res.get("result") == "success":
+                        stream_print(Panel.fit("[success]Agent updated successfully![/success]", border_style="green"))
+                    else:
+                        stream_print(f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
+                return True
+            except Exception as e:
+                stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
+                return True
+        else:
+            stream_print("[warning]Modifications cancelled[/warning]")
+            return False
+    elif choice_option == 'Exit':
+        if Confirm.ask("Abandon any changes and exit?"):
+            return True
+        else:
+            return False
 
 def _is_likely_markdown(text):
     """Use simple heuristics to determine if the text is likely Markdown."""
@@ -286,7 +412,6 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_bef
     current_content = ""
     json_buffer = ""  
     in_json_block = False
-    last_agent_name = ""
     live_mode = True
     
     with Progress(
@@ -453,7 +578,7 @@ async def list_agents(ctx, user_id, match):
         
         table = Table(title=f"Agent list for user [highlight]{user_id}[/highlight]", show_header=True, header_style="bold magenta", border_style="cyan")
         table.add_column("Name", style="agent_name")
-        table.add_column("Nickname", style="agent_nick_name")
+        table.add_column("NickName", style="agent_nick_name")
         table.add_column("Description", style="agent_desc")
         table.add_column("Tools", style="agent_type")
         
@@ -493,7 +618,7 @@ async def list_default_agents(ctx):
         
         table = Table(title="Default Agent List", show_header=True, header_style="bold magenta", border_style="cyan")
         table.add_column("Name", style="agent_name")
-        table.add_column("Nickname", style="agent_nick_name")
+        table.add_column("NickName", style="agent_nick_name")
         table.add_column("Description", style="agent_desc")
         
         count = 0
@@ -563,114 +688,171 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
     except Exception as e:
         stream_print(f"[danger]Failed to fetch configuration: {str(e)}[/danger]")
         return
-
-    def show_current_config():
-        stream_print(Panel.fit(
-            f"[agent_name]Name:[/agent_name] {original_config.get('agent_name', '')}\n"
-            f"[agent_nick_name]Nickname:[/agent_nick_name] {original_config.get('nick_name', '')}\n"
-            f"[agent_desc]Description:[/agent_desc] {original_config.get('description', '')}\n"
-            f"[tool_name]Tools:[/tool_name] {', '.join([t.get('name', '') for t in original_config.get('selected_tools', [])])}\n"
-            f"[highlight]Prompt:[/highlight]\n{original_config.get('prompt', '')}",
-            title="Current Configuration",
-            border_style="blue"
-        ))
     
-    show_current_config()
+    show_agent_config(original_config)
 
     modified_config = original_config.copy()
+    stop_editing = False
+    if interactive:
+        while not stop_editing:
+            edit_option_list = ['NickName', 'Description', 'Tool', 'Prompt']
+            stop_editing = await edit_agent_option(edit_option_list,original_config,modified_config,server)
+
+
+@cli.command(name="polish")
+@click.pass_context
+@click.option('--user-id', '-u', required=True, help='User ID')
+@click.option('--match', '-m', help='Match string')
+@click.option('--interactive/--no-interactive', '-i/-I', default=True, help='Use interactive mode')
+@async_command
+async def polish(ctx, user_id, match, interactive):
+    """Edit an existing Agent interactively"""
+    server = ctx.obj['server']
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console
+    ) as progress:
+        task = progress.add_task("[green]Fetching Workflow list...", total=None)
+        
+        request = listAgentRequest(user_id=user_id, match=match)
+        
+        table = Table(title=f"Workflow list for user [highlight]{user_id}[/highlight]", show_header=True, header_style="bold magenta", border_style="cyan")
+        table.add_column("ID", style="tool_desc")
+        table.add_column("Workflow ID", style="tool_desc")
+        table.add_column("Lap", style="tool_desc")
+        table.add_column("Version", style="tool_desc")
+        table.add_column("Graph", style="tool_desc")
+        table.add_column("Planning Steps", style="agent_nick_name")
+
+        
+        count = 0
+        workflow_list = server._list_workflow(request)
+        for workflow in workflow_list:
+            try:
+                planning = json.loads(workflow.get("planning_steps", ""))
+                steps = planning['steps']
+                table.add_row(str(count), workflow.get("workflow_id", ""), str(workflow.get("lap", "")), str(workflow.get("version", "")), json.dumps(workflow.get("graph", ""), indent=2, ensure_ascii=False), json.dumps(steps, indent=2, ensure_ascii=False))
+                count += 1
+            except:
+                stream_print(f"[danger]Parsing error: {workflow}[/danger]")
+        
+        progress.update(task, description=f"[success]Fetched {count} workflow!")
+        
+        if count == 0:
+            stream_print(Panel(f"No matching workflow found", title="Result", border_style="yellow"))
+        else:
+            stream_print(table)    
+    
+    
     while interactive:
-        console.print("\nSelect content to modify:")
-        console.print("1 - Modify Nickname")
-        console.print("2 - Modify Description")
-        console.print("3 - Modify Tool List")
-        console.print("4 - Modify Prompt")
-        console.print("5 - Preview Changes")
-        console.print("0 - Save and Exit")
+        console.print("\n Select workflow by index to polish:")
         
         choice = Prompt.ask(
-            "Enter option",
-            choices=["0", "1", "2", "3", "4", "5"],
-            show_choices=False
+            "Enter workflow ID",
+            choices=[str(i) for i in range(count)],
+            show_choices=True
         )
         
-        if choice == "1":
-            new_name = Prompt.ask(
-                "Enter new nickname", 
-                default=modified_config.get('nick_name', ''),
-                show_default=True
-            )
-            modified_config['nick_name'] = new_name
+        workflow_id = workflow_list[int(choice)]["workflow_id"]
         
-        elif choice == "2":
-            new_desc = Prompt.ask(
-                "Enter new description", 
-                default=modified_config.get('description', ''),
-                show_default=True
-            )
-            modified_config['description'] = new_desc
-        
-        elif choice == "3":
-            current_tools = [t.get('name') for t in modified_config.get('selected_tools', [])]
-            stream_print(f"Current tools: {', '.join(current_tools)}")
-            new_tools = Prompt.ask(
-                "Enter new tool list (comma-separated)",
-                default=", ".join(current_tools),
-                show_default=True
-            )
-            modified_config['selected_tools'] = [
-                {"name": t.strip(), "description": ""} 
-                for t in new_tools.split(',') 
-                if t.strip()
-            ]
-        
-        elif choice == "4":
-            console.print("Enter new prompt (type 'END' to finish):")
-            lines = []
-            while True:
-                line = Prompt.ask("> ", default="")
-                if line == "END":
-                    break
-                lines.append(line)
-            modified_config['prompt'] = "\n".join(lines)
-        
-        elif choice == "5":
-            show_current_config()
-            stream_print(Panel.fit(
-                f"[agent_name]New Name:[/agent_name] {modified_config.get('agent_name', '')}\n"
-                f"[nick_name]New Nickname:[/nick_name] {modified_config.get('nick_name', '')}\n"
-                f"[agent_desc]New Description:[/agent_desc] {modified_config.get('description', '')}\n"
-                f"[tool_name]New Tools:[/tool_name] {', '.join([t.get('name', '') for t in modified_config.get('selected_tools', [])])}\n"
-                f"[highlight]New Prompt:[/highlight]\n{modified_config.get('prompt', '')}",
-                title="Modified Configuration Preview",
-                border_style="yellow"
-            ))
-        
-        elif choice == "0":
-            if Confirm.ask("Confirm saving changes?"):
-                try:
-                    agent_request = Agent(
-                        user_id=original_config.get('user_id', ''),
-                        nick_name=modified_config['nick_name'],
-                        agent_name=modified_config['agent_name'],
-                        description=modified_config['description'],
-                        selected_tools=modified_config['selected_tools'],
-                        prompt=modified_config['prompt'],
-                        llm_type=original_config.get('llm_type', 'basic')
-                    )
-                    
-                    async for result in server._edit_agent(agent_request):
-                        res = json.loads(result)
-                        if res.get("result") == "success":
-                            stream_print(Panel.fit("[success]Agent updated successfully![/success]", border_style="green"))
-                        else:
-                            stream_print(f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
-                    return
-                except Exception as e:
-                    stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
-            else:
-                stream_print("[warning]Modifications cancelled[/warning]")
-            return
+        parts_to_edit_options = ["graph", "planning_steps"]
+        console.print("Select part to edit:")
+        for i, part_option in enumerate(parts_to_edit_options):
+            console.print(f"{i+1} - {part_option}")
 
+        part_choice_idx_str = Prompt.ask(
+            "Enter part number",
+            choices=[str(i+1) for i in range(len(parts_to_edit_options))],
+            show_choices=False
+        )
+        part_to_edit = parts_to_edit_options[int(part_choice_idx_str) - 1]
+
+        if part_to_edit == "graph":
+            agents = workflow_cache.get_editable_agents((workflow_id))
+            
+            console.print("Select agent to edit:")
+            for i, agent in enumerate(agents):
+                console.print(f"{i+1} - {agent.agent_name}")
+
+            agent_choice_idx_str = Prompt.ask(
+                "Enter agent number",
+                choices=[str(i+1) for i in range(len(agents))],
+                show_choices=False 
+            )
+            agent_to_edit = agents[int(agent_choice_idx_str) - 1].agent_name
+            
+            agent_path = agents_dir / f"{agent_to_edit}.json"
+            if not agent_path.exists():
+                raise FileNotFoundError(f"agent {agent_to_edit} not found.")
+            with open(agent_path, "r") as f:
+                json_str = f.read()
+                _agent = Agent.model_validate_json(json_str)
+                config = json.loads(json_str)
+            
+            show_agent_config(config)
+            
+            stop_polishing = False
+            while not stop_polishing:
+                agent_part_options = ["tools", "prompt"]
+                console.print("Select part to edit:")
+                for i, part_option in enumerate(agent_part_options):
+                    console.print(f"{i+1} - {part_option}")
+
+                part_choice_idx_str = Prompt.ask(
+                    "Enter part number",
+                    choices=[str(i+1) for i in range(len(agent_part_options))],
+                    show_choices=False
+                )
+                part_to_edit = agent_part_options[int(part_choice_idx_str) - 1]            
+
+                if part_to_edit == "prompt":
+                    polish_prompt_mode = ['AI Assistant','Manually Edit']
+                    console.print("Select mode to edit:")
+                    for i, part_option in enumerate(polish_prompt_mode):
+                        console.print(f"{i + 1} - {part_option}")
+
+                    prompt_mode_choice_idx_str = Prompt.ask(
+                        "Enter part number",
+                        choices=[str(i + 1) for i in range(len(polish_prompt_mode))],
+                        show_choices=False
+                    )
+                    if polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "AI Assistant":
+                        instruction = Prompt.ask(
+                            "Enter your instruction",
+                            show_default=True
+                        )
+                        polish_content = await polish_agent(_agent, instruction, part_to_edit)
+                        stream_print(f"polished description: \n {polish_content['agent_description']}\n\n")
+                        stream_print(f"polished prompt: \n {polish_content['prompt']}")
+                        while True:
+                            if Confirm.ask("Confirm saving changes?"):
+                                _agent.prompt = polish_content['prompt']
+                                _agent.description = polish_content['agent_description']
+                                try:
+                                    async for result in server._edit_agent(_agent):
+                                        res = json.loads(result)
+                                        if res.get("result") == "success":
+                                            stream_print(Panel.fit("[success]Agent updated successfully![/success]",
+                                                                   border_style="green"))
+                                        else:
+                                            stream_print(
+                                                f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
+                                    return
+                                except Exception as e:
+                                    stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
+                            else:
+                                stream_print("[warning]Modifications cancelled[/warning]")
+
+                            if Confirm.ask("Stop polishing?"):
+                                stop_polishing = True
+                            break
+                    elif polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "Manually Edit":
+                        modified_config = config.copy()
+                        edit_option_list = ['NickName', 'Description', 'Prompt']
+                        stop_polishing = await edit_agent_option(edit_option_list, config, modified_config, server)
+            return
 
 @cli.command(name="remove-agent")
 @click.pass_context

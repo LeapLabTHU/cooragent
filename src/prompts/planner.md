@@ -76,4 +76,3 @@ interface PlanWithAgents {
 - If the value of "new_agents_needed" has content, it means that a certain agent needs to be created, **you must use `agent_factory` in the steps to create it**!!
 - Always use the `reporter` to conclude the entire work at the end of the steps.
 - Language consistency: The prompt needs to be consistent with the user input language.
-
