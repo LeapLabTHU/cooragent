@@ -20,7 +20,8 @@ from src.interface.agent import Agent
 
 logger = logging.getLogger(__name__)
 
-    
+
+
 async def polish_agent(_agent: Agent, instruction: str, tools: list, part_to_edit: str):
     if part_to_edit in ['prompt', 'tool']:
         if part_to_edit == 'prompt':

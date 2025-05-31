@@ -89,6 +89,7 @@ class State(MessagesState):
     search_before_planning: bool
     workflow_id: str
     workflow_mode: WorkMode="auto"
+    initialized: bool=False
 
 class RemoveAgentRequest(BaseModel):
     user_id: str

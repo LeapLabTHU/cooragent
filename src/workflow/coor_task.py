@@ -79,7 +79,7 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
         if agent == "FINISH":
             goto = "__end__"
             logger.info("Workflow completed \n")
-            cache.restore_node(state["workflow_id"], goto)
+            cache.restore_node(state["workflow_id"], goto, state["initialized"])
             return Command(goto=goto, update={"next": goto})
         elif agent != "agent_factory":
             goto = "agent_proxy"
@@ -87,7 +87,7 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
             goto = "agent_factory"
         logger.info(f"publisher delegating to: {agent} \n")
         
-        cache.restore_node(state["workflow_id"], agent)
+        cache.restore_node(state["workflow_id"], agent, state["initialized"])
         
     elif state["work_mode"] in ["production", "polish"]:
         # todo add polish history 
@@ -109,6 +109,7 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
     """Proxy node that acts as a proxy for the agent."""
     _agent = agent_manager.available_agents[state["next"]]
     logger.info(f"Agent Proxy Start to work in {state['work_mode']} workmode \n")
+    state["initialized"] = True
     async with MultiServerMCPClient(mcp_client_config()) as client:
         mcp_tools = client.get_tools()
         for _tool in mcp_tools:
@@ -123,9 +124,9 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
         response = await agent.ainvoke(state)
         
         if state["work_mode"] == "launch":
-            cache.restore_node(state["workflow_id"], _agent)
+            cache.restore_node(state["workflow_id"], _agent, state["initialized"])
         elif state["work_mode"] == "production":
-            cache.update_stack(state["workflow_id"], _agent)
+            cache.update_stack(state["workflow_id"], _agent, state["initialized"])
 
     return Command(
         update={
