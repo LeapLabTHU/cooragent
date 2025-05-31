@@ -1064,6 +1064,7 @@ async def polish(ctx, user_id, match, interactive):
                         stop_edit_tool = await edit_agent_option(_agent,edit_option_list, config, modified_config, server)
             return
 
+
 @cli.command(name="remove-agent")
 @click.pass_context
 @click.option('--agent-name', '-n', required=True, help='Name of the Agent to remove')
