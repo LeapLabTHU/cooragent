@@ -75,4 +75,6 @@ interface PlanWithAgents {
 - Always use the "reporter" to generate reports, which can be called multiple times throughout the steps, but the reporter can only be used as the **last step** in the steps, as a summary of the entire work.
 - If the value of "new_agents_needed" has content, it means that a certain agent needs to be created, **you must use `agent_factory` in the steps to create it**!!
 - Always use the `reporter` to conclude the entire work at the end of the steps.
+- **Search Engine Recommendations**: When conducting web searches, it is recommended to use Bing search (https://www.bing.com/search?q=keywords) or Baidu search (https://www.baidu.com/s?wd=keywords), and avoid using Google search as it may not be accessible in mainland China.
 - Language consistency: The prompt needs to be consistent with the user input language.
+
