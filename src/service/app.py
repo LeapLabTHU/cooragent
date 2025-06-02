@@ -146,6 +146,19 @@ class Server:
             yield json.dumps({"result": "error", "error": str(e)}) + "\n"
 
     @staticmethod
+    async def _edit_planning_steps(
+        request: "EditStepsRequest"
+    ) -> AsyncGenerator[str, None]:
+        if agent_manager is None:
+             raise HTTPException(status_code=503, detail="Service not ready, AgentManager not initialized.")
+        try:
+            workflow_cache.restore_planning_steps(request.workflow_id,request.planning_steps)
+            yield json.dumps({"result": "success"}) + "\n"
+        except Exception as e:
+            logger.error(f"Error editing planning steps : {e}", exc_info=True)
+            yield json.dumps({"result": "error", "error": str(e)}) + "\n"
+
+    @staticmethod
     async def _remove_agent(request: RemoveAgentRequest) -> AsyncGenerator[str, None]:
         if agent_manager is None:
              yield json.dumps({"result": "error", "message": "Service not ready, AgentManager not initialized."}) + "\n"
@@ -192,7 +205,14 @@ class Server:
                 self._edit_agent(request),
                 media_type="application/x-ndjson"
             )
-        
+
+        @self.app.post("/v1/edit_planning_steps", status_code=status.HTTP_200_OK)
+        async def edit_agent_endpoint(request: EditStepsRequest):
+            return StreamingResponse(
+                self._edit_planning_steps(request),
+                media_type="application/x-ndjson"
+            )
+
         @self.app.post("/v1/remove_agent", status_code=status.HTTP_200_OK)
         async def remove_agent_endpoint(request: RemoveAgentRequest):
             return StreamingResponse(

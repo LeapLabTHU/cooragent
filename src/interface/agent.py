@@ -71,7 +71,10 @@ class AgentRequest(BaseModel):
 class listAgentRequest(BaseModel):
     user_id: Optional[str]
     match: Optional[str]
-    
+
+class EditStepsRequest(BaseModel):
+    workflow_id: str
+    planning_steps: dict
 
 class Router(TypedDict):
     """Worker to route to next. If no workers needed, route to FINISH."""

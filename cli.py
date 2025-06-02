@@ -51,7 +51,10 @@ custom_theme = Theme({
     "tool_name": "bold blue",
     "tool_desc": "green",
     "user_msg": "bold white on blue",
-    "assistant_msg": "bold black on green"
+    "assistant_msg": "bold black on green",
+    "step_title": "bold magenta",
+    "step_desc": "green",
+    "step_note": "magenta",
 })
 
 # Create Rich console object for beautified output
@@ -133,8 +136,7 @@ def show_agent_config(config):
         title="Current Configuration",
         border_style="blue"
     ))
-    
-async def edit_agent_option(edit_option:list[str], original_config, modified_config, server):
+async def edit_agent_option(_agent: Agent,edit_option:list[str], original_config, modified_config, server):
     all_edit_option = {
         'NickName': 'Modify NickName',
         'Description': 'Modify Description',
@@ -162,7 +164,6 @@ async def edit_agent_option(edit_option:list[str], original_config, modified_con
             default=modified_config.get('nick_name', ''),
             show_default=True
         )
-        modified_config['agent_name'] = new_name
         modified_config['nick_name'] = new_name
         return False
 
@@ -176,18 +177,99 @@ async def edit_agent_option(edit_option:list[str], original_config, modified_con
         return False
 
     elif choice_option == 'Tool':
-        current_tools = [t.get('name') for t in modified_config.get('selected_tools', [])]
-        stream_print(f"Current tools: {', '.join(current_tools)}")
-        new_tools = Prompt.ask(
-            "Enter new tool list (comma-separated)",
-            default=", ".join(current_tools),
-            show_default=True
-        )
-        modified_config['selected_tools'] = [
-            {"name": t.strip(), "description": ""}
-            for t in new_tools.split(',')
-            if t.strip()
-        ]
+
+        async def use_ai_generate_prompt():
+            if Confirm.ask("Whether to automatically update prompt?"):
+                repeat = True
+                while repeat:
+                    polish_content = await polish_agent(_agent=_agent, part_to_edit='tool', tools=modified_config.get('selected_tools'))
+                    stream_print(f"polished description: \n {polish_content['agent_description']}\n\n")
+                    stream_print(f"polished prompt: \n {polish_content['prompt']}")
+                    if not Confirm.ask("Do we need to regenerate the prompt?"):
+                        repeat = False
+                        if Confirm.ask("Confirm saving changes?"):
+                            modified_config['description'] = polish_content['agent_description']
+                            modified_config['prompt'] = polish_content['prompt']
+                        else:
+                            stream_print(f"[warning]The tool list may not match the prompt[/warning]")
+            else:
+                stream_print(f"[warning]The tool list may not match the prompt[/warning]")
+
+        stream_print("[green]Fetching tool list...")
+        default_tool_name = []
+        default_tool_desc = {}
+        async for tool_json in server._list_default_tools():
+            try:
+                default_tool = json.loads(tool_json)
+                default_tool_name.append(default_tool.get('name'))
+                default_tool_desc[default_tool.get('name')] = default_tool.get('description')
+            except:
+                stream_print(f"[danger]Parsing error: {tool_json}[/danger]")
+        stream_print("[success]Fetched tools!")
+        table = Table(title=f"Tool list for agent [highlight]{modified_config.get('nick_name')}[/highlight]", show_header=True, header_style="bold magenta", border_style="cyan")
+        table.add_column("Number", style="tool_desc")
+        table.add_column("Name", style="tool_desc")
+        table.add_column("Description", style="tool_desc")
+        current_tools = modified_config.get('selected_tools')
+        agent_tool_names = []
+        for num,tool in enumerate(current_tools):
+            table.add_row(str(num), tool['name'], tool['description'])
+            agent_tool_names.append(tool['name'])
+        stream_print(table)
+        _stop = False
+        while not _stop:
+            edit_tools_option = ["add tool","delete tool","view default tool list"]
+            for i, part_option in enumerate(edit_tools_option):
+                console.print(f"{i + 1} - {part_option}")
+            choice_tools_option_idx = Prompt.ask(
+                "Enter part number to select operation",
+                choices=[str(i + 1) for i in range(len(edit_tools_option))],
+                show_choices=False
+            )
+            if choice_tools_option_idx == '1':
+                new_tools = Prompt.ask(
+                    "Enter tool list to add (comma-separated)",
+                    show_default=True
+                )
+                change_successful = False
+                for t in new_tools.split(','):
+                    if t.strip() not in agent_tool_names:
+                        if t.strip() in default_tool_name:
+                            modified_config['selected_tools'].append({"name": t.strip(), "description": default_tool_desc[t.strip()]})
+                            change_successful = True
+                        else:
+                            stream_print(f"[danger]Error occurred during add:\n {t.strip()} does not exist in the default tool list[/danger]")
+                    else:
+                        stream_print(f"[warning]{t.strip()} already exists[/warning]")
+                if change_successful:
+                    await use_ai_generate_prompt()
+                _stop = True
+            elif choice_tools_option_idx == '2':
+                del_tools = Prompt.ask(
+                    "Enter tool list to delete (comma-separated)",
+                    show_default=True
+                )
+                change_successful = False
+                for t in del_tools.split(','):
+                    if t.strip() in agent_tool_names:
+                        for i,original_tool in enumerate(modified_config.get('selected_tools')):
+                            if original_tool["name"] == t.strip():
+                                modified_config['selected_tools'].pop(i)
+                                change_successful = True
+                                break
+                    else:
+                        stream_print(
+                            f"[danger]Error occurred during delete:\n {t.strip()} does not exist in the agent tool list[/danger]")
+                if change_successful:
+                    await use_ai_generate_prompt()
+                _stop = True
+            elif choice_tools_option_idx == '3':
+                table = Table(title="Default Tool List", show_header=True, header_style="bold magenta", border_style="cyan")
+                table.add_column("Name", style="tool_name")
+                table.add_column("Description", style="tool_desc")
+                for tool_name in default_tool_name:
+                    table.add_row(tool_name, default_tool_desc[tool_name])
+                stream_print(table)
         return False
 
     elif choice_option == 'Prompt':
@@ -647,7 +729,6 @@ async def list_default_tools(ctx):
         console=console
     ) as progress:
         task = progress.add_task("[green]Fetching default tool list...", total=None)
-        
         table = Table(title="Default Tool List", show_header=True, header_style="bold magenta", border_style="cyan")
         table.add_column("Name", style="tool_name")
         table.add_column("Description", style="tool_desc")
@@ -681,6 +762,7 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
             agent = json.loads(agent_json)
             if agent.get("agent_name") == agent_name:
                 original_config = agent
+                _agent = Agent.model_validate_json(agent)
                 break
         if not original_config:
             stream_print(f"[danger]Agent not found: {agent_name}[/danger]")
@@ -696,7 +778,7 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
     if interactive:
         while not stop_editing:
             edit_option_list = ['NickName', 'Description', 'Tool', 'Prompt']
-            stop_editing = await edit_agent_option(edit_option_list,original_config,modified_config,server)
+            stop_editing = await edit_agent_option(_agent, edit_option_list,original_config,modified_config,server)
 
 
 @cli.command(name="polish")
@@ -823,7 +905,7 @@ async def polish(ctx, user_id, match, interactive):
                             "Enter your instruction",
                             show_default=True
                         )
-                        polish_content = await polish_agent(_agent, instruction, part_to_edit)
+                        polish_content = await polish_agent(_agent=_agent, part_to_edit='prompt', instruction=instruction)
                         stream_print(f"polished description: \n {polish_content['agent_description']}\n\n")
                         stream_print(f"polished prompt: \n {polish_content['prompt']}")
                         while True:
@@ -848,11 +930,109 @@ async def polish(ctx, user_id, match, interactive):
                             if Confirm.ask("Stop polishing?"):
                                 stop_polishing = True
                             break
-                    elif polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "Manually Edit":
+                    if polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "Manually Edit":
                         modified_config = config.copy()
-                        edit_option_list = ['NickName', 'Description', 'Prompt']
-                        stop_polishing = await edit_agent_option(edit_option_list, config, modified_config, server)
+                        stop_edit_agent = False
+                        while not stop_edit_agent:
+                            edit_option_list = ['NickName', 'Description', 'Prompt']
+                            stop_polishing = await edit_agent_option(edit_option_list, config, modified_config, server)
+                elif part_to_edit == "tools":
+                    modified_config = config.copy()
+                    stop_edit_tool = False
+                    while not stop_edit_tool:
+                        edit_option_list = ['Tool']
+                        stop_edit_tool = await edit_agent_option(_agent,edit_option_list, config, modified_config, server)
             return
+        if part_to_edit == "planning_steps":
+            planning_steps = [json.dumps(step, indent=2, ensure_ascii=False) for step in steps]
+            table = Table(title=f"Planning steps list for workflow [highlight]{workflow_id}[/highlight]", show_header=True,
+                          header_style="bold magenta", border_style="cyan")
+            table.add_column("Planning steps num", style="tool_desc")
+            table.add_column("content", style="agent_nick_name")
+            for index, step in enumerate(planning_steps):
+                table.add_row(str(index+1),step)
+            stream_print(table)
+            while True:
+                console.print("\n Select Planning steps by index to polish:")
+                choice = Prompt.ask(
+                    "Enter Planning steps num",
+                    choices=[str(i+1) for i in range(len(planning_steps))],
+                    show_choices=True
+                )
+                editing_step = steps[int(choice) - 1].copy()
+                origin_step = steps[int(choice) - 1]
+                stop_step_edit = False
+                while not stop_step_edit:
+                    step_theme = ['Title', 'Description', 'Note', 'Preview', 'Save and Exit ', 'Only Exit']
+                    console.print("Select part to edit:")
+                    for i, part_option in enumerate(step_theme):
+                        console.print(f"{i + 1} - {part_option}")
+                    theme_choice = Prompt.ask(
+                        "Enter part num",
+                        choices=[str(i + 1) for i in range(len(step_theme))],
+                        show_choices=True
+                    )
+                    if theme_choice == str(1):
+                        new_title = Prompt.ask(
+                            "Enter new title",
+                            default=editing_step.get('title', ''),
+                            show_default=True
+                        )
+                        editing_step['title'] = new_title
+                    if theme_choice == str(2):
+                        new_dec = Prompt.ask(
+                            "Enter new description",
+                            default=editing_step.get('description', ''),
+                            show_default=True
+                        )
+                        editing_step['description'] = new_dec
+                    if theme_choice == str(3):
+                        new_dec = Prompt.ask(
+                            "Enter new note",
+                            default=editing_step.get('note', ''),
+                            show_default=True
+                        )
+                        editing_step['note'] = new_dec
+                    if theme_choice == str(4):
+                        if editing_step == origin_step:
+                            stream_print("No modifications were made!")
+                        else:
+                            stream_print(Panel.fit(
+                                f"[agent_name]Name:[/agent_name] {origin_step.get('agent_name', '')}\n"
+                                f"[step_title]Title:[/step_title] {origin_step.get('title', '')}\n"
+                                f"[step_desc]Description:[/step_desc] {origin_step.get('description', '')}\n"
+                                f"[step_note]Note:[/step_note] {origin_step.get('note', '')}\n",
+                                title="Current Configuration Preview",
+                                border_style="blue"
+                            ))
+                            stream_print(Panel.fit(
+                                f"[agent_name]Name:[/agent_name] {editing_step.get('agent_name', '')}\n"
+                                f"[step_title]Title:[/step_title] {editing_step.get('title', '')}\n"
+                                f"[step_desc]Description:[/step_desc] {editing_step.get('description', '')}\n"
+                                f"[step_note]Note:[/step_note] {editing_step.get('note', '')}\n",
+                                title="Modified Configuration Preview",
+                                border_style="yellow"
+                            ))
+                    if theme_choice == str(5):
+                        if Confirm.ask("Confirm saving changes and exit?"):
+                            try:
+                                planning["steps"][int(choice) - 1] = editing_step
+                                step_request = EditStepsRequest(workflow_id=workflow_id, planning_steps=planning)
+                                async for result in server._edit_planning_steps(step_request):
+                                    res = json.loads(result)
+                                    if res.get("result") == "success":
+                                        stream_print(Panel.fit("[success]Planning Steps updated successfully![/success]",
+                                                               border_style="green"))
+                                    else:
+                                        stream_print(
+                                            f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
+                                stop_step_edit = True
+                            except Exception as e:
+                                stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
+
+                    if theme_choice == str(6):
+                        if Confirm.ask("Abandon any changes and exit?"):
+                            stop_step_edit = True
 
 @cli.command(name="remove-agent")
 @click.pass_context
