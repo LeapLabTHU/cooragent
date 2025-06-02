@@ -246,7 +246,11 @@ class AgentManager:
     async def _list_default_agents(self):
         agents = [agent for agent in self.available_agents.values() if agent.user_id == "share"]
         return agents
-    
+
+    def _list_user_all_agents(self, user_id: str):
+        agents = [agent for agent in self.available_agents.values() if
+                  agent.user_id == "share" or agent.user_id == user_id]
+        return agents
 from config.global_variables import tools_dir, agents_dir, prompts_dir
 
 agent_manager = AgentManager(tools_dir, agents_dir, prompts_dir)

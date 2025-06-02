@@ -15,6 +15,7 @@ from src.manager import agent_manager
 from src.manager.agents import NotFoundAgentError
 from src.service.session import UserSession
 from src.interface.agent import RemoveAgentRequest
+from fastapi.responses import FileResponse
 from src.workflow.cache import workflow_cache
 
 logger = logging.getLogger(__name__)
@@ -104,6 +105,27 @@ class Server:
         except Exception as e:
             logger.error(f"Error listing workflows: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
+    @staticmethod
+    async def _list_agents_json(user_id: str, match: Optional[str] = None):
+        try:
+            agents = agent_manager._list_agents(user_id, match)
+            return [agent.model_dump() for agent in agents]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    @staticmethod
+    async def _list_user_all_agents(user_id: str):
+        try:
+            agents = agent_manager._list_user_all_agents(user_id)
+            return [agent.model_dump() for agent in agents]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    @staticmethod
+    async def _list_default_agents_json():
+        try:
+            agents = agent_manager._list_default_agents()
+            return [agent.model_dump() for agent in agents]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
     async def _list_default_agents() -> AsyncGenerator[str, None]:
@@ -160,8 +182,12 @@ class Server:
     def launch(self):
         @self.app.post("/v1/workflow", status_code=status.HTTP_200_OK)
         async def agent_workflow_endpoint(request: AgentRequest):
+            async def response_generator():
+                async for chunk in self._run_agent_workflow(request):
+                    yield json.dumps(chunk, ensure_ascii=False) + "\n"
+
             return StreamingResponse(
-                self._run_agent_workflow(request),
+                response_generator(),
                 media_type="application/x-ndjson"
             )
 
@@ -171,14 +197,42 @@ class Server:
                 self._list_agents(request),
                 media_type="application/x-ndjson"
             )
+        @self.app.get("/get_image/{image_name}")
+        async def get_image(image_name: str):
+            root_dir = os.getcwd()  # 获取当前工作目录，即根目录
+            image_path = os.path.join(root_dir, image_name)
 
+            if not os.path.isfile(image_path):
+                raise HTTPException(status_code=404, detail="Image not found")
+
+            return FileResponse(image_path)
         @self.app.get("/v1/list_default_agents", status_code=status.HTTP_200_OK)
         async def list_default_agents_endpoint():
             return StreamingResponse(
                 self._list_default_agents(),
                 media_type="application/x-ndjson"
             )
-        
+        @self.app.get("/v1/list_agents_json", status_code=status.HTTP_200_OK)
+        async def list_agents_json(user_id: str, match: Optional[str] = None):
+            try:
+                agents = await self._list_agents_json(user_id, match)
+                return agents
+            except HTTPException as e:
+                return {"error": e.detail}, e.status_code
+        @self.app.get("/v1/list_user_all_agents", status_code=status.HTTP_200_OK)
+        async def list_user_all_agents(user_id: str):
+            try:
+                agents = await self._list_user_all_agents(user_id)
+                return agents
+            except HTTPException as e:
+                return {"error": e.detail}, e.status_code
+        @self.app.get("/v1/list_default_agents_json", status_code=status.HTTP_200_OK)
+        async def list_default_agents_json():
+            try:
+                agents = await self._list_default_agents_json()
+                return agents
+            except HTTPException as e:
+                return {"error": e.detail}, e.status_code
         @self.app.get("/v1/list_default_tools", status_code=status.HTTP_200_OK)
         async def list_default_tools_endpoint():
             return StreamingResponse(
