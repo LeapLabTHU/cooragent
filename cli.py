@@ -51,7 +51,10 @@ custom_theme = Theme({
     "tool_name": "bold blue",
     "tool_desc": "green",
     "user_msg": "bold white on blue",
-    "assistant_msg": "bold black on green"
+    "assistant_msg": "bold black on green",
+    "step_title": "bold magenta",
+    "step_desc": "green",
+    "step_note": "magenta",
 })
 
 # Create Rich console object for beautified output
@@ -179,7 +182,7 @@ async def edit_agent_option(_agent: Agent,edit_option:list[str], original_config
             if Confirm.ask("Whether to automatically update prompt?"):
                 repeat = True
                 while repeat:
-                    polish_content = await polish_agent(_agent, '',modified_config.get('selected_tools'),'tool')
+                    polish_content = await polish_agent(_agent=_agent, part_to_edit='tool', tools=modified_config.get('selected_tools'))
                     stream_print(f"polished description: \n {polish_content['agent_description']}\n\n")
                     stream_print(f"polished prompt: \n {polish_content['prompt']}")
                     if not Confirm.ask("Do we need to regenerate the prompt?"):
@@ -902,7 +905,7 @@ async def polish(ctx, user_id, match, interactive):
                             "Enter your instruction",
                             show_default=True
                         )
-                        polish_content = await polish_agent(_agent, instruction, [],'prompt')
+                        polish_content = await polish_agent(_agent=_agent, part_to_edit='prompt', instruction=instruction)
                         stream_print(f"polished description: \n {polish_content['agent_description']}\n\n")
                         stream_print(f"polished prompt: \n {polish_content['prompt']}")
                         while True:
@@ -940,6 +943,96 @@ async def polish(ctx, user_id, match, interactive):
                         edit_option_list = ['Tool']
                         stop_edit_tool = await edit_agent_option(_agent,edit_option_list, config, modified_config, server)
             return
+        if part_to_edit == "planning_steps":
+            planning_steps = [json.dumps(step, indent=2, ensure_ascii=False) for step in steps]
+            table = Table(title=f"Planning steps list for workflow [highlight]{workflow_id}[/highlight]", show_header=True,
+                          header_style="bold magenta", border_style="cyan")
+            table.add_column("Planning steps num", style="tool_desc")
+            table.add_column("content", style="agent_nick_name")
+            for index, step in enumerate(planning_steps):
+                table.add_row(str(index+1),step)
+            stream_print(table)
+            while True:
+                console.print("\n Select Planning steps by index to polish:")
+                choice = Prompt.ask(
+                    "Enter Planning steps num",
+                    choices=[str(i+1) for i in range(len(planning_steps))],
+                    show_choices=True
+                )
+                editing_step = steps[int(choice) - 1].copy()
+                origin_step = steps[int(choice) - 1]
+                stop_step_edit = False
+                while not stop_step_edit:
+                    step_theme = ['Title', 'Description', 'Note', 'Preview', 'Save and Exit ', 'Only Exit']
+                    console.print("Select part to edit:")
+                    for i, part_option in enumerate(step_theme):
+                        console.print(f"{i + 1} - {part_option}")
+                    theme_choice = Prompt.ask(
+                        "Enter part num",
+                        choices=[str(i + 1) for i in range(len(step_theme))],
+                        show_choices=True
+                    )
+                    if theme_choice == str(1):
+                        new_title = Prompt.ask(
+                            "Enter new title",
+                            default=editing_step.get('title', ''),
+                            show_default=True
+                        )
+                        editing_step['title'] = new_title
+                    if theme_choice == str(2):
+                        new_dec = Prompt.ask(
+                            "Enter new description",
+                            default=editing_step.get('description', ''),
+                            show_default=True
+                        )
+                        editing_step['description'] = new_dec
+                    if theme_choice == str(3):
+                        new_dec = Prompt.ask(
+                            "Enter new note",
+                            default=editing_step.get('note', ''),
+                            show_default=True
+                        )
+                        editing_step['note'] = new_dec
+                    if theme_choice == str(4):
+                        if editing_step == origin_step:
+                            stream_print("No modifications were made!")
+                        else:
+                            stream_print(Panel.fit(
+                                f"[agent_name]Name:[/agent_name] {origin_step.get('agent_name', '')}\n"
+                                f"[step_title]Title:[/step_title] {origin_step.get('title', '')}\n"
+                                f"[step_desc]Description:[/step_desc] {origin_step.get('description', '')}\n"
+                                f"[step_note]Note:[/step_note] {origin_step.get('note', '')}\n",
+                                title="Current Configuration Preview",
+                                border_style="blue"
+                            ))
+                            stream_print(Panel.fit(
+                                f"[agent_name]Name:[/agent_name] {editing_step.get('agent_name', '')}\n"
+                                f"[step_title]Title:[/step_title] {editing_step.get('title', '')}\n"
+                                f"[step_desc]Description:[/step_desc] {editing_step.get('description', '')}\n"
+                                f"[step_note]Note:[/step_note] {editing_step.get('note', '')}\n",
+                                title="Modified Configuration Preview",
+                                border_style="yellow"
+                            ))
+                    if theme_choice == str(5):
+                        if Confirm.ask("Confirm saving changes and exit?"):
+                            try:
+                                planning["steps"][int(choice) - 1] = editing_step
+                                step_request = EditStepsRequest(workflow_id=workflow_id, planning_steps=planning)
+                                async for result in server._edit_planning_steps(step_request):
+                                    res = json.loads(result)
+                                    if res.get("result") == "success":
+                                        stream_print(Panel.fit("[success]Planning Steps updated successfully![/success]",
+                                                               border_style="green"))
+                                    else:
+                                        stream_print(
+                                            f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
+                                stop_step_edit = True
+                            except Exception as e:
+                                stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
+
+                    if theme_choice == str(6):
+                        if Confirm.ask("Abandon any changes and exit?"):
+                            stop_step_edit = True
 
 @cli.command(name="remove-agent")
 @click.pass_context

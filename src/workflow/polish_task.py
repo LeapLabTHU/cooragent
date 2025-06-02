@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 
-async def polish_agent(_agent: Agent, instruction: str, tools: list, part_to_edit: str):
+async def polish_agent(_agent: Agent, part_to_edit: str, instruction=None, tools=None):
     if part_to_edit in ['prompt', 'tool']:
         if part_to_edit == 'prompt':
             messages = apply_polish_template(_agent, instruction)
