@@ -7,8 +7,9 @@ from langgraph.types import Command
 from src.llm.llm import get_llm_by_type
 from src.llm.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
-# from src.tools.search import tavily_tool
-from src.interface.agent_types import State, Router
+from src.tools.search import tavily_tool
+from src.interface.agent import State, Router
+from src.interface.serialize_types import AgentBuilder
 from src.manager import agent_manager
 from src.workflow.graph import AgentWorkflow
 
@@ -23,7 +24,7 @@ async def agent_factory_node(state: State) -> Command[Literal["publisher","__end
     messages = apply_prompt_template("agent_factory", state)
     response = (
         get_llm_by_type(AGENT_LLM_MAP["agent_factory"])
-        .with_structured_output(Router)
+        .with_structured_output(AgentBuilder)
         .invoke(messages)
     )
     
@@ -84,10 +85,10 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
     llm = get_llm_by_type(AGENT_LLM_MAP["planner"])
     if state.get("deep_thinking_mode"):
         llm = get_llm_by_type("reasoning")
-    # if state.get("search_before_planning"):
-    #     searched_content = tavily_tool.invoke({"query": state["messages"][-1]["content"]})
-    #     messages = deepcopy(messages)
-    #     messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
+    if state.get("search_before_planning"):
+        searched_content = tavily_tool.invoke({"query": state["messages"][-1]["content"]})
+        messages = deepcopy(messages)
+        messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
     
     response = await llm.ainvoke(messages)
     content = response.content

@@ -6,7 +6,7 @@ from langchain_core.prompts import PromptTemplate
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from src.utils.path_utils import get_project_root
 from langchain_core.messages import HumanMessage
-
+from src.interface.agent import Agent
 
 
 def get_prompt_template(prompt_name: str) -> str:
@@ -62,3 +62,30 @@ def apply_prompt(state: AgentState, template:str=None) -> list:
         template=template,
     ).format(CURRENT_TIME=datetime.now().strftime("%a %b %d %Y %H:%M:%S %z"), **state)
     return _prompt
+
+
+def apply_polish_template(_agent: Agent, instruction: str):
+    try:
+        template_dir = get_project_root() / "src" / "prompts"
+        polish_template = open(os.path.join(template_dir, "agent_polish.md")).read()
+        # First, escape all literal curly braces in the template
+        polish_template = polish_template.replace("{", "{{").replace("}", "}}")
+        # Then, unescape the <<VAR>> style placeholders by converting them to single brace {VAR}
+        polish_template = re.sub(r"<<([^>>]+)>>", r"{\1}", polish_template)
+
+        # Create the PromptTemplate instance
+        prompt_instance = PromptTemplate(
+            input_variables=["CURRENT_TIME", "agent_to_modify", "available_tools", "user_instruction"],
+            template=polish_template,
+        )
+        # Format the prompt
+        formatted_prompt = prompt_instance.format(
+            CURRENT_TIME=datetime.now().strftime("%a %b %d %Y %H:%M:%S %z"),
+            agent_to_modify=_agent.model_dump_json(),
+            user_instruction=instruction
+        )
+    except Exception as e:
+        from traceback import print_exc
+        print_exc()
+        return None
+    return formatted_prompt

@@ -10,16 +10,18 @@ from datetime import datetime
 
 load_dotenv()
 import logging
-from src.interface.agent_types import *
+from src.interface.agent import *
 from src.workflow.process import run_agent_workflow
 from src.manager import agent_manager 
 from src.manager.agents import NotFoundAgentError
 from src.service.session import UserSession
-from src.interface.agent_types import RemoveAgentRequest
+from src.interface.agent import RemoveAgentRequest
 from fastapi.responses import FileResponse
 from src.utils.path_utils import get_project_root
 from src.service.tool_tracker import tool_tracker
 from src.service.websocket_manager import websocket_manager
+from src.workflow.cache import workflow_cache
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -102,6 +104,19 @@ class Server:
             agents = agent_manager._list_agents(user_id, match)
             return [agent.model_dump() for agent in agents]
         except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @staticmethod
+    def _list_workflow(
+         request: "listAgentRequest"
+    ) -> AsyncGenerator[str, None]:
+        if workflow_cache is None:
+             raise HTTPException(status_code=503, detail="Service not ready, WorkflowCache not initialized.")
+        try:
+            workflows = workflow_cache.list_workflows(request.user_id, request.match)
+            return workflows
+        except Exception as e:
+            logger.error(f"Error listing workflows: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
