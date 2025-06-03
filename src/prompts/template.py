@@ -1,6 +1,5 @@
 import os
 import re
-import json
 from datetime import datetime
 import copy
 from langchain_core.prompts import PromptTemplate
@@ -8,7 +7,6 @@ from langgraph.prebuilt.chat_agent_executor import AgentState
 from src.utils.path_utils import get_project_root
 from langchain_core.messages import HumanMessage
 from src.interface.agent import Agent
-
 
 
 def get_prompt_template(prompt_name: str) -> str:
@@ -74,7 +72,7 @@ def apply_polish_template(_agent: Agent, instruction: str):
         polish_template = polish_template.replace("{", "{{").replace("}", "}}")
         # Then, unescape the <<VAR>> style placeholders by converting them to single brace {VAR}
         polish_template = re.sub(r"<<([^>>]+)>>", r"{\1}", polish_template)
-        
+
         # Create the PromptTemplate instance
         prompt_instance = PromptTemplate(
             input_variables=["CURRENT_TIME", "agent_to_modify", "available_tools", "user_instruction"],

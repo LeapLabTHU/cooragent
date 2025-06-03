@@ -11,6 +11,7 @@ from src.interface.agent import State
 from src.service.env import USE_BROWSER
 from src.workflow.cache import workflow_cache as cache
 from src.interface.agent import WorkMode
+from src.service.context import UserContext
 
 logging.basicConfig(
     level=logging.INFO,
@@ -139,12 +140,8 @@ async def run_agent_workflow(
     global is_handoff_case
     is_handoff_case = False
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console
-    ) as progress:
-            async for event_data in _process_workflow(
+
+    async for event_data in _process_workflow(
                 graph,
                 {
                     "user_id": user_id,
@@ -180,6 +177,7 @@ async def _process_workflow(
         current_node = workflow.start_node
         state = State(**initial_state)
     
+        UserContext.set_user_id(state["user_id"])
         
         while current_node != "__end__":
             agent_name = current_node
@@ -275,6 +273,3 @@ async def _process_workflow(
                 "error": str(e),
             },
         }
-
-
-
