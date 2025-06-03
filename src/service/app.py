@@ -1,21 +1,25 @@
 import os
-from typing import Dict, List, AsyncGenerator
+from typing import Dict, List, AsyncGenerator, Optional
 import uvicorn
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 import json
+from datetime import datetime
 
 load_dotenv()
 import logging
-from src.interface.agent import *
+from src.interface.agent_types import *
 from src.workflow.process import run_agent_workflow
 from src.manager import agent_manager 
 from src.manager.agents import NotFoundAgentError
 from src.service.session import UserSession
-from src.interface.agent import RemoveAgentRequest
-from src.workflow.cache import workflow_cache
+from src.interface.agent_types import RemoveAgentRequest
+from fastapi.responses import FileResponse
+from src.utils.path_utils import get_project_root
+from src.service.tool_tracker import tool_tracker
+from src.service.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -45,6 +49,7 @@ class Server:
         for message in request.messages:
             session.add_message(message.role, message.content)
         session_messages = session.history[-3:]
+
         response_stream = run_agent_workflow(
             request.user_id,
             request.task_type,
@@ -54,7 +59,6 @@ class Server:
             request.search_before_planning,
             request.coor_agents
         )
-
         async for res in response_stream:
             try:
                 event_type = res.get("event")
@@ -93,16 +97,26 @@ class Server:
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
-    def _list_workflow(
-         request: "listAgentRequest"
-    ) -> AsyncGenerator[str, None]:
-        if workflow_cache is None:
-             raise HTTPException(status_code=503, detail="Service not ready, WorkflowCache not initialized.")
+    async def _list_agents_json(user_id: str, match: Optional[str] = None):
         try:
-            workflows = workflow_cache.list_workflows(request.user_id, request.match)
-            return workflows
+            agents = agent_manager._list_agents(user_id, match)
+            return [agent.model_dump() for agent in agents]
         except Exception as e:
-            logger.error(f"Error listing workflows: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @staticmethod
+    async def _list_user_all_agents(user_id: str):
+        try:
+            agents = agent_manager._list_user_all_agents(user_id)
+            return [agent.model_dump() for agent in agents]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    @staticmethod
+    async def _list_default_agents_json():
+        try:
+            agents = agent_manager._list_default_agents()
+            return [agent.model_dump() for agent in agents]
+        except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
@@ -170,11 +184,57 @@ class Server:
             logger.error(f"Error removing agent {request.agent_name}: {e}", exc_info=True)
             yield json.dumps({"result": "error", "message": f"Error removing Agent '{request.agent_name}': {str(e)}"}) + "\n"
 
+    @staticmethod
+    async def _get_browser_container_info(user_id: str):
+        """Get user's browser container information"""
+        try:
+            # Currently returns fixed container address, can be dynamically allocated based on user_id in the future
+            container_info = {
+                "user_id": user_id,
+                "container_url": "http://106.13.116.188:30005",
+                "status": "active",
+                "message": "Browser container is ready"
+            }
+            return container_info
+        except Exception as e:
+            logger.error(f"Error getting browser container info for user {user_id}: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @staticmethod
+    async def _get_active_tools(user_id: str):
+        """Get tools currently being used by the user"""
+        try:
+            active_tools = tool_tracker.get_active_tools(user_id)
+            
+            # Check if browser tool is being used
+            is_browser_active = "browser" in active_tools
+            
+            # Get last usage time of browser tool
+            browser_timestamp = None
+            if user_id in tool_tracker._user_tool_usage and "browser" in tool_tracker._user_tool_usage[user_id]:
+                browser_timestamp = tool_tracker._user_tool_usage[user_id]["browser"].isoformat()
+            
+            result = {
+                "user_id": user_id,
+                "active_tools": list(active_tools),
+                "browser_active": is_browser_active,
+                "browser_last_used": browser_timestamp
+            }
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error getting active tools for user {user_id}: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=str(e))
+
     def launch(self):
         @self.app.post("/v1/workflow", status_code=status.HTTP_200_OK)
         async def agent_workflow_endpoint(request: AgentRequest):
+            async def response_generator():
+                async for chunk in self._run_agent_workflow(request):
+                    yield json.dumps(chunk, ensure_ascii=False) + "\n"
+
             return StreamingResponse(
-                self._run_agent_workflow(request),
+                response_generator(),
                 media_type="application/x-ndjson"
             )
 
@@ -185,13 +245,45 @@ class Server:
                 media_type="application/x-ndjson"
             )
 
+        @self.app.get("/get_image/{image_name}")
+        async def get_image(image_name: str):
+            root_dir = os.getcwd()  # Get current working directory, which is the root directory
+            image_path = os.path.join(root_dir, image_name)
+
+            if not os.path.isfile(image_path):
+                raise HTTPException(status_code=404, detail="Image not found")
+
+            return FileResponse(image_path)
+        @self.app.get("/v1/list_agents_json", status_code=status.HTTP_200_OK)
+        async def list_agents_json(user_id: str, match: Optional[str] = None):
+            try:
+                agents = await self._list_agents_json(user_id, match)
+                return agents
+            except HTTPException as e:
+                return {"error": e.detail}, e.status_code
+        @self.app.get("/v1/list_user_all_agents", status_code=status.HTTP_200_OK)
+        async def list_user_all_agents(user_id: str):
+            try:
+                agents = await self._list_user_all_agents(user_id)
+                return agents
+            except HTTPException as e:
+                return {"error": e.detail}, e.status_code
+
         @self.app.get("/v1/list_default_agents", status_code=status.HTTP_200_OK)
         async def list_default_agents_endpoint():
             return StreamingResponse(
                 self._list_default_agents(),
                 media_type="application/x-ndjson"
             )
-        
+
+        @self.app.get("/v1/list_default_agents_json", status_code=status.HTTP_200_OK)
+        async def list_default_agents_json():
+            try:
+                agents = await self._list_default_agents_json()
+                return agents
+            except HTTPException as e:
+                return {"error": e.detail}, e.status_code
+
         @self.app.get("/v1/list_default_tools", status_code=status.HTTP_200_OK)
         async def list_default_tools_endpoint():
             return StreamingResponse(
@@ -219,6 +311,49 @@ class Server:
                 self._remove_agent(request),
                 media_type="application/x-ndjson"
             )
+        
+        @self.app.get("/v1/browser_container/{user_id}", status_code=status.HTTP_200_OK)
+        async def get_browser_container_info(user_id: str):
+            """Get user's browser container information"""
+            try:
+                container_info = await self._get_browser_container_info(user_id)
+                return container_info
+            except HTTPException as e:
+                return {"error": e.detail}, e.status_code
+        
+        @self.app.get("/v1/active_tools/{user_id}", status_code=status.HTTP_200_OK)
+        async def get_active_tools(user_id: str):
+            """Get tools currently being used by the user"""
+            try:
+                active_tools_info = await self._get_active_tools(user_id)
+                return active_tools_info
+            except HTTPException as e:
+                return {"error": e.detail}, e.status_code
+        
+        @self.app.websocket("/ws/tools/{user_id}")
+        async def websocket_endpoint(websocket: WebSocket, user_id: str):
+            """WebSocket endpoint for real-time tool usage notifications"""
+            await websocket_manager.connect(websocket, user_id)
+            
+            try:
+                # Keep connection alive
+                while True:
+                    try:
+                        # Wait for client messages (heartbeat, etc.)
+                        data = await websocket.receive_text()
+                        # Simply ignore client messages, just keep connection alive
+                    except WebSocketDisconnect:
+                        break
+                    except Exception as e:
+                        logger.error(f"Error handling WebSocket message: {e}")
+                        break
+                        
+            except WebSocketDisconnect:
+                pass
+            except Exception as e:
+                logger.error(f"WebSocket connection error: {e}")
+            finally:
+                await websocket_manager.disconnect(websocket, user_id)
         
         uvicorn.run(
             self.app,

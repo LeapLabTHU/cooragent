@@ -3,7 +3,7 @@ import logging
 from pydantic import BaseModel, Field
 from typing import ClassVar, Type
 from langchain.tools import BaseTool
-from src.tools.decorators import create_logged_tool
+from ..service.decorators import create_logged_tool
 import webbrowser
 import json
 logger = logging.getLogger(__name__)

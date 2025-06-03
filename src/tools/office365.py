@@ -1,5 +1,5 @@
 import logging
-from src.tools.decorators import create_logged_tool
+from ..service.decorators import create_logged_tool
 from pydantic import BaseModel
 from O365 import Account
 from typing import Optional

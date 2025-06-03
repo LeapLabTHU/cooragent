@@ -1,6 +1,6 @@
 import asyncio
 from langgraph.prebuilt import create_react_agent
-from src.interface.mcp import Tool
+from src.interface.mcp_types import Tool
 from src.prompts import apply_prompt_template, get_prompt_template
 
 from src.tools import (
@@ -16,12 +16,11 @@ from src.llm.agents import AGENT_LLM_MAP
 from langchain_core.tools import tool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from pathlib import Path
-from src.interface.agent import Agent
+from src.interface.agent_types import Agent
 from src.service.env import USR_AGENT, USE_BROWSER,USE_MCP_TOOLS
 from src.manager.mcp import mcp_client_config
 import logging
 import re
-import json
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -182,9 +181,9 @@ class AgentManager:
                                         name="researcher", 
                                         nick_name="researcher", 
                                         llm_type=AGENT_LLM_MAP["researcher"], 
-                                        tools=[tavily_tool, crawl_tool], 
+                                        tools=[tavily_tool, crawl_tool],
                                         prompt=get_prompt_template("researcher"),
-                                        description="This agent specializes in research tasks by utilizing search engines and web crawling. It can search for information using keywords, crawl specific URLs to extract content, and synthesize findings into comprehensive reports. The agent excels at gathering information from multiple sources, verifying relevance and credibility, and presenting structured conclusions based on collected data."),
+                                       description="This agent specializes in research tasks by utilizing search engines and web crawling. It can search for information using keywords, crawl specific URLs to extract content, and synthesize findings into comprehensive reports. The agent excels at gathering information from multiple sources, verifying relevance and credibility, and presenting structured conclusions based on collected data."),
         
         self._create_agent_by_prebuilt(user_id="share", 
                                         name="coder", 
@@ -201,7 +200,7 @@ class AgentManager:
                                         llm_type=AGENT_LLM_MAP["browser"], 
                                         tools=[browser_tool], 
                                         prompt=get_prompt_template("browser"), 
-                                        description="This agent specializes in interacting with web browsers. It can navigate to websites, perform actions like clicking, typing, and scrolling, and extract information from web pages. The agent is adept at handling tasks such as searching specific websites, interacting with web elements, and gathering online data. It is capable of operations like logging in, form filling, clicking buttons, and scraping content."),
+                                        description="This agent specializes in web browsing and content retrieval. It can access specified websites, retrieve HTML content, and extract useful information. The agent excels at analyzing webpage content, extracting information, and collecting webpage data. It can retrieve the complete HTML content of a webpage and analyze and extract the required information."),
     
         self._create_agent_by_prebuilt(user_id="share", 
                                         name="reporter", 
@@ -246,8 +245,15 @@ class AgentManager:
     async def _list_default_agents(self):
         agents = [agent for agent in self.available_agents.values() if agent.user_id == "share"]
         return agents
-    
-from config.global_variables import tools_dir, agents_dir, prompts_dir
+    def _list_user_all_agents(self, user_id: str):
+        agents = [agent for agent in self.available_agents.values() if agent.user_id == "share" or agent.user_id == user_id]
+        return agents
+
+from src.utils.path_utils import get_project_root
+
+tools_dir = get_project_root() / "store" / "tools"
+agents_dir = get_project_root() / "store" / "agents"
+prompts_dir = get_project_root() / "store" / "prompts"
 
 agent_manager = AgentManager(tools_dir, agents_dir, prompts_dir)
 asyncio.run(agent_manager.initialize())
