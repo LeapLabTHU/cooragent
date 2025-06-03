@@ -1098,6 +1098,12 @@ def help():
     help_table.add_row("  -u/--user-id", "User ID (required)")
     help_table.add_row()
 
+    help_table.add_row("[Command] polish", "Polish an existing Workflow interactively")
+    help_table.add_row("  -u/--user-id", "User ID (required)")
+    help_table.add_row("  -m/--match", "Match string for workflows")
+    help_table.add_row("  -i/--interactive", "Interactive mode (default: on)")
+    help_table.add_row()
+
     help_table.add_row("[Interactive Mode]", "Run cli.py directly to enter")
     help_table.add_row("  exit/quit", "Exit interactive mode")
     
