@@ -6,7 +6,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 import json
-from datetime import datetime
 
 load_dotenv()
 import logging
@@ -374,7 +373,7 @@ class Server:
             self.app,
             host=self.host,
             port=self.port,
-            workers=1
+            workers=os.cpu_count()
         )
 
 

@@ -9,17 +9,24 @@ logger = logging.getLogger(__name__)
 
 class WebSocketManager:
     """WebSocket connection manager"""
+    _instance = None
+    
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(WebSocketManager, cls).__new__(cls)
+        return cls._instance
     
     def __init__(self):
         # Store mapping from user ID to WebSocket connections
-        self.active_connections: Dict[str, Set[WebSocket]] = {}
-        self._lock = asyncio.Lock()
+        if not hasattr(self, 'initialized'):
+            self.active_connections: Dict[str, Set[WebSocket]] = {}
+            self.initialized = True
     
     async def connect(self, websocket: WebSocket, user_id: str):
         """Establish WebSocket connection"""
         await websocket.accept()
-        
-        async with self._lock:
+        _lock = asyncio.Lock()
+        async with _lock:
             if user_id not in self.active_connections:
                 self.active_connections[user_id] = set()
             self.active_connections[user_id].add(websocket)

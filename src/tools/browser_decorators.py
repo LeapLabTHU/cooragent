@@ -3,6 +3,8 @@ import functools
 import asyncio
 from typing import Any, Callable, Type, TypeVar
 from src.service.tool_tracker import tool_tracker
+from src.tools.websocket_manager import websocket_manager
+
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +138,6 @@ class LoggedToolMixin:
     def _send_tool_notification(self, tool_name: str, user_id: str) -> None:
         """Synchronous method to send tool start notification."""
         try:
-            from src.tools.websocket_manager import websocket_manager
             
             # Create a new event loop to handle asynchronous notification
             def run_notification():
