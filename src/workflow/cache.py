@@ -153,8 +153,10 @@ class WorkflowCache:
     def update_stack(self, workflow_id: str, agent: Agent):
         self.queue[workflow_id].popleft()
     
-    def get_next_node(self, workflow_id: str):
+    def get_next_node(self, workflow_id: str, workflow_initialized: bool):
         try:
+            if not workflow_initialized:
+                return self.queue[workflow_id][0]
             if not self.queue[workflow_id][0]["next_to"] or self.queue[workflow_id][0]["next_to"][0] == "__end__":
                 return "FINISH"
             else:
