@@ -6,7 +6,8 @@ from typing import ClassVar, Type
 from langchain.tools import BaseTool
 from ..service.decorators import create_logged_tool
 from src.llm.llm import get_llm_by_type
-from src.service.env import USE_BROWSER
+from src.service.env import USE_BROWSER, BROWSER_BACKEND
+import os
 import logging
 
 logger = logging.getLogger(__name__)
@@ -64,29 +65,22 @@ class BrowserTool(BaseTool):
             llm = get_llm_by_type("basic")
             
             prompt = f"""Please analyze the following web page content and provide a structured summary.
+                         Web page URL: {url}
+                         Web page content:
+                        {text_content}
+                        Please provide a summary in the following format:
 
-Web page URL: {url}
-
-Web page content:
-{text_content}
-
-Please provide a summary in the following format:
-
-## Basic Web Page Information
-- Website Name: [Website Name]
-- Page Title: [Page Title]
-- Page Type: [Search Results Page/News Page/Product Page/Other]
-
-## Main Content Summary
-[Summarize the main content of the page in 2-3 sentences]
-
-## Key Information
-[List 3-5 key information points, if it's a search results page, please list the main search results]
-
-## Related Links or Resources
-[If there are important links or resources, please list them]
-
-Please reply in Chinese, keep it concise and clear."""
+                        ## Basic Web Page Information
+                        - Website Name: [Website Name]
+                        - Page Title: [Page Title]
+                        - Page Type: [Search Results Page/News Page/Product Page/Other]
+                        ## Main Content Summary
+                        [Summarize the main content of the page in 2-3 sentences]
+                        ## Key Information
+                        [List 3-5 key information points, if it's a search results page, please list the main search results]
+                        ## Related Links or Resources
+                        [If there are important links or resources, please list them]
+                        Please reply in Chinese, keep it concise and clear."""
 
             response = llm.invoke(prompt)
             return response.content
@@ -119,7 +113,7 @@ Please reply in Chinese, keep it concise and clear."""
             }
             print("Request URL", url)
             # Send request to scroll API
-            response = requests.get("http://106.13.116.188:30004/scroll", params=query_params)
+            response = requests.get(f"{BROWSER_BACKEND}/scroll", params=query_params)
             
             response_text = response.text
             

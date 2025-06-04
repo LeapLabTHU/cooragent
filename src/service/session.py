@@ -1,8 +1,7 @@
 
 from typing import Dict
 from uuid import uuid4
-from datetime import datetime, timedelta
-import json
+from datetime import datetime
 
 class UserSession:
     def __init__(self, user_id: str, max_history=10):

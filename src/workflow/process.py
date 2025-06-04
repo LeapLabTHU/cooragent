@@ -11,7 +11,6 @@ from src.interface.agent import State
 from src.service.env import USE_BROWSER
 from src.workflow.cache import workflow_cache as cache
 from src.interface.agent import WorkMode
-from src.service.context import UserContext
 
 logging.basicConfig(
     level=logging.INFO,
@@ -175,9 +174,7 @@ async def _process_workflow(
     try:
         current_node = workflow.start_node
         state = State(**initial_state)
-    
-        UserContext.set_user_id(state["user_id"])
-        
+            
         while current_node != "__end__":
             agent_name = current_node
             logger.info(f"Started node: {agent_name}")
