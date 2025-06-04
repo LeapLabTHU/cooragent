@@ -486,7 +486,8 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_bef
         debug=debug,
         deep_thinking_mode=deep_thinking,
         search_before_planning=search_before_planning,
-        coor_agents=list(agents)
+        coor_agents=list(agents),
+        workmode="launch"
     )
     
     console.print(Panel.fit("[highlight]Workflow execution started[/highlight]", title="CoorAgent", border_style="cyan"))
@@ -829,210 +830,419 @@ async def polish(ctx, user_id, match, interactive):
     
     
     while interactive:
-        console.print("\n Select workflow by index to polish:")
-        
-        choice = Prompt.ask(
-            "Enter workflow ID",
-            choices=[str(i) for i in range(count)],
-            show_choices=True
-        )
-        
-        workflow_id = workflow_list[int(choice)]["workflow_id"]
-        
-        parts_to_edit_options = ["graph", "planning_steps"]
-        console.print("Select part to edit:")
-        for i, part_option in enumerate(parts_to_edit_options):
+        option = ["Select workflow","Exit"]
+        console.print("Select part:")
+        for i, part_option in enumerate(option):
             console.print(f"{i+1} - {part_option}")
-
         part_choice_idx_str = Prompt.ask(
             "Enter part number",
-            choices=[str(i+1) for i in range(len(parts_to_edit_options))],
+            choices=[str(i+1) for i in range(len(option))],
             show_choices=False
         )
-        part_to_edit = parts_to_edit_options[int(part_choice_idx_str) - 1]
-
-        if part_to_edit == "graph":
-            agents = workflow_cache.get_editable_agents((workflow_id))
-            
-            console.print("Select agent to edit:")
-            for i, agent in enumerate(agents):
-                console.print(f"{i+1} - {agent.agent_name}")
-
-            agent_choice_idx_str = Prompt.ask(
-                "Enter agent number",
-                choices=[str(i+1) for i in range(len(agents))],
-                show_choices=False 
+        if part_choice_idx_str == "2":
+            break
+        if part_choice_idx_str == "1":
+            console.print("\n Select workflow by index to polish:")
+            choice = Prompt.ask(
+                "Enter workflow ID",
+                choices=[str(i) for i in range(count)],
+                show_choices=True
             )
-            agent_to_edit = agents[int(agent_choice_idx_str) - 1].agent_name
-            
-            agent_path = agents_dir / f"{agent_to_edit}.json"
-            if not agent_path.exists():
-                raise FileNotFoundError(f"agent {agent_to_edit} not found.")
-            with open(agent_path, "r") as f:
-                json_str = f.read()
-                _agent = Agent.model_validate_json(json_str)
-                config = json.loads(json_str)
-            
-            show_agent_config(config)
-            
-            stop_polishing = False
-            while not stop_polishing:
-                agent_part_options = ["tools", "prompt"]
+
+            workflow = workflow_list[int(choice)]
+            workflow_id = workflow["workflow_id"]
+            while True:
+                parts_to_edit_options = ["graph", "planning_steps","run this workflow","back"]
                 console.print("Select part to edit:")
-                for i, part_option in enumerate(agent_part_options):
+                for i, part_option in enumerate(parts_to_edit_options):
                     console.print(f"{i+1} - {part_option}")
 
                 part_choice_idx_str = Prompt.ask(
                     "Enter part number",
-                    choices=[str(i+1) for i in range(len(agent_part_options))],
+                    choices=[str(i+1) for i in range(len(parts_to_edit_options))],
                     show_choices=False
                 )
-                part_to_edit = agent_part_options[int(part_choice_idx_str) - 1]            
+                part_to_edit = parts_to_edit_options[int(part_choice_idx_str) - 1]
 
-                if part_to_edit == "prompt":
-                    polish_prompt_mode = ['AI Assistant','Manually Edit']
-                    console.print("Select mode to edit:")
-                    for i, part_option in enumerate(polish_prompt_mode):
-                        console.print(f"{i + 1} - {part_option}")
+                if part_to_edit == "graph":
+                    agents = workflow_cache.get_editable_agents(workflow_id)
 
-                    prompt_mode_choice_idx_str = Prompt.ask(
-                        "Enter part number",
-                        choices=[str(i + 1) for i in range(len(polish_prompt_mode))],
+                    console.print("Select agent to edit:")
+                    for i, agent in enumerate(agents):
+                        console.print(f"{i+1} - {agent.agent_name}")
+
+                    agent_choice_idx_str = Prompt.ask(
+                        "Enter agent number",
+                        choices=[str(i+1) for i in range(len(agents))],
                         show_choices=False
                     )
-                    if polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "AI Assistant":
-                        instruction = Prompt.ask(
-                            "Enter your instruction",
-                            show_default=True
-                        )
-                        polish_content = await polish_agent(_agent=_agent, part_to_edit='prompt', instruction=instruction)
-                        stream_print(f"polished description: \n {polish_content['agent_description']}\n\n")
-                        stream_print(f"polished prompt: \n {polish_content['prompt']}")
-                        while True:
-                            if Confirm.ask("Confirm saving changes?"):
-                                _agent.prompt = polish_content['prompt']
-                                _agent.description = polish_content['agent_description']
-                                try:
-                                    async for result in server._edit_agent(_agent):
-                                        res = json.loads(result)
-                                        if res.get("result") == "success":
-                                            stream_print(Panel.fit("[success]Agent updated successfully![/success]",
-                                                                   border_style="green"))
-                                        else:
-                                            stream_print(
-                                                f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
-                                    return
-                                except Exception as e:
-                                    stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
-                            else:
-                                stream_print("[warning]Modifications cancelled[/warning]")
+                    agent_to_edit = agents[int(agent_choice_idx_str) - 1].agent_name
 
-                            if Confirm.ask("Stop polishing?"):
-                                stop_polishing = True
-                            break
-                    if polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "Manually Edit":
-                        modified_config = config.copy()
-                        stop_edit_agent = False
-                        while not stop_edit_agent:
-                            edit_option_list = ['NickName', 'Description', 'Prompt']
-                            stop_polishing = await edit_agent_option(edit_option_list, config, modified_config, server)
-                elif part_to_edit == "tools":
-                    modified_config = config.copy()
-                    stop_edit_tool = False
-                    while not stop_edit_tool:
-                        edit_option_list = ['Tool']
-                        stop_edit_tool = await edit_agent_option(_agent,edit_option_list, config, modified_config, server)
-            return
-        if part_to_edit == "planning_steps":
-            planning_steps = [json.dumps(step, indent=2, ensure_ascii=False) for step in steps]
-            table = Table(title=f"Planning steps list for workflow [highlight]{workflow_id}[/highlight]", show_header=True,
-                          header_style="bold magenta", border_style="cyan")
-            table.add_column("Planning steps num", style="tool_desc")
-            table.add_column("content", style="agent_nick_name")
-            for index, step in enumerate(planning_steps):
-                table.add_row(str(index+1),step)
-            stream_print(table)
-            while True:
-                console.print("\n Select Planning steps by index to polish:")
-                choice = Prompt.ask(
-                    "Enter Planning steps num",
-                    choices=[str(i+1) for i in range(len(planning_steps))],
-                    show_choices=True
-                )
-                editing_step = steps[int(choice) - 1].copy()
-                origin_step = steps[int(choice) - 1]
-                stop_step_edit = False
-                while not stop_step_edit:
-                    step_theme = ['Title', 'Description', 'Note', 'Preview', 'Save and Exit ', 'Only Exit']
-                    console.print("Select part to edit:")
-                    for i, part_option in enumerate(step_theme):
-                        console.print(f"{i + 1} - {part_option}")
-                    theme_choice = Prompt.ask(
-                        "Enter part num",
-                        choices=[str(i + 1) for i in range(len(step_theme))],
-                        show_choices=True
-                    )
-                    if theme_choice == str(1):
-                        new_title = Prompt.ask(
-                            "Enter new title",
-                            default=editing_step.get('title', ''),
-                            show_default=True
+                    agent_path = agents_dir / f"{agent_to_edit}.json"
+                    if not agent_path.exists():
+                        raise FileNotFoundError(f"agent {agent_to_edit} not found.")
+                    with open(agent_path, "r") as f:
+                        json_str = f.read()
+                        _agent = Agent.model_validate_json(json_str)
+                        config = json.loads(json_str)
+
+                    show_agent_config(config)
+                    stop_tools_or_prompt = False
+
+                    while not stop_tools_or_prompt:
+                        agent_part_options = ["tools", "prompt", "back"]
+                        console.print("Select part to edit:")
+                        for i, part_option in enumerate(agent_part_options):
+                            console.print(f"{i+1} - {part_option}")
+
+                        part_choice_idx_str = Prompt.ask(
+                            "Enter part number",
+                            choices=[str(i+1) for i in range(len(agent_part_options))],
+                            show_choices=False
                         )
-                        editing_step['title'] = new_title
-                    if theme_choice == str(2):
-                        new_dec = Prompt.ask(
-                            "Enter new description",
-                            default=editing_step.get('description', ''),
-                            show_default=True
+                        part_to_edit = agent_part_options[int(part_choice_idx_str) - 1]
+
+                        if part_to_edit == "prompt":
+                            while True:
+                                polish_prompt_mode = ['AI Assistant','Manually Edit',"back"]
+                                console.print("Select mode to edit:")
+                                for i, part_option in enumerate(polish_prompt_mode):
+                                    console.print(f"{i + 1} - {part_option}")
+
+                                prompt_mode_choice_idx_str = Prompt.ask(
+                                    "Enter part number",
+                                    choices=[str(i + 1) for i in range(len(polish_prompt_mode))],
+                                    show_choices=False
+                                )
+                                if polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "AI Assistant":
+                                    while True:
+                                        instruction = Prompt.ask(
+                                            "Enter your instruction",
+                                            show_default=True
+                                        )
+                                        polish_content = await polish_agent(_agent=_agent, part_to_edit='prompt', instruction=instruction)
+                                        stream_print(f"polished description: \n {polish_content['agent_description']}\n\n")
+                                        stream_print(f"polished prompt: \n {polish_content['prompt']}")
+                                        while True:
+                                            if Confirm.ask("Confirm saving changes?"):
+                                                _agent.prompt = polish_content['prompt']
+                                                _agent.description = polish_content['agent_description']
+                                                try:
+                                                    async for result in server._edit_agent(_agent):
+                                                        res = json.loads(result)
+                                                        if res.get("result") == "success":
+                                                            stream_print(Panel.fit("[success]Agent updated successfully![/success]",
+                                                                                   border_style="green"))
+                                                        else:
+                                                            stream_print(
+                                                                f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
+                                                    return
+                                                except Exception as e:
+                                                    stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
+                                            else:
+                                                stream_print("[warning]Modifications cancelled[/warning]")
+                                            break
+                                        if Confirm.ask("Exit AI Assistant?"):
+                                            break
+                                if polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "Manually Edit":
+                                    modified_config = config.copy()
+                                    stop_edit_agent = False
+                                    while not stop_edit_agent:
+                                        edit_option_list = ['NickName', 'Description', 'Prompt']
+                                        stop_edit_agent = await edit_agent_option(_agent,edit_option_list, config, modified_config, server)
+                                if polish_prompt_mode[int(prompt_mode_choice_idx_str) - 1] == "back":
+                                    break
+                        if part_to_edit == "tools":
+                            modified_config = config.copy()
+                            stop_edit_tool = False
+                            while not stop_edit_tool:
+                                edit_option_list = ['Tool']
+                                stop_edit_tool = await edit_agent_option(_agent,edit_option_list, config, modified_config, server)
+                        if part_to_edit == "back":
+                            stop_tools_or_prompt = True
+                if part_to_edit == "planning_steps":
+                    planning_steps = [json.dumps(step, indent=2, ensure_ascii=False) for step in steps]
+                    table = Table(title=f"Planning steps list for workflow [highlight]{workflow_id}[/highlight]", show_header=True,
+                                  header_style="bold magenta", border_style="cyan")
+                    table.add_column("Planning steps num", style="tool_desc")
+                    table.add_column("content", style="agent_nick_name")
+                    for index, step in enumerate(planning_steps):
+                        table.add_row(str(index+1),step)
+                    stream_print(table)
+                    while True:
+                        edit_steps_options = ["Select steps num","back"]
+                        console.print("Select option:")
+                        for i, part_option in enumerate(edit_steps_options):
+                            console.print(f"{i + 1} - {part_option}")
+                        edit_steps_options_choice = Prompt.ask(
+                            "Enter option num",
+                            choices=[str(i + 1) for i in range(len(edit_steps_options))],
+                            show_choices=True
                         )
-                        editing_step['description'] = new_dec
-                    if theme_choice == str(3):
-                        new_dec = Prompt.ask(
-                            "Enter new note",
-                            default=editing_step.get('note', ''),
-                            show_default=True
-                        )
-                        editing_step['note'] = new_dec
-                    if theme_choice == str(4):
-                        if editing_step == origin_step:
-                            stream_print("No modifications were made!")
-                        else:
-                            stream_print(Panel.fit(
-                                f"[agent_name]Name:[/agent_name] {origin_step.get('agent_name', '')}\n"
-                                f"[step_title]Title:[/step_title] {origin_step.get('title', '')}\n"
-                                f"[step_desc]Description:[/step_desc] {origin_step.get('description', '')}\n"
-                                f"[step_note]Note:[/step_note] {origin_step.get('note', '')}\n",
-                                title="Current Configuration Preview",
-                                border_style="blue"
-                            ))
-                            stream_print(Panel.fit(
-                                f"[agent_name]Name:[/agent_name] {editing_step.get('agent_name', '')}\n"
-                                f"[step_title]Title:[/step_title] {editing_step.get('title', '')}\n"
-                                f"[step_desc]Description:[/step_desc] {editing_step.get('description', '')}\n"
-                                f"[step_note]Note:[/step_note] {editing_step.get('note', '')}\n",
-                                title="Modified Configuration Preview",
-                                border_style="yellow"
-                            ))
-                    if theme_choice == str(5):
-                        if Confirm.ask("Confirm saving changes and exit?"):
-                            try:
-                                planning["steps"][int(choice) - 1] = editing_step
-                                step_request = EditStepsRequest(workflow_id=workflow_id, planning_steps=planning)
-                                async for result in server._edit_planning_steps(step_request):
-                                    res = json.loads(result)
-                                    if res.get("result") == "success":
-                                        stream_print(Panel.fit("[success]Planning Steps updated successfully![/success]",
-                                                               border_style="green"))
+                        if edit_steps_options_choice == "1":
+                            console.print("\n Select Planning steps by index to polish:")
+                            choice = Prompt.ask(
+                                "Enter Planning steps num",
+                                choices=[str(i+1) for i in range(len(planning_steps))],
+                                show_choices=True
+                            )
+                            editing_step = steps[int(choice) - 1].copy()
+                            origin_step = steps[int(choice) - 1]
+                            stop_step_edit = False
+                            while not stop_step_edit:
+                                step_theme = ['Title', 'Description', 'Note', 'Preview', 'Save and Exit ', 'Only Exit']
+                                console.print("Select part to edit:")
+                                for i, part_option in enumerate(step_theme):
+                                    console.print(f"{i + 1} - {part_option}")
+                                theme_choice = Prompt.ask(
+                                    "Enter part num",
+                                    choices=[str(i + 1) for i in range(len(step_theme))],
+                                    show_choices=True
+                                )
+                                if theme_choice == str(1):
+                                    new_title = Prompt.ask(
+                                        "Enter new title",
+                                        default=editing_step.get('title', ''),
+                                        show_default=True
+                                    )
+                                    editing_step['title'] = new_title
+                                if theme_choice == str(2):
+                                    new_dec = Prompt.ask(
+                                        "Enter new description",
+                                        default=editing_step.get('description', ''),
+                                        show_default=True
+                                    )
+                                    editing_step['description'] = new_dec
+                                if theme_choice == str(3):
+                                    new_dec = Prompt.ask(
+                                        "Enter new note",
+                                        default=editing_step.get('note', ''),
+                                        show_default=True
+                                    )
+                                    editing_step['note'] = new_dec
+                                if theme_choice == str(4):
+                                    if editing_step == origin_step:
+                                        stream_print("No modifications were made!")
                                     else:
-                                        stream_print(
-                                            f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
-                                stop_step_edit = True
-                            except Exception as e:
-                                stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
+                                        stream_print(Panel.fit(
+                                            f"[agent_name]Name:[/agent_name] {origin_step.get('agent_name', '')}\n"
+                                            f"[step_title]Title:[/step_title] {origin_step.get('title', '')}\n"
+                                            f"[step_desc]Description:[/step_desc] {origin_step.get('description', '')}\n"
+                                            f"[step_note]Note:[/step_note] {origin_step.get('note', '')}\n",
+                                            title="Current Configuration Preview",
+                                            border_style="blue"
+                                        ))
+                                        stream_print(Panel.fit(
+                                            f"[agent_name]Name:[/agent_name] {editing_step.get('agent_name', '')}\n"
+                                            f"[step_title]Title:[/step_title] {editing_step.get('title', '')}\n"
+                                            f"[step_desc]Description:[/step_desc] {editing_step.get('description', '')}\n"
+                                            f"[step_note]Note:[/step_note] {editing_step.get('note', '')}\n",
+                                            title="Modified Configuration Preview",
+                                            border_style="yellow"
+                                        ))
+                                if theme_choice == str(5):
+                                    if Confirm.ask("Confirm saving changes and exit?"):
+                                        try:
+                                            planning["steps"][int(choice) - 1] = editing_step
+                                            step_request = EditStepsRequest(workflow_id=workflow_id, planning_steps=planning)
+                                            async for result in server._edit_planning_steps(step_request):
+                                                res = json.loads(result)
+                                                if res.get("result") == "success":
+                                                    stream_print(Panel.fit("[success]Planning Steps updated successfully![/success]",
+                                                                           border_style="green"))
+                                                else:
+                                                    stream_print(
+                                                        f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
+                                            stop_step_edit = True
+                                        except Exception as e:
+                                            stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
 
-                    if theme_choice == str(6):
-                        if Confirm.ask("Abandon any changes and exit?"):
-                            stop_step_edit = True
+                                if theme_choice == str(6):
+                                    if Confirm.ask("Abandon any changes and exit?"):
+                                        stop_step_edit = True
+                        else:
+                            break
+                if part_to_edit == "run this workflow":
+                    run_stop = False
+                    while not run_stop:
+                        pre_user_input_messages = workflow["user_input_messages"]
+                        console.print(f"The instruction before this workflow were:\n{pre_user_input_messages}")
+                        if Confirm.ask("Do you need to change the instruction for running the workflow this time?"):
+                            new_user_input_messages = Prompt.ask(
+                                "Enter new instruction: "
+                            )
+                            _input_messages = [{"role": "user", "content": new_user_input_messages}]
+                        else:
+                            _input_messages = pre_user_input_messages
+
+                        request = AgentRequest(
+                            user_id=user_id,
+                            lang="en",
+                            task_type="agent_workflow",
+                            messages=_input_messages,
+                            debug=True,
+                            deep_thinking_mode=True,
+                            search_before_planning=False,
+                            coor_agents=[],
+                            workmode="production"
+                        )
+
+                        console.print(Panel.fit("[highlight]Workflow execution started[/highlight]", title="CoorAgent",
+                                                border_style="cyan"))
+
+                        current_content = ""
+                        json_buffer = ""
+                        in_json_block = False
+                        live_mode = True
+
+                        with Progress(
+                                SpinnerColumn(),
+                                TextColumn("[progress.description]{task.description}"),
+                                console=console,
+                                transient=True,
+                                refresh_per_second=2
+                        ) as progress:
+                            task = progress.add_task("[green]Processing request...", total=None)
+
+                            async for chunk in server._run_agent_workflow(request):
+                                event_type = chunk.get("event")
+                                data = chunk.get("data", {})
+
+                                if event_type == "start_of_agent":
+                                    if current_content:
+                                        console.print(current_content, end="", highlight=False)
+                                        current_content = ""
+
+                                    if in_json_block and json_buffer:
+                                        try:
+                                            parsed_json = json.loads(json_buffer)
+                                            formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                                            console.print("\n")
+                                            syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                                            console.print(syntax)
+                                        except:
+                                            console.print(f"\n{json_buffer}")
+                                        json_buffer = ""
+                                        in_json_block = False
+
+                                    agent_name = data.get("agent_name", "")
+                                    if agent_name:
+                                        console.print("\n")
+                                        progress.update(task, description=f"[green]Starting execution: {agent_name}...")
+                                        console.print(f"[agent_name]>>> {agent_name} starting execution...[/agent_name]")
+                                        console.print("")
+
+                                elif event_type == "end_of_agent":
+                                    if current_content:
+                                        console.print(current_content, end="", highlight=False)
+                                        current_content = ""
+
+                                    if in_json_block and json_buffer:
+                                        try:
+                                            parsed_json = json.loads(json_buffer)
+                                            formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                                            console.print("\n")
+                                            syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                                            console.print(syntax)
+                                        except:
+                                            console.print(f"\n{json_buffer}")
+                                        json_buffer = ""
+                                        in_json_block = False
+
+                                    agent_name = data.get("agent_name", "")
+                                    if agent_name:
+                                        console.print("\n")
+                                        progress.update(task, description=f"[green]Execution finished: {agent_name}...")
+                                        console.print(f"[agent_name]<<< {agent_name} execution finished[/agent_name]")
+                                        console.print("")
+
+                                elif event_type == "messages":
+                                    delta = data.get("delta", {})
+                                    content = delta.get("content", "")
+                                    reasoning = delta.get("reasoning_content", "")
+                                    agent_name = data.get("agent_name", "")
+
+                                    if agent_name:
+                                        console.print("\n")
+                                        progress.update(task, description=f"[green]Executing: {agent_name}...")
+                                        progress.update(task,
+                                                        description=f"[agent_name]>>> {agent_name} executing...[/agent_name]")
+                                        console.print("")
+                                    if content and (content.strip().startswith("{") or in_json_block):
+                                        if not in_json_block:
+                                            in_json_block = True
+                                            json_buffer = ""
+
+                                        json_buffer += content
+
+                                        try:
+                                            parsed_json = json.loads(json_buffer)
+                                            formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+
+                                            if current_content:
+                                                console.print(current_content, end="", highlight=False)
+                                                current_content = ""
+
+                                            console.print("")
+                                            syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                                            console.print(syntax)
+                                            json_buffer = ""
+                                            in_json_block = False
+                                        except:
+                                            pass
+                                    elif content:
+                                        if live_mode:
+                                            if not content:
+                                                continue
+
+                                            direct_print(content)
+
+                                        else:
+                                            current_content += content
+
+                                    if reasoning:
+                                        stream_print(f"\n[info]Thinking process: {reasoning}[/info]")
+
+
+                                elif event_type == "new_agent_created":
+                                    new_agent_name = data.get("new_agent_name", "")
+                                    agent_obj = data.get("agent_obj", None)
+                                    console.print(f"[new_agent_name]>>> {new_agent_name} created successfully...")
+                                    console.print(f"[new_agent]>>> Configuration: ")
+                                    syntax = Syntax(agent_obj, "json", theme="monokai", line_numbers=False)
+                                    console.print(syntax)
+
+
+                                elif event_type == "end_of_workflow":
+                                    if current_content:
+                                        console.print(current_content, end="", highlight=False)
+                                        current_content = ""
+
+                                    if in_json_block and json_buffer:
+                                        try:
+                                            parsed_json = json.loads(json_buffer)
+                                            formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                                            console.print("\n")
+                                            syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                                            console.print(syntax)
+                                        except:
+                                            console.print(f"\n{json_buffer}")
+                                        json_buffer = ""
+                                        in_json_block = False
+
+                                    console.print("")
+                                    progress.update(task, description="[success]Workflow execution finished!")
+                                    console.print(
+                                        Panel.fit("[success]Workflow execution finished![/success]", title="CoorAgent",
+                                                  border_style="green"))
+
+                        console.print(Panel.fit("[success]Workflow execution finished![/success]", title="CoorAgent",
+                                                border_style="green"))
+                        if not Confirm.ask("Do you want to rerun it?"):
+                            run_stop = True
+                if part_to_edit == "back":
+                    break
+
 
 @cli.command(name="remove-agent")
 @click.pass_context

@@ -53,13 +53,14 @@ class Server:
         session_messages = session.history[-3:]
 
         response_stream = run_agent_workflow(
-            request.user_id,
-            request.task_type,
-            session_messages,
-            request.debug,
-            request.deep_thinking_mode,
-            request.search_before_planning,
-            request.coor_agents
+            user_id=request.user_id,
+            task_type=request.task_type,
+            user_input_messages=session_messages,
+            debug=request.debug,
+            deep_thinking_mode=request.deep_thinking_mode,
+            search_before_planning=request.search_before_planning,
+            coor_agents=request.coor_agents,
+            workmode=request.workmode
         )
         async for res in response_stream:
             try:
@@ -181,7 +182,7 @@ class Server:
         if agent_manager is None:
              raise HTTPException(status_code=503, detail="Service not ready, AgentManager not initialized.")
         try:
-            workflow_cache.restore_planning_steps(request.workflow_id,request.planning_steps)
+            workflow_cache.save_planning_steps(request.workflow_id,request.planning_steps)
             yield json.dumps({"result": "success"}) + "\n"
         except Exception as e:
             logger.error(f"Error editing planning steps : {e}", exc_info=True)
