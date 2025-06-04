@@ -4,6 +4,7 @@ import logging
 from typing import Dict, Set
 from fastapi import WebSocket, WebSocketDisconnect
 from datetime import datetime
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -21,27 +22,27 @@ class WebSocketManager:
         if not hasattr(self, 'initialized'):
             self.active_connections: Dict[str, Set[WebSocket]] = {}
             self.initialized = True
+            self._lock = asyncio.Lock()
     
     async def connect(self, websocket: WebSocket, user_id: str):
         """Establish WebSocket connection"""
         await websocket.accept()
-        _lock = asyncio.Lock()
-        async with _lock:
-            if user_id not in self.active_connections:
+        if user_id not in self.active_connections:
+            async with self._lock:
                 self.active_connections[user_id] = set()
+        async with self._lock:
             self.active_connections[user_id].add(websocket)
-        
-        logger.info(f"User {user_id} established WebSocket connection, current connections: {len(self.active_connections[user_id])}")
+            logger.info(f"User {user_id} established WebSocket connection, current connections: {len(self.active_connections[user_id])}")
     
     async def disconnect(self, websocket: WebSocket, user_id: str):
         """Disconnect WebSocket connection"""
-        async with self._lock:
-            if user_id in self.active_connections:
+        if user_id in self.active_connections:
+            async with self._lock:
                 self.active_connections[user_id].discard(websocket)
                 if not self.active_connections[user_id]:
                     del self.active_connections[user_id]
         
-        logger.info(f"User {user_id} disconnected WebSocket connection")
+                logger.info(f"User {user_id} disconnected WebSocket connection")
     
     async def send_to_user(self, user_id: str, message: dict):
         """Send message to specified user"""
@@ -61,12 +62,13 @@ class WebSocketManager:
                 logger.debug(f"Successfully sent message to user {user_id} connection: {message}")
             except Exception as e:
                 logger.warning(f"Failed to send message to user {user_id}: {e}")
-                disconnected_connections.add(websocket)
+                async with self._lock:
+                    disconnected_connections.add(websocket)
         
         # Clean up disconnected connections
         if disconnected_connections:
-            async with self._lock:
-                if user_id in self.active_connections:
+            if user_id in self.active_connections:
+                async with self._lock:
                     self.active_connections[user_id] -= disconnected_connections
                     if not self.active_connections[user_id]:
                         del self.active_connections[user_id]
