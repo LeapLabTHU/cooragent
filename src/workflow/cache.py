@@ -79,15 +79,15 @@ class WorkflowCache:
                     for agent in self.cache[workflow_id]["graph"]:
                         if agent["node_type"] == "execution_agent":
                             self.queue[workflow_id].append(agent)
-                    virtual_begin_node = {
-                        "node_name": "virtual_begin_node",
+                    begin_node = {
+                        "node_name": "begin_node",
                         "node_type": "execution_agent",
                         "next_to": [
                             self.queue[workflow_id][0]["node_name"]
                         ],
                         "condition": "supervised"
                     }
-                    self.queue[workflow_id].appendleft(virtual_begin_node)
+                    self.queue[workflow_id].appendleft(begin_node)
                 except Exception as e:
                     logger.error(f"Error initializing workflow cache: {e}")
                     raise e

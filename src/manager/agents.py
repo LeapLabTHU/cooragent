@@ -218,11 +218,12 @@ class AgentManager:
             agent_name = agent_path.stem
             if agent_name not in self.available_agents.keys():
                 load_tasks.append(self._load_agent(agent_name, user_agent_flag))
-                
-        if not USE_BROWSER and "browser" in self.available_agents:
-            del self.available_agents["browser"]
+        if not USE_BROWSER:
+            if "browser" in self.available_agents:
+                del self.available_agents["browser"]
         else:
-            del self.available_agents["researcher"]
+            if "researcher" in self.available_agents:
+                del self.available_agents["researcher"]
             
 
         if load_tasks:

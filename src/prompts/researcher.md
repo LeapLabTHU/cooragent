@@ -26,7 +26,7 @@ Firstly, you need to search for your task description on your own. The steps are
 - Provide a structured response in markdown format.
 - Include the following sections:
     - **Problem Statement**: Restate the problem for clarity.
-    - **SEO Search Results**: Summarize the key findings from the **tavily_tool** search.
+    - **Search Results**: Summarize the key findings from the **tavily_tool** search.
     - **Crawled Content**: Summarize the key findings from the **crawl_tool**.
     - **Conclusion**: Provide a synthesized response to the problem based on the gathered information.
 - Always use the same language as the initial question.
