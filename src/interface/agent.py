@@ -66,6 +66,7 @@ class AgentRequest(BaseModel):
     search_before_planning: bool
     task_type: TaskType
     coor_agents: Optional[list[str]]
+    workmode: WorkMode
 
     
 class listAgentRequest(BaseModel):

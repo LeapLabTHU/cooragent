@@ -221,6 +221,8 @@ class AgentManager:
                 
         if not USE_BROWSER and "browser" in self.available_agents:
             del self.available_agents["browser"]
+        else:
+            del self.available_agents["researcher"]
             
 
         if load_tasks:

@@ -90,7 +90,7 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
         cache.restore_node(state["workflow_id"], agent, state["initialized"])
         
     elif state["work_mode"] in ["production", "polish"]:
-        # todo add polish history 
+        # todo add polish history
         agent = cache.get_next_node(state["workflow_id"])
         if agent == "FINISH":
             goto = "__end__"
@@ -126,7 +126,7 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
         if state["work_mode"] == "launch":
             cache.restore_node(state["workflow_id"], _agent, state["initialized"])
         elif state["work_mode"] == "production":
-            cache.update_stack(state["workflow_id"], _agent, state["initialized"])
+            cache.update_stack(state["workflow_id"])
 
     return Command(
         update={

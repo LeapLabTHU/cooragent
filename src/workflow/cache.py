@@ -79,6 +79,15 @@ class WorkflowCache:
                     for agent in self.cache[workflow_id]["graph"]:
                         if agent["node_type"] == "execution_agent":
                             self.queue[workflow_id].append(agent)
+                    virtual_begin_node = {
+                        "node_name": "virtual_begin_node",
+                        "node_type": "execution_agent",
+                        "next_to": [
+                            self.queue[workflow_id][0]["node_name"]
+                        ],
+                        "condition": "supervised"
+                    }
+                    self.queue[workflow_id].appendleft(virtual_begin_node)
                 except Exception as e:
                     logger.error(f"Error initializing workflow cache: {e}")
                     raise e
@@ -150,13 +159,11 @@ class WorkflowCache:
         except Exception as e:
             logger.error(f"Error getting planning steps: {e}")
             
-    def update_stack(self, workflow_id: str, agent: Agent):
+    def update_stack(self, workflow_id: str):
         self.queue[workflow_id].popleft()
     
-    def get_next_node(self, workflow_id: str, workflow_initialized: bool):
+    def get_next_node(self, workflow_id: str):
         try:
-            if not workflow_initialized:
-                return self.queue[workflow_id][0]
             if not self.queue[workflow_id][0]["next_to"] or self.queue[workflow_id][0]["next_to"][0] == "__end__":
                 return "FINISH"
             else:
@@ -196,9 +203,18 @@ class WorkflowCache:
                         self.cache[workflow_id]["graph"][-1]["next_to"].append(_next_to)
         except Exception as e:
             logger.error(f"Error restore_node: {e}")
-        
-            
-        
+
+    def save_planning_steps(self, workflow_id,planning_steps):
+        try:
+            self.cache[workflow_id]["planning_steps"] = json.dumps(planning_steps, ensure_ascii=False)
+            workflow = self.cache[workflow_id]
+            user_id, polish_id = workflow["workflow_id"].split(":")
+            workflow_path = self.workflow_dir / user_id / f"{polish_id}.json"
+            with open(workflow_path, "w") as f:
+                f.write(json.dumps(workflow, indent=2, ensure_ascii=False))
+        except Exception as e:
+            logger.error(f"Error dumping workflow: {e}")
+
     def dump(self, workflow_id: str, mode: str):
         try:
             if mode == "launch":
