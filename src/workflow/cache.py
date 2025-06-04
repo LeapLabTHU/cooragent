@@ -55,8 +55,8 @@ class WorkflowCache:
         try:
             if user_id not in self._lock_pool:
                 self._lock_pool[user_id] = threading.Lock()
+            self._load_workflow(user_id)
             with self._lock_pool[user_id]:
-                self._load_workflow(user_id)
                 if mode == "launch":
                     self.cache[workflow_id] = WORKFLOW_TEMPLATE.copy()
                     self.cache[workflow_id]["mode"] = mode

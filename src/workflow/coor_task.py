@@ -12,8 +12,7 @@ from src.manager import agent_manager
 from src.prompts.template import apply_prompt
 from langgraph.prebuilt import create_react_agent
 from src.workflow.graph import AgentWorkflow
-from langchain_mcp_adapters.client import MultiServerMCPClient
-from src.manager.mcp import mcp_client_config
+
 from src.workflow.cache import workflow_cache as cache
 
 
@@ -79,7 +78,7 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
         if agent == "FINISH":
             goto = "__end__"
             logger.info("Workflow completed \n")
-            cache.restore_node(state["workflow_id"], goto, state["initialized"])
+            cache.restore_node(state["workflow_id"], goto, state["initialized"], state["user_id"])
             return Command(goto=goto, update={"next": goto})
         elif agent != "agent_factory":
             goto = "agent_proxy"
@@ -87,7 +86,7 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
             goto = "agent_factory"
         logger.info(f"publisher delegating to: {agent} \n")
         
-        cache.restore_node(state["workflow_id"], agent, state["initialized"])
+        cache.restore_node(state["workflow_id"], agent, state["initialized"], state["user_id"])
         
     elif state["work_mode"] in ["production", "polish"]:
         # todo add polish history
@@ -120,7 +119,7 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
     response = await agent.ainvoke(state)
     
     if state["work_mode"] == "launch":
-        cache.restore_node(state["workflow_id"], _agent, state["initialized"])
+        cache.restore_node(state["workflow_id"], _agent, state["initialized"], state["user_id"])
     elif state["work_mode"] == "production":
         cache.update_stack(state["workflow_id"], state["user_id"])
 
