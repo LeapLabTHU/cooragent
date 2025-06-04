@@ -110,23 +110,18 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
     _agent = agent_manager.available_agents[state["next"]]
     logger.info(f"Agent Proxy Start to work in {state['work_mode']} workmode \n")
     state["initialized"] = True
-    async with MultiServerMCPClient(mcp_client_config()) as client:
-        mcp_tools = client.get_tools()
-        for _tool in mcp_tools:
-            agent_manager.available_tools[_tool.name] = _tool
             
-        agent = create_react_agent(
-            get_llm_by_type(_agent.llm_type),
-            tools=[agent_manager.available_tools[tool.name] for tool in _agent.selected_tools],
-            prompt=apply_prompt(state, _agent.prompt),
-        )
+    agent = create_react_agent(
+        get_llm_by_type(_agent.llm_type),
+        tools=[agent_manager.available_tools[tool.name] for tool in _agent.selected_tools],
+        prompt=apply_prompt(state, _agent.prompt),
+    )
 
-        response = await agent.ainvoke(state)
-        
-        if state["work_mode"] == "launch":
-            cache.restore_node(state["workflow_id"], _agent, state["initialized"])
-        elif state["work_mode"] == "production":
-            cache.update_stack(state["workflow_id"])
+    response = await agent.ainvoke(state)
+    if state["work_mode"] == "launch":
+        cache.restore_node(state["workflow_id"], _agent, state["initialized"])
+    elif state["work_mode"] == "production":
+        cache.update_stack(state["workflow_id"])
 
     return Command(
         update={

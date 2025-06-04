@@ -83,10 +83,10 @@ class AgentManager:
 
 
     async def load_mcp_tools(self):
-        async with MultiServerMCPClient(mcp_client_config()) as client:
-            mcp_tools = client.get_tools()
-            for _tool in mcp_tools:
-                self.available_tools[_tool.name] = _tool
+        mcp_client = MultiServerMCPClient(mcp_client_config())
+        mcp_tools = await mcp_client.get_tools()
+        for _tool in mcp_tools:
+            self.available_tools[_tool.name] = _tool
                     
     async def load_tools(self):        
         self.available_tools.update({
@@ -236,14 +236,13 @@ class AgentManager:
         return   
     
     async def _list_default_tools(self):
-        await self.load_tools()
-        mcp_tools = []
+        tools = []
         for tool_name, tool in self.available_tools.items():
-            mcp_tools.append(Tool(
+            tools.append(Tool(
                 name=tool_name,
                 description=tool.description,
             ))
-        return mcp_tools
+        return tools
     
     async def _list_default_agents(self):
         agents = [agent for agent in self.available_agents.values() if agent.user_id == "share"]

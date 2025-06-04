@@ -131,7 +131,6 @@ async def run_agent_workflow(
             MEMBER_DESCRIPTION = TEAM_MEMBERS_DESCRIPTION_TEMPLATE.format(agent_name=agent.agent_name, agent_description=agent.description)
             TEAM_MEMBERS_DESCRIPTION += '\n' + MEMBER_DESCRIPTION
 
-    await agent_manager.load_tools()
     for tool_name, tool in agent_manager.available_tools.items():
         TOOLS_DESCRIPTION += '\n' + TOOLS_DESCRIPTION_TEMPLATE.format(tool_name=tool_name,tool_description=tool.description)
 
