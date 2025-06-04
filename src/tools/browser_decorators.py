@@ -3,7 +3,6 @@ import functools
 import asyncio
 from typing import Any, Callable, Type, TypeVar
 from src.service.tool_tracker import tool_tracker
-from src.service.context import UserContext
 
 logger = logging.getLogger(__name__)
 
@@ -43,63 +42,63 @@ def log_io(func: Callable) -> Callable:
 
 def early_tool_notification(tool_cls: Type[T]) -> Type[T]:
     """
-    装饰器：在工具类的invoke和ainvoke方法中添加早期通知功能
-    这个装饰器会在工具真正开始执行之前就发送通知
+    Decorator: Adds early notification functionality to the invoke and ainvoke methods of a tool class.
+    This decorator sends a notification before the tool actually starts executing.
     """
     original_invoke = getattr(tool_cls, 'invoke', None)
     original_ainvoke = getattr(tool_cls, 'ainvoke', None)
     
     def _send_notification_sync(tool_name: str, user_id: str) -> None:
-        """同步发送通知"""
+        """Synchronously sends a notification."""
         try:
-            from src.service.websocket_manager import websocket_manager
+            from src.tools.websocket_manager import websocket_manager
             
-            # 记录工具使用
+            # Record tool usage
             tool_tracker.record_tool_usage(user_id, tool_name)
             
-            # 发送通知
+            # Send notification
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    # 如果事件循环正在运行，创建任务
+                    # If the event loop is running, create a task
                     asyncio.create_task(websocket_manager.broadcast_tool_start(user_id, tool_name))
                 else:
-                    # 如果没有运行的事件循环，直接运行
+                    # If there is no running event loop, run directly
                     loop.run_until_complete(websocket_manager.broadcast_tool_start(user_id, tool_name))
             except RuntimeError:
-                # 如果没有事件循环，创建新的
+                # If there is no event loop, create a new one
                 asyncio.run(websocket_manager.broadcast_tool_start(user_id, tool_name))
                 
-            logger.info(f"早期通知已发送: 工具 {tool_name}, 用户 {user_id}")
+            logger.info(f"Early notification sent: Tool {tool_name}, User {user_id}")
         except Exception as e:
-            logger.warning(f"早期通知发送失败: {e}")
+            logger.warning(f"Failed to send early notification: {e}")
     
     async def _send_notification_async(tool_name: str, user_id: str) -> None:
-        """异步发送通知"""
+        """Asynchronously sends a notification."""
         try:
-            from src.service.websocket_manager import websocket_manager
+            from src.tools.websocket_manager import websocket_manager
             
-            # 记录工具使用
+            # Record tool usage
             tool_tracker.record_tool_usage(user_id, tool_name)
             
-            # 发送通知
+            # Send notification
             await websocket_manager.broadcast_tool_start(user_id, tool_name)
-            logger.info(f"早期通知已发送: 工具 {tool_name}, 用户 {user_id}")
+            logger.info(f"Early notification sent: Tool {tool_name}, User {user_id}")
         except Exception as e:
-            logger.warning(f"早期通知发送失败: {e}")
+            logger.warning(f"Failed to send early notification: {e}")
     
     if original_invoke:
         @functools.wraps(original_invoke)
         def invoke(self, input, config=None, **kwargs):
-            # 获取工具名称和用户ID
+            # Get tool name and user ID
             tool_name = getattr(self, 'name', self.__class__.__name__.lower())
-            user_id = UserContext.get_user_id()
+            user_id = kwargs.get('user_id', None)
             
-            # 立即发送通知
+            # Send notification immediately
             if user_id:
                 _send_notification_sync(tool_name, user_id)
             
-            # 调用原始方法
+            # Call the original method
             return original_invoke(self, input, config, **kwargs)
         
         setattr(tool_cls, 'invoke', invoke)
@@ -107,15 +106,15 @@ def early_tool_notification(tool_cls: Type[T]) -> Type[T]:
     if original_ainvoke:
         @functools.wraps(original_ainvoke)
         async def ainvoke(self, input, config=None, **kwargs):
-            # 获取工具名称和用户ID
+            # Get tool name and user ID
             tool_name = getattr(self, 'name', self.__class__.__name__.lower())
-            user_id = UserContext.get_user_id()
+            user_id = kwargs.get('user_id', None)
             
-            # 立即发送通知
+            # Send notification immediately
             if user_id:
                 await _send_notification_async(tool_name, user_id)
             
-            # 调用原始方法
+            # Call the original method
             return await original_ainvoke(self, input, config, **kwargs)
         
         setattr(tool_cls, 'ainvoke', ainvoke)
@@ -135,96 +134,96 @@ class LoggedToolMixin:
         logger.debug(f"Tool {tool_name}.{method_name} called with parameters: {params}")
 
     def _send_tool_notification(self, tool_name: str, user_id: str) -> None:
-        """发送工具开始通知的同步方法"""
+        """Synchronous method to send tool start notification."""
         try:
-            from src.service.websocket_manager import websocket_manager
+            from src.tools.websocket_manager import websocket_manager
             
-            # 创建一个新的事件循环来处理异步通知
+            # Create a new event loop to handle asynchronous notification
             def run_notification():
                 try:
-                    # 尝试获取当前事件循环
+                    # Try to get the current event loop
                     loop = asyncio.get_event_loop()
                     if loop.is_running():
-                        # 如果事件循环正在运行，创建任务
+                        # If the event loop is running, create a task
                         task = asyncio.create_task(websocket_manager.broadcast_tool_start(user_id, tool_name))
                         return task
                     else:
-                        # 如果没有运行的事件循环，直接运行
+                        # If there is no running event loop, run directly
                         return loop.run_until_complete(websocket_manager.broadcast_tool_start(user_id, tool_name))
                 except RuntimeError:
-                    # 如果没有事件循环，创建新的
+                    # If there is no event loop, create a new one
                     return asyncio.run(websocket_manager.broadcast_tool_start(user_id, tool_name))
             
             run_notification()
-            logger.debug(f"成功发送工具开始通知: {tool_name} for user {user_id}")
+            logger.debug(f"Successfully sent tool start notification: {tool_name} for user {user_id}")
         except Exception as e:
-            logger.warning(f"发送工具开始通知失败: {e}")
+            logger.warning(f"Failed to send tool start notification: {e}")
 
     async def _send_tool_notification_async(self, tool_name: str, user_id: str) -> None:
-        """发送工具开始通知的异步方法"""
+        """Asynchronous method to send tool start notification."""
         try:
-            from src.service.websocket_manager import websocket_manager
+            from src.tools.websocket_manager import websocket_manager
             await websocket_manager.broadcast_tool_start(user_id, tool_name)
-            logger.debug(f"成功发送工具开始通知: {tool_name} for user {user_id}")
+            logger.debug(f"Successfully sent tool start notification: {tool_name} for user {user_id}")
         except Exception as e:
-            logger.warning(f"发送工具开始通知失败: {e}")
+            logger.warning(f"Failed to send tool start notification: {e}")
 
     def invoke(self, input, config=None, **kwargs):
-        """重写invoke方法，在工具调用前发送通知"""
-        # 获取工具名称和用户ID
+        """Override invoke method to send notification before tool call."""
+        # Get tool name and user ID
         tool_name = getattr(self, 'name', self.__class__.__name__.replace('Logged', '').lower())
-        user_id = UserContext.get_user_id()
+        user_id = kwargs.get('user_id', None)
         
-        # 记录工具使用情况和发送开始通知
+        
+        # Record tool usage and send start notification
         if user_id:
             tool_tracker.record_tool_usage(user_id, tool_name)
-            # 立即发送通知
+            # Send notification immediately
             self._send_tool_notification(tool_name, user_id)
         
-        # 调用原始的invoke方法
+        # Call the original invoke method
         if hasattr(super(), 'invoke'):
             return super().invoke(input, config, **kwargs)
         else:
-            # 如果没有invoke方法，回退到_run
+            # If there is no invoke method, fall back to _run
             return self._run(**input if isinstance(input, dict) else {"input": input})
 
     async def ainvoke(self, input, config=None, **kwargs):
-        """重写ainvoke方法，在工具调用前发送通知"""
-        # 获取工具名称和用户ID
+        """Override ainvoke method to send notification before tool call."""
+        # Get tool name and user ID
         tool_name = getattr(self, 'name', self.__class__.__name__.replace('Logged', '').lower())
-        user_id = UserContext.get_user_id()
+        user_id = kwargs.get('user_id', None)
         
-        # 记录工具使用情况和发送开始通知
+        # Record tool usage and send start notification
         if user_id:
             tool_tracker.record_tool_usage(user_id, tool_name)
-            # 立即发送异步通知
+            # Send asynchronous notification immediately
             await self._send_tool_notification_async(tool_name, user_id)
         
-        # 调用原始的ainvoke方法
+        # Call the original ainvoke method
         if hasattr(super(), 'ainvoke'):
             return await super().ainvoke(input, config, **kwargs)
         else:
-            # 如果没有ainvoke方法，回退到_arun或_run
+            # If there is no ainvoke method, fall back to _arun or _run
             if hasattr(self, '_arun'):
                 return await self._arun(**input if isinstance(input, dict) else {"input": input})
             else:
                 return self._run(**input if isinstance(input, dict) else {"input": input})
+            
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         """Override _run method to add logging and tool usage tracking."""
         self._log_operation("_run", *args, **kwargs)
         
-        # 获取工具名称和用户ID
+        # Get tool name and user ID
         tool_name = getattr(self, 'name', self.__class__.__name__.replace('Logged', '').lower())
-        user_id = UserContext.get_user_id()
+        user_id = kwargs.get('user_id', None)
         
-        # 如果还没有记录工具使用（可能是直接调用_run），则记录并发送通知
+        # If tool usage has not been recorded yet (possibly _run was called directly), record it and send notification
         if user_id and not tool_tracker.is_tool_active(user_id, tool_name):
             tool_tracker.record_tool_usage(user_id, tool_name)
             self._send_tool_notification(tool_name, user_id)
         
-        # 执行工具
-        success = True
         result = None
         try:
             result = super()._run(*args, **kwargs)
@@ -232,7 +231,6 @@ class LoggedToolMixin:
                 f"Tool {self.__class__.__name__.replace('Logged', '')} returned: {result}"
             )
         except Exception as e:
-            success = False
             logger.error(f"Tool {tool_name} execution failed: {e}")
             raise
         
@@ -256,7 +254,7 @@ def create_logged_tool(base_tool_class: Type[T]) -> Type[T]:
     # Set a more descriptive name for the class
     LoggedTool.__name__ = f"Logged{base_tool_class.__name__}"
     
-    # 应用早期通知装饰器
+    # Apply the early notification decorator
     LoggedTool = early_tool_notification(LoggedTool)
     
     return LoggedTool

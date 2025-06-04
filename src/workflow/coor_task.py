@@ -90,13 +90,8 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
         cache.restore_node(state["workflow_id"], agent, state["initialized"])
         
     elif state["work_mode"] in ["production", "polish"]:
-<<<<<<< HEAD
         # todo add polish history
         agent = cache.get_next_node(state["workflow_id"])
-=======
-        # todo add polish history 
-        agent = cache.get_next_node(state["workflow_id"], state["initialized"])
->>>>>>> ea3d7a2 (update user session management)
         if agent == "FINISH":
             goto = "__end__"
             logger.info("Workflow completed \n")

@@ -4,7 +4,7 @@ import re
 from pydantic import BaseModel, Field
 from typing import ClassVar, Type
 from langchain.tools import BaseTool
-from ..service.decorators import create_logged_tool
+from src.tools.browser_decorators import create_logged_tool
 from src.llm.llm import get_llm_by_type
 from src.service.env import USE_BROWSER, BROWSER_BACKEND
 import os
@@ -16,6 +16,7 @@ class BrowserInput(BaseModel):
     """Input for Browser Tool."""
     url: str = Field(..., description="Web page URL")
     test_mode: bool = Field(default=False, description="Whether it's test mode")
+    user_id: str = Field(..., description="User ID")
 
 class BrowserTool(BaseTool):
     name: ClassVar[str] = "browser"
@@ -89,7 +90,7 @@ class BrowserTool(BaseTool):
             logger.error(f"Error during LLM summarization: {e}")
             return f"Web page content retrieved successfully, but error occurred during summarization: {str(e)}\n\nOriginal content preview:\n{text_content[:500]}..."
 
-    def _run(self, url: str, test_mode: bool = False) -> str:
+    def _run(self, url: str, test_mode: bool = False, user_id: str = None) -> str:
         """Browser page browsing, returns web page HTML content"""
         
         # Check if browser tool is enabled
@@ -215,9 +216,9 @@ class BrowserTool(BaseTool):
                 "error": str(e)
             }, ensure_ascii=False)
 
-    async def _arun(self, url: str, test_mode: bool = False) -> str:
+    async def _arun(self, url: str, test_mode: bool = False, user_id: str = None) -> str:
         """Async version of browser tool"""
-        return self._run(url, test_mode)
+        return self._run(url, test_mode, user_id)
 
 BrowserTool = create_logged_tool(BrowserTool)
 browser_tool = BrowserTool()

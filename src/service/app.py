@@ -18,7 +18,7 @@ from src.service.session import SessionManager
 from src.interface.agent import RemoveAgentRequest
 from fastapi.responses import FileResponse
 from src.service.tool_tracker import tool_tracker
-from src.service.websocket_manager import websocket_manager
+from src.tools.websocket_manager import websocket_manager
 from src.workflow.cache import workflow_cache
 
 

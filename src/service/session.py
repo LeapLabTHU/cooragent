@@ -24,16 +24,27 @@ class UserSession:
         self.last_active = datetime.now()
 
 class SessionManager:
-    def __init__(self, session_timeout=300):
-        self.sessions: Dict[str, UserSession] = {}
-        self.timeout = session_timeout
+    _instance = None
 
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(SessionManager, cls).__new__(cls)
+        return cls._instance
+
+    def __init__(self, session_timeout=300):
+        if not hasattr(self, 'initialized'):
+            self.sessions: Dict[str, UserSession] = {}
+            self.timeout = session_timeout
+            self.initialized = True
+
+    @staticmethod
     def get_session(self, user_id: str) -> UserSession:
         self.cleanup()
         if user_id not in self.sessions:
             self.sessions[user_id] = UserSession(user_id)
         return self.sessions[user_id]
 
+    @staticmethod
     def cleanup(self):
         expired = [
             uid for uid, session in self.sessions.items()
