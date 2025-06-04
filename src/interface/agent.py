@@ -21,6 +21,56 @@ class LLMType(str, Enum):
     VISION = "vision"
     CODE = 'code'
 
+class Component(BaseModel):
+    component_type: str
+    label: str
+    name: str
+    description: str
+    config: dict
+COORDINATOR = Component(
+    component_type="agent",
+    label="coordinator",
+    name="coordinator",
+    description="Coordinator node that communicate with customers.",
+    config={
+        "type": "system_agent",
+        "name": "coordinator",
+    }
+)
+
+
+PLANNER = Component(
+    component_type="agent",
+    label="planner",
+    name="planner",
+    description="Planner node that plan the task.",
+    config={
+        "type": "system_agent",
+        "name": "planner",
+    }
+)
+
+PUBLISHER = Component(
+    component_type="condtion",
+    label="publisher_condition",
+    name="publisher",
+    description="Publisher node that publish the task.",
+    config={
+        "type": "system_agent",
+        "name": "publisher",
+    }
+)
+
+AGENT_FACTORY = Component(
+    component_type="agent",
+    label="system_agent",
+    name="agent_factory",
+    description="Agent factory node that create the agent.",
+    config={
+        "type": "system_agent",
+        "name": "agent_factory",
+    }
+)
 
 class TaskType(str, Enum):
     AGENT_FACTORY = "agent_factory"

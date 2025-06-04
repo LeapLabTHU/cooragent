@@ -4,6 +4,7 @@ from src.workflow.template import WORKFLOW_TEMPLATE
 from typing import Union
 from src.interface.agent import Agent
 from config.global_variables import agents_dir
+from src.interface.agent import Component
 import os
 from pathlib import Path
 from collections import deque
@@ -77,7 +78,7 @@ class WorkflowCache:
                             
                     self.queue[workflow_id] = deque()
                     for agent in self.cache[workflow_id]["graph"]:
-                        if agent["node_type"] == "execution_agent":
+                        if agent["config"]["node_type"] == "execution_agent":
                             self.queue[workflow_id].append(agent)
                     begin_node = {
                         "node_name": "begin_node",
@@ -164,10 +165,10 @@ class WorkflowCache:
     
     def get_next_node(self, workflow_id: str):
         try:
-            if not self.queue[workflow_id][0]["next_to"] or self.queue[workflow_id][0]["next_to"][0] == "__end__":
+            if not self.queue[workflow_id][0]["config"]["next_to"] or self.queue[workflow_id][0]["config"]["next_to"][0] == "__end__":
                 return "FINISH"
             else:
-                return self.queue[workflow_id][0]["next_to"][0]
+                return self.queue[workflow_id][0]["config"]["next_to"][0]
              
         except Exception as e:
             logger.error(f"Error getting next node: {e}")
@@ -178,29 +179,83 @@ class WorkflowCache:
             return self.cache[workflow_id]["lap"]
         except Exception as e:
             logger.error(f"Error getting lap: {e}")
-                 
+
+    def restore_system_node(self, workflow_id: str, node: Union[Component, str]):
+        try:
+            logger.info(f"restore_system_node node: {node}")
+            if isinstance(node, Component):
+                if node.name not in self.cache[workflow_id]["nodes"]:
+                    self.cache[workflow_id]["nodes"][node.name] = node.model_dump_json()
+                for existing_node in self.cache[workflow_id]["graph"]:
+                    if existing_node["name"] == node.name:
+                        return  # 节点已存在，不添加
+                self.cache[workflow_id]["graph"].append({
+                    "component_type": node.component_type,
+                    "label": node.label,
+                    "name": node.name,
+                    "config": {
+                        "node_name": node.name,
+                        "node_type": node.config["type"],
+                        "next_to": [],
+                        "condition": {}
+                    }
+                })
+            elif isinstance(node, str):
+                _next_to = node
+                if self.cache[workflow_id]["graph"][-1]["config"]["node_type"] == "system_agent":
+                    if not self.cache[workflow_id]["graph"][-1]["config"]["next_to"]:
+                        self.cache[workflow_id]["graph"][-1]["config"]["next_to"].append(_next_to)
+
+        except Exception as e:
+            logger.error(f"Error restore_system_node: {e}")
     def restore_node(self, workflow_id: str, node: Union[Agent, str], workflow_initialized: bool):
         try:
+            logger.info(f"restore_node node: {node}")
             if isinstance(node, Agent):
                 _agent = node
-                if _agent.agent_name not in self.cache[workflow_id]["agent_nodes"]:
-                    self.cache[workflow_id]["agent_nodes"][_agent.agent_name] = {
-                        "type": "execution_agent",
-                        "agent_name": _agent.agent_name,
-                        "agent":_agent.model_dump_json()
+                if _agent.agent_name not in self.cache[workflow_id]["nodes"]:
+                    tools = []
+                    for tool in _agent.selected_tools:
+                        tools.append({
+                            "component_type": "function",
+                            "label": tool.name,
+                            "name": tool.name,
+                            "config": {
+                                "name": tool.name,
+                                "description": tool.description,
+                            }
+                        })
+                    self.cache[workflow_id]["nodes"][_agent.agent_name] = {
+                        "component_type": "agent",
+                        "label": _agent.agent_name,
+                        "name": _agent.agent_name,
+                        "config": {
+                            "name": _agent.agent_name,
+                            "tools":tools,
+                            "description":_agent.description,
+                            "prompt":_agent.prompt
+                        }
                     }
                 self.cache[workflow_id]["graph"].append({
-                    "node_name": _agent.agent_name,
-                    "node_type": "execution_agent",
-                    "next_to": [],
-                    "condition": "supervised"
+                    "component_type": "agent",
+                    "label": _agent.agent_name,
+                    "name": _agent.agent_name,
+                    "config": {
+                        "node_name": _agent.agent_name,
+                        "node_type": "execution_agent",
+                        "next_to": [],
+                        "condition": "supervised"
+                    }
+                    
                 })
                 
             elif isinstance(node, str) and workflow_initialized:
                 _next_to = node
-                if self.cache[workflow_id]["graph"][-1]["node_type"] == "execution_agent":
-                    if not self.cache[workflow_id]["graph"][-1]["next_to"]:
-                        self.cache[workflow_id]["graph"][-1]["next_to"].append(_next_to)
+                if _next_to == "__end__" :
+                    return
+                if self.cache[workflow_id]["graph"][-1]["config"]["node_type"] == "execution_agent":
+                    if not self.cache[workflow_id]["graph"][-1]["config"]["next_to"]:
+                        self.cache[workflow_id]["graph"][-1]["config"]["next_to"].append(_next_to)
         except Exception as e:
             logger.error(f"Error restore_node: {e}")
 
@@ -233,7 +288,7 @@ class WorkflowCache:
         try:
             agents = []
             for node in self.cache[workflow_id]["graph"]:
-                agent_path = agents_dir / f"{node["node_name"]}.json"
+                agent_path = agents_dir / f"{node["config"]["node_name"]}.json"
                 with open(agent_path, "r") as f:
                     json_str = f.read()
                     _agent = Agent.model_validate_json(json_str)                

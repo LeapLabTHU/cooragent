@@ -22,78 +22,109 @@ WORKFLOW_TEMPLATE = {
         "database": {},
         "file_store": {}
     },
-    "agent_nodes": {
+    "nodes": {
         "coordinator": {
-            "type": "system_agent",
+            "component_type": "agent",
+            "label": "coordinator",
             "name": "coordinator",
-            "description": "Coordinator node that communicate with customers."
+            "description": "Coordinator node that communicate with customers.",
+            "config": {
+                "type": "system_agent",
+                "name": "coordinator",
+            },
         },
         "planner": {
-            "type": "system_agent",
+            "component_type": "agent",
+            "label": "planner",
             "name": "planner",
-            "description": "Planner node that plan the task."
+            "description": "Planner node that plan the task.",
+            "config": {
+                "type": "system_agent",
+                "name": "planner",
+            },
         },
         "publisher": {
-            "type": "system_agent",
+            "component_type": "condtion",
+            "label": "publisher_condition",
             "name": "publisher",
-            "description": "Publisher node that publish the task."
+            "description": "Publisher node that publish the task.",
+            "config": {
+                "type": "system_agent",
+                "name": "publisher",
+            },
         },
         "agent_factory": {
+            "component_type": "agent",
+            "label": "system_agent",
             "type": "system_agent",
             "name": "agent_factory",
-            "description": "Agent factory node that create the agent."
+            "description": "Agent factory node that create the agent.",
+            "config": {
+                "type": "system_agent",
+                "name": "agent_factory",
+            },
         },
         "researcher": {
+            "component_type": "agent",
+            "label": "researcher",
             "type": "execution_agent",
             "name": "researcher",
-            "agent": {
+            "config": {
+                "type": "execution_agent",
+                "name": "researcher",
                 "user_id": "test",
-                "agent_name": "researcher",
+                "name": "researcher",
                 "nick_name": "researcher",
                 "description": "",
                 "llm_type": "basic",
                 "selected_tools": [],
-                "prompt": ""
-            }
+                "prompt": "",
+            },
         },
         "reporter": {
+            "component_type": "agent",
+            "label": "reporter",
             "type": "execution_agent",
             "name": "reporter",
-            "agent": {
+            "config": {
                 "user_id": "test",
-                "agent_name": "reporter",
+                "name": "reporter",
                 "nick_name": "reporter",
                 "description": "",
                 "llm_type": "basic",
                 "selected_tools": [],
                 "prompt": ""
-            }
+            },
         },
         "coder": {
+            "component_type": "agent",
+            "label": "coder",
             "type": "execution_agent",
             "name": "coder",
-            "agent": {
+            "config": {
                 "user_id": "test",
-                "agent_name": "coder",
+                "name": "coder",
                 "nick_name": "coder",
                 "description": "",
                 "llm_type": "basic",
                 "selected_tools": [],
                 "prompt": ""
-            }
+            },
         },
         "browser": {
+            "component_type": "agent",
+            "label": "browser",
             "type": "execution_agent",
             "name": "browser",
-            "agent": {
+            "config": {
                 "user_id": "test",
-                "agent_name": "browser",
+                "name": "browser",
                 "nick_name": "browser",
                 "description": "",
                 "llm_type": "basic",
-                "selected_tools": [],
+                "tools": [],
                 "prompt": ""
-            }
+            },
         }
     },
     "graph": [

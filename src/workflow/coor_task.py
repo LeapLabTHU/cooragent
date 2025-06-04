@@ -3,6 +3,7 @@ import json
 from copy import deepcopy
 from langgraph.types import Command
 from typing import Literal
+from src.interface.agent import Component, COORDINATOR, PLANNER, PUBLISHER, AGENT_FACTORY
 from src.llm.llm import get_llm_by_type
 from src.llm.agents import AGENT_LLM_MAP
 from src.prompts.template import apply_prompt_template
@@ -25,6 +26,7 @@ async def agent_factory_node(state: State) -> Command[Literal["publisher","__end
     logger.info("Agent Factory Start to work in {} workmode \n".format(state["work_mode"]))
     
     if state["work_mode"] == "launch":
+        cache.restore_system_node(state["workflow_id"], AGENT_FACTORY)
         messages = apply_prompt_template("agent_factory", state)
         response = (
             get_llm_by_type(AGENT_LLM_MAP["agent_factory"])
@@ -43,7 +45,6 @@ async def agent_factory_node(state: State) -> Command[Literal["publisher","__end
             prompt=response["prompt"],
             description=response["agent_description"],
         )
-        
         state["TEAM_MEMBERS"].append(response["agent_name"])
         
     elif state["work_mode"] == "polish":
@@ -68,6 +69,7 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
     logger.info("publisher evaluating next action in {} mode \n".format(state["work_mode"]))
     
     if state["work_mode"] == "launch":
+        cache.restore_system_node(state["workflow_id"], PUBLISHER)
         messages = apply_prompt_template("publisher", state)
         response = await (
             get_llm_by_type(AGENT_LLM_MAP["publisher"])
@@ -82,9 +84,12 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
             cache.restore_node(state["workflow_id"], goto, state["initialized"])
             return Command(goto=goto, update={"next": goto})
         elif agent != "agent_factory":
+            cache.restore_system_node(state["workflow_id"], agent)
             goto = "agent_proxy"
-        else:
+        else: 
+            cache.restore_system_node(state["workflow_id"], "agent_factory")
             goto = "agent_factory"
+       
         logger.info(f"publisher delegating to: {agent} \n")
         
         cache.restore_node(state["workflow_id"], agent, state["initialized"])
@@ -152,7 +157,7 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
             searched_content = tavily_tool.invoke({"query": [''.join(message["content"]) for message in state["messages"] if message["role"] == "user"][0]})
             messages = deepcopy(messages)
             messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
-
+        cache.restore_system_node(state["workflow_id"], PLANNER)
         response = await llm.ainvoke(messages)
         content = response.content
 
@@ -161,6 +166,7 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
 
         if content.endswith("```"):
             content = content.removesuffix("```")
+        
 
         cache.restore_planning_steps(state["workflow_id"], content)
         
@@ -192,14 +198,15 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
             content = content.removesuffix("```")
 
         cache.restore_planning_steps(state["workflow_id"], content)
-        
+    
     goto = "publisher"
     try:
         json.loads(content)
     except json.JSONDecodeError:
         logger.warning("Planner response is not a valid JSON \n")
         goto = "__end__"
-
+    if state["work_mode"] == "launch":
+        cache.restore_system_node(state["workflow_id"], goto)    
     return Command(
         update={
             "messages": [{"content":content, "tool":"planner", "role":"assistant"}],
@@ -215,11 +222,14 @@ async def coordinator_node(state: State) -> Command[Literal["planner", "__end__"
     logger.info("Coordinator talking. \n")
     messages = apply_prompt_template("coordinator", state)
     response = get_llm_by_type(AGENT_LLM_MAP["coordinator"]).invoke(messages)
+    if state["work_mode"] == "launch":
+        cache.restore_system_node(state["workflow_id"], COORDINATOR)
 
     goto = "__end__"
     if "handover_to_planner" in response.content:
         goto = "planner"
-
+    if state["work_mode"] == "launch":
+            cache.restore_system_node(state["workflow_id"], "planner")
     return Command(
         update={
             "messages": [{"content":response.content, "tool":"coordinator", "role":"assistant"}],

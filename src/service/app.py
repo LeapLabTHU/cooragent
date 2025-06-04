@@ -108,6 +108,13 @@ class Server:
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
+    async def _list_workflow_json(user_id: str, match: Optional[str] = None):
+        try:
+            workflows = workflow_cache.list_workflows(user_id, match)
+            return workflows.model_dump()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    @staticmethod
     def _list_workflow(
          request: "listAgentRequest"
     ) -> AsyncGenerator[str, None]:
@@ -254,6 +261,13 @@ class Server:
                 media_type="application/x-ndjson"
             )
 
+        @self.app.get("/v1/list_workflow_json", status_code=status.HTTP_200_OK)
+        async def list_agents_json(user_id: str, match: Optional[str] = None):
+            try:
+                agents = await self._list_workflow_json(user_id, match)
+                return agents
+            except HTTPException as e:
+                return {"error": e.detail}, e.status_code
         @self.app.post("/v1/list_agents", status_code=status.HTTP_200_OK)
         async def list_agents_endpoint(request: listAgentRequest):
             return StreamingResponse(
