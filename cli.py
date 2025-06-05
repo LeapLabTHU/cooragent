@@ -438,7 +438,7 @@ def cli(ctx):
         return
 
 
-@cli.command()
+@cli.command(name="run-l")
 @click.pass_context
 @click.option('--user-id', '-u', default="test", help='User ID')
 @click.option('--task-type', '-t', required=True, 
@@ -449,14 +449,12 @@ def cli(ctx):
 @click.option('--deep-thinking/--no-deep-thinking', default=True, help='Enable deep thinking mode')
 @click.option('--search-before-planning/--no-search-before-planning', default=False, help='Enable search before planning')
 @click.option('--agents', '-a', multiple=True, help='List of collaborating Agents (use multiple times to add multiple Agents)')
-@click.option('--workflow-id', '-w', default="", help='Workflow ID')
-@click.option('--workflow-mode', '-d', type=click.Choice(['launch', 'production']), default='launch', help='Workflow mode')
 @async_command
-async def launch(ctx, user_id, task_type, message, debug, deep_thinking, search_before_planning, agents, workflow_id, workflow_mode):
+async def run_launch(ctx, user_id, task_type, message, debug, deep_thinking, search_before_planning, agents,):
     """Run the agent workflow"""
     server = ctx.obj['server']
     
-    config_table = Table(title="Workflow Configuration", show_header=True, header_style="bold magenta")
+    config_table = Table(title="Run Launch Configuration", show_header=True, header_style="bold magenta")
     config_table.add_column("Parameter", style="cyan")
     config_table.add_column("Value", style="green")
     config_table.add_row("User ID", user_id)
@@ -489,7 +487,7 @@ async def launch(ctx, user_id, task_type, message, debug, deep_thinking, search_
         deep_thinking_mode=deep_thinking,
         search_before_planning=search_before_planning,
         coor_agents=list(agents),
-        workmode=workflow_mode
+        workmode="launch"
     )
     
     console.print(Panel.fit("[highlight]Workflow execution started[/highlight]", title="CoorAgent", border_style="cyan"))
@@ -643,6 +641,246 @@ async def launch(ctx, user_id, task_type, message, debug, deep_thinking, search_
     console.print(Panel.fit("[success]Workflow execution finished![/success]", title="CoorAgent", border_style="green"))
 
 
+@cli.command(name="run-p")
+@click.pass_context
+@click.option('--user-id', '-u', default="test", help='User ID')
+@click.option('--message', '-m', required=True, multiple=True, help='Message content (use multiple times for multiple messages)')
+@click.option('--workflow-id', '-w', default="", help='Workflow ID')
+@async_command
+async def run_production(ctx, user_id, message, workflow_id):
+    """Run the agent workflow"""
+    server = ctx.obj['server']
+ 
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console
+    ) as progress:
+        task = progress.add_task("[green]Fetching Workflow list...", total=None)
+        
+        request = listAgentRequest(user_id=user_id, match=None)
+        
+        table = Table(title=f"Workflow list for user [highlight]{user_id}[/highlight]", show_header=True, header_style="bold magenta", border_style="cyan")
+        table.add_column("ID", style="tool_desc")
+        table.add_column("Workflow ID", style="tool_desc")
+        table.add_column("Lap", style="tool_desc")
+        table.add_column("Version", style="tool_desc")
+        table.add_column("Graph", style="tool_desc")
+        table.add_column("Planning Steps", style="agent_nick_name")
+
+        count = 0
+        workflow_list = server._list_workflow(request)
+        for workflow in workflow_list:
+            try:
+                planning = json.loads(workflow.get("planning_steps", ""))
+                steps = planning['steps']
+                if workflow_id:
+                    if workflow.get("workflow_id") == workflow_id:
+                        table.add_row(str(count), workflow.get("workflow_id", ""), str(workflow.get("lap", "")), str(workflow.get("version", "")), json.dumps(workflow.get("graph", ""), indent=2, ensure_ascii=False), json.dumps(steps, indent=2, ensure_ascii=False))
+                        count += 1
+                        break
+                else:   
+                    table.add_row(str(count), workflow.get("workflow_id", ""), str(workflow.get("lap", "")), str(workflow.get("version", "")), json.dumps(workflow.get("graph", ""), indent=2, ensure_ascii=False), json.dumps(steps, indent=2, ensure_ascii=False))
+                    count += 1
+            except:
+                stream_print(f"[danger]Parsing error: {workflow}[/danger]")
+        
+        progress.update(task, description=f"[success]Fetched {count} workflow!")
+        
+    if count == 0:
+        stream_print(Panel(f"No matching workflow found", title="Result", border_style="yellow"))
+    else:
+        stream_print(table)
+    option = ["Select workflow", "Exit"]
+    console.print("Select part:")
+    for i, part_option in enumerate(option):
+        console.print(f"{i+1} - {part_option}")
+    part_choice_idx_str = Prompt.ask(
+        "Enter part number",
+        choices=[str(i+1) for i in range(len(option))],
+        show_choices=False
+    )
+    if part_choice_idx_str == "2":
+        return
+    if part_choice_idx_str == "1":
+        console.print("\n Select workflow by index to run:")
+        choice = Prompt.ask(
+            "Enter workflow ID",
+            choices=[str(i) for i in range(count)],
+            show_choices=True
+        )
+
+        workflow = workflow_list[int(choice)]
+        workflow_id = workflow["workflow_id"]
+
+    messages = []
+    for i, msg in enumerate(message):
+        role = "user" if i % 2 == 0 else "assistant"
+        messages.append({"role": role, "content": msg})
+    
+    request = AgentRequest(
+        user_id=user_id,
+        lang="en",
+        task_type="agent_workflow",
+        messages=messages,
+        debug=False,
+        deep_thinking_mode=True,
+        search_before_planning=False,
+        coor_agents=[],
+        workmode="production",
+        workflow_id=workflow_id
+    )
+    
+    console.print(Panel.fit("[highlight]Workflow execution started[/highlight]", title="CoorAgent", border_style="cyan"))
+    
+    current_content = ""
+    json_buffer = ""  
+    in_json_block = False
+    live_mode = True
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+        transient=True,
+        refresh_per_second=2
+    ) as progress:
+        task = progress.add_task("[green]Processing request...", total=None)
+        
+        async for chunk in server._run_agent_workflow(request):
+            event_type = chunk.get("event")
+            data = chunk.get("data", {})
+            
+            if event_type == "start_of_agent":
+                if current_content:
+                    console.print(current_content, end="", highlight=False)
+                    current_content = ""
+                
+                if in_json_block and json_buffer:
+                    try:
+                        parsed_json = json.loads(json_buffer)
+                        formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                        console.print("\n")
+                        syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                        console.print(syntax)
+                    except:
+                        console.print(f"\n{json_buffer}")
+                    json_buffer = ""
+                    in_json_block = False
+                
+                agent_name = data.get("agent_name", "")
+                if agent_name :
+                    console.print("\n")
+                    progress.update(task, description=f"[green]Starting execution: {agent_name}...")
+                    console.print(f"[agent_name]>>> {agent_name} starting execution...[/agent_name]")
+                    console.print("")
+                    
+            elif event_type == "end_of_agent":
+                if current_content:
+                    console.print(current_content, end="", highlight=False)
+                    current_content = ""
+                
+                if in_json_block and json_buffer:
+                    try:
+                        parsed_json = json.loads(json_buffer)
+                        formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                        console.print("\n")  
+                        syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                        console.print(syntax)
+                    except:
+                        console.print(f"\n{json_buffer}")
+                    json_buffer = ""
+                    in_json_block = False
+                
+                agent_name = data.get("agent_name", "")
+                if agent_name:
+                    console.print("\n")
+                    progress.update(task, description=f"[green]Execution finished: {agent_name}...")
+                    console.print(f"[agent_name]<<< {agent_name} execution finished[/agent_name]")
+                    console.print("")
+            
+            elif event_type == "messages":
+                delta = data.get("delta", {})
+                content = delta.get("content", "")
+                reasoning = delta.get("reasoning_content", "")
+                agent_name = data.get("agent_name", "")
+
+                
+                if agent_name:
+                    console.print("\n")
+                    progress.update(task, description=f"[green]Executing: {agent_name}...")
+                    progress.update(task, description=f"[agent_name]>>> {agent_name} executing...[/agent_name]")
+                    console.print("")
+                if content and (content.strip().startswith("{") or in_json_block):
+                    if not in_json_block:
+                        in_json_block = True
+                        json_buffer = ""
+                    
+                    json_buffer += content
+                    
+                    try:
+                        parsed_json = json.loads(json_buffer)
+                        formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                        
+                        if current_content:
+                            console.print(current_content, end="", highlight=False)
+                            current_content = ""
+                        
+                        console.print("")
+                        syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                        console.print(syntax)
+                        json_buffer = ""
+                        in_json_block = False
+                    except:
+                        pass
+                elif content:
+                    if live_mode:
+                        if not content: 
+                            continue
+    
+                        direct_print(content)
+
+                    else:
+                        current_content += content
+                
+                if reasoning:
+                    stream_print(f"\n[info]Thinking process: {reasoning}[/info]")
+                
+
+            elif event_type == "new_agent_created":
+                new_agent_name = data.get("new_agent_name", "")
+                agent_obj = data.get("agent_obj", None)
+                console.print(f"[new_agent_name]>>> {new_agent_name} created successfully...")
+                console.print(f"[new_agent]>>> Configuration: ")
+                syntax = Syntax(agent_obj, "json", theme="monokai", line_numbers=False)
+                console.print(syntax)
+
+
+            elif event_type == "end_of_workflow":
+                if current_content:
+                    console.print(current_content, end="", highlight=False)
+                    current_content = ""
+                
+                if in_json_block and json_buffer:
+                    try:
+                        parsed_json = json.loads(json_buffer)
+                        formatted_json = json.dumps(parsed_json, indent=2, ensure_ascii=False)
+                        console.print("\n")
+                        syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+                        console.print(syntax)
+                    except:
+                        console.print(f"\n{json_buffer}")
+                    json_buffer = ""
+                    in_json_block = False
+                
+                console.print("")
+                progress.update(task, description="[success]Workflow execution finished!")
+                console.print(Panel.fit("[success]Workflow execution finished![/success]", title="CoorAgent", border_style="green"))
+                
+    console.print(Panel.fit("[success]Workflow execution finished![/success]", title="CoorAgent", border_style="green"))
+
+
+
 @cli.command()
 @click.pass_context
 @click.option('--user-id', '-u', default="test", help='User ID')
@@ -784,14 +1022,14 @@ async def edit_agent(ctx, agent_name, user_id, interactive):
             stop_editing = await edit_agent_option(_agent, edit_option_list,original_config,modified_config,server)
 
 
-@cli.command(name="polish")
+@cli.command(name="run-o")
 @click.pass_context
 @click.option('--user-id', '-u', required=True, help='User ID')
 @click.option('--match', '-m', help='Match string')
 @click.option('--interactive/--no-interactive', '-i/-I', default=True, help='Use interactive mode')
 @async_command
-async def polish(ctx, user_id, match, interactive):
-    """Edit an existing Agent interactively"""
+async def run_polish(ctx, user_id, match, interactive):
+    """Edit an existing Workflow interactively"""
     server = ctx.obj['server']
     
     with Progress(
@@ -832,7 +1070,7 @@ async def polish(ctx, user_id, match, interactive):
     
     
     while interactive:
-        option = ["Select workflow","Exit"]
+        option = ["Select workflow", "Exit"]
         console.print("Select part:")
         for i, part_option in enumerate(option):
             console.print(f"{i+1} - {part_option}")
@@ -1086,7 +1324,8 @@ async def polish(ctx, user_id, match, interactive):
                             deep_thinking_mode=True,
                             search_before_planning=False,
                             coor_agents=[],
-                            workmode="production"
+                            workmode="production",
+                            workflow_id=workflow_id
                         )
 
                         console.print(Panel.fit("[highlight]Workflow execution started[/highlight]", title="CoorAgent",
@@ -1280,14 +1519,26 @@ def help():
     help_table.add_column(style="bold cyan")
     help_table.add_column(style="green")
     
-    help_table.add_row("[Command] launch", "Launch the agent workflow")
-    help_table.add_row("  -u/--user-id", "User ID")
-    help_table.add_row("  -t/--task-type", "Task type (agent_factory/agent_workflow)")
-    help_table.add_row("  -m/--message", "Message content (use multiple times)")
-    help_table.add_row("  --debug/--no-debug", "Enable/disable debug mode")
-    help_table.add_row("  --deep-thinking/--no-deep-thinking", "Enable/disable deep thinking mode")
-    help_table.add_row("  --search-before-planning/--no-search-before-planning", "Enable/disable search before planning (default: enabled)")
-    help_table.add_row("  -a/--agents", "List of collaborating Agents")
+    help_table.add_row("[Command] run-l (launch)", "Launch the agent workflow in launch mode")
+    help_table.add_row("  -u/--user-id", "User ID (default: test)")
+    help_table.add_row("  -t/--task-type", "Task type (required, options: agent_factory, agent_workflow)")
+    help_table.add_row("  -m/--message", "Message content (required, use multiple times for multiple messages)")
+    help_table.add_row("  --debug/--no-debug", "Enable/disable debug mode (default: disabled)")
+    help_table.add_row("  --deep-thinking/--no-deep-thinking", "Enable/disable deep thinking mode (default: enabled)")
+    help_table.add_row("  --search-before-planning/--no-search-before-planning", "Enable/disable search before planning (default: disabled)")
+    help_table.add_row("  -a/--agents", "List of collaborating Agents (use multiple times to add multiple Agents)")
+    help_table.add_row()
+
+    help_table.add_row("[Command] run-p (production)", "Run the agent workflow in production mode")
+    help_table.add_row("  -u/--user-id", "User ID (default: test)")
+    help_table.add_row("  -m/--message", "Message content (required, use multiple times for multiple messages)")
+    help_table.add_row("  -w/--workflow-id", "Workflow ID (optional, if not provided, lists workflows to choose from)")
+    help_table.add_row()
+
+    help_table.add_row("[Command] run-o (polish)", "Polish an existing Workflow interactively")
+    help_table.add_row("  -u/--user-id", "User ID (required)")
+    help_table.add_row("  -m/--match", "Match string for workflows (optional)")
+    help_table.add_row("  -i/-I/--interactive/--no-interactive", "Use interactive mode (default: enabled)")
     help_table.add_row()
     
     help_table.add_row("[Command] list-agents", "List user's Agents")
@@ -1308,12 +1559,6 @@ def help():
     help_table.add_row("[Command] remove-agent", "Remove the specified Agent")
     help_table.add_row("  -n/--agent-name", "Agent name (required)")
     help_table.add_row("  -u/--user-id", "User ID (required)")
-    help_table.add_row()
-
-    help_table.add_row("[Command] polish", "Polish an existing Workflow interactively")
-    help_table.add_row("  -u/--user-id", "User ID (required)")
-    help_table.add_row("  -m/--match", "Match string for workflows")
-    help_table.add_row("  -i/--interactive", "Interactive mode (default: on)")
     help_table.add_row()
 
     help_table.add_row("[Interactive Mode]", "Run cli.py directly to enter")

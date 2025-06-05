@@ -61,7 +61,7 @@ async def run_agent_workflow(
     polish_id: str = None,
     lap: int = 0,
     workmode: WorkMode = "launch",
-    polish_instruction: str = None
+    workflow_id: str = None
 ):
     """Run the agent workflow with the given user input.
 
@@ -72,14 +72,15 @@ async def run_agent_workflow(
     Returns:
         The final state after the workflow completes
     """
-    if not polish_id:
-        if workmode == "launch":
-            msg = f"{user_id}_{task_type}_{user_input_messages}_{deep_thinking_mode}_{search_before_planning}_{coor_agents}"
-            polish_id = hashlib.md5(msg.encode('utf-8')).hexdigest()
-        else:
-            polish_id = cache.get_latest_polish_id(user_id)
-    
-    workflow_id = f'{user_id}:{polish_id}'
+    if not workflow_id:
+        if not polish_id:
+            if workmode == "launch":
+                msg = f"{user_id}_{task_type}_{user_input_messages}_{deep_thinking_mode}_{search_before_planning}_{coor_agents}"
+                polish_id = hashlib.md5(msg.encode('utf-8')).hexdigest()
+            else:
+                polish_id = cache.get_latest_polish_id(user_id)
+        
+        workflow_id = f'{user_id}:{polish_id}'
     lap = cache.get_lap(workflow_id) if workmode != "launch" else 0
     
     if workmode != "production":
