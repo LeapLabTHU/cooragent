@@ -449,8 +449,10 @@ def cli(ctx):
 @click.option('--deep-thinking/--no-deep-thinking', default=True, help='Enable deep thinking mode')
 @click.option('--search-before-planning/--no-search-before-planning', default=False, help='Enable search before planning')
 @click.option('--agents', '-a', multiple=True, help='List of collaborating Agents (use multiple times to add multiple Agents)')
+@click.option('--workflow-id', '-w', default="", help='Workflow ID')
+@click.option('--workflow-mode', '-d', type=click.Choice(['launch', 'production']), default='launch', help='Workflow mode')
 @async_command
-async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_before_planning, agents):
+async def launch(ctx, user_id, task_type, message, debug, deep_thinking, search_before_planning, agents, workflow_id, workflow_mode):
     """Run the agent workflow"""
     server = ctx.obj['server']
     
@@ -487,7 +489,7 @@ async def run(ctx, user_id, task_type, message, debug, deep_thinking, search_bef
         deep_thinking_mode=deep_thinking,
         search_before_planning=search_before_planning,
         coor_agents=list(agents),
-        workmode="launch"
+        workmode=workflow_mode
     )
     
     console.print(Panel.fit("[highlight]Workflow execution started[/highlight]", title="CoorAgent", border_style="cyan"))
@@ -1278,7 +1280,7 @@ def help():
     help_table.add_column(style="bold cyan")
     help_table.add_column(style="green")
     
-    help_table.add_row("[Command] run", "Run the agent workflow")
+    help_table.add_row("[Command] launch", "Launch the agent workflow")
     help_table.add_row("  -u/--user-id", "User ID")
     help_table.add_row("  -t/--task-type", "Task type (agent_factory/agent_workflow)")
     help_table.add_row("  -m/--message", "Message content (use multiple times)")
