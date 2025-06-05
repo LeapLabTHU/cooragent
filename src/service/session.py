@@ -1,8 +1,7 @@
-
 from typing import Dict
 from uuid import uuid4
-from datetime import datetime, timedelta
-import json
+from datetime import datetime
+import threading
 
 class UserSession:
     def __init__(self, user_id: str, max_history=10):
@@ -25,14 +24,25 @@ class UserSession:
         self.last_active = datetime.now()
 
 class SessionManager:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(SessionManager, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, session_timeout=300):
-        self.sessions: Dict[str, UserSession] = {}
-        self.timeout = session_timeout
+        if not hasattr(self, 'initialized'):
+            self.sessions: Dict[str, UserSession] = {}
+            self.timeout = session_timeout
+            self.initialized = True
+            self._lock = threading.Lock()
 
     def get_session(self, user_id: str) -> UserSession:
         self.cleanup()
         if user_id not in self.sessions:
-            self.sessions[user_id] = UserSession(user_id)
+            with self._lock:
+                self.sessions[user_id] = UserSession(user_id)
         return self.sessions[user_id]
 
     def cleanup(self):
@@ -41,4 +51,5 @@ class SessionManager:
             if (datetime.now() - session.last_active).seconds > self.timeout
         ]
         for uid in expired:
-            del self.sessions[uid]
+            with self._lock:
+                del self.sessions[uid]

@@ -79,7 +79,7 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
         if agent == "FINISH":
             goto = "__end__"
             logger.info("Workflow completed \n")
-            cache.restore_node(state["workflow_id"], goto, state["initialized"])
+            cache.restore_node(state["workflow_id"], goto, state["initialized"], state["user_id"])
             return Command(goto=goto, update={"next": goto})
         elif agent != "agent_factory":
             goto = "agent_proxy"
@@ -87,7 +87,7 @@ async def publisher_node(state: State) -> Command[Literal["agent_proxy", "agent_
             goto = "agent_factory"
         logger.info(f"publisher delegating to: {agent} \n")
         
-        cache.restore_node(state["workflow_id"], agent, state["initialized"])
+        cache.restore_node(state["workflow_id"], agent, state["initialized"], state["user_id"])
         
     elif state["work_mode"] in ["production", "polish"]:
         # todo add polish history
@@ -118,10 +118,11 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
     )
 
     response = await agent.ainvoke(state)
+    
     if state["work_mode"] == "launch":
-        cache.restore_node(state["workflow_id"], _agent, state["initialized"])
+        cache.restore_node(state["workflow_id"], _agent, state["initialized"], state["user_id"])
     elif state["work_mode"] == "production":
-        cache.update_stack(state["workflow_id"])
+        cache.update_stack(state["workflow_id"], state["user_id"])
 
     return Command(
         update={
@@ -157,7 +158,7 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
         if content.endswith("```"):
             content = content.removesuffix("```")
 
-        cache.restore_planning_steps(state["workflow_id"], content)
+        cache.restore_planning_steps(state["workflow_id"], content, state["user_id"])
         
     elif state["work_mode"] == "production":
         # watch out the json style
@@ -186,7 +187,7 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
         if content.endswith("```"):
             content = content.removesuffix("```")
 
-        cache.restore_planning_steps(state["workflow_id"], content)
+        cache.restore_planning_steps(state["workflow_id"], content, state["user_id"])
         
     goto = "publisher"
     try:
