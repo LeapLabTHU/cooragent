@@ -61,7 +61,8 @@ async def run_agent_workflow(
     polish_id: str = None,
     lap: int = 0,
     workmode: WorkMode = "launch",
-    workflow_id: str = None
+    workflow_id: str = None,
+    polish_instruction: str = None
 ):
     """Run the agent workflow with the given user input.
 

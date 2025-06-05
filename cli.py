@@ -644,10 +644,10 @@ async def run_launch(ctx, user_id, task_type, message, debug, deep_thinking, sea
 @cli.command(name="run-p")
 @click.pass_context
 @click.option('--user-id', '-u', default="test", help='User ID')
-@click.option('--message', '-m', required=True, multiple=True, help='Message content (use multiple times for multiple messages)')
+@click.option('--messages', '-m', default=[],  multiple=True, help='Message content (use multiple times for multiple messages)')
 @click.option('--workflow-id', '-w', default="", help='Workflow ID')
 @async_command
-async def run_production(ctx, user_id, message, workflow_id):
+async def run_production(ctx, user_id, messages, workflow_id):
     """Run the agent workflow"""
     server = ctx.obj['server']
  
@@ -692,9 +692,10 @@ async def run_production(ctx, user_id, message, workflow_id):
     else:
         stream_print(table)
     option = ["Select workflow", "Exit"]
-    console.print("Select part:")
+    console.print("Select Command:")
     for i, part_option in enumerate(option):
         console.print(f"{i+1} - {part_option}")
+        
     part_choice_idx_str = Prompt.ask(
         "Enter part number",
         choices=[str(i+1) for i in range(len(option))],
@@ -713,10 +714,12 @@ async def run_production(ctx, user_id, message, workflow_id):
         workflow = workflow_list[int(choice)]
         workflow_id = workflow["workflow_id"]
 
-    messages = []
-    for i, msg in enumerate(message):
-        role = "user" if i % 2 == 0 else "assistant"
-        messages.append({"role": role, "content": msg})
+    if messages:
+        for i, msg in enumerate(messages):
+            role = "user" if i % 2 == 0 else "assistant"
+            messages.append({"role": role, "content": msg})
+    else:
+        messages = workflow["user_input_messages"]
     
     request = AgentRequest(
         user_id=user_id,
@@ -1071,7 +1074,7 @@ async def run_polish(ctx, user_id, match, interactive):
     
     while interactive:
         option = ["Select workflow", "Exit"]
-        console.print("Select part:")
+        console.print("Select Command:")
         for i, part_option in enumerate(option):
             console.print(f"{i+1} - {part_option}")
         part_choice_idx_str = Prompt.ask(
