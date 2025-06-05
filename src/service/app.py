@@ -6,7 +6,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 import json
-from datetime import datetime
 
 load_dotenv()
 import logging
@@ -14,18 +13,17 @@ from src.interface.agent import *
 from src.workflow.process import run_agent_workflow
 from src.manager import agent_manager 
 from src.manager.agents import NotFoundAgentError
-from src.service.session import UserSession
+from src.service.session import SessionManager
 from src.interface.agent import RemoveAgentRequest
 from fastapi.responses import FileResponse
-from src.utils.path_utils import get_project_root
 from src.service.tool_tracker import tool_tracker
-from src.service.websocket_manager import websocket_manager
+from src.tools.websocket_manager import websocket_manager
 from src.workflow.cache import workflow_cache
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
-
+session_manager = SessionManager()
 
 class Server:
     def __init__(self, host="0.0.0.0", port="8001") -> None:
@@ -47,7 +45,7 @@ class Server:
              logger.error("Agent workflow called before AgentManager was initialized.")
              raise HTTPException(status_code=503, detail="Service not ready, AgentManager not initialized.")
 
-        session = UserSession(request.user_id)
+        session = session_manager.get_session(request.user_id)
         for message in request.messages:
             session.add_message(message.role, message.content)
         session_messages = session.history[-3:]
@@ -389,7 +387,7 @@ class Server:
             self.app,
             host=self.host,
             port=self.port,
-            workers=1
+            workers=os.cpu_count()
         )
 
 
