@@ -85,7 +85,7 @@ class DynamicWorkflow:
             self.workflow.add_node(name, self._build_agent_node(name, node))
 
     def _build_workflow(self, json_workflow: dict):
-        nodes = json_workflow["agent_nodes"]
+        nodes = json_workflow["nodes"]
         for node in json_workflow["graph"]:
             self.add_node(nodes[node["node_name"]])
         self.workflow.set_start(json_workflow["start_node"])

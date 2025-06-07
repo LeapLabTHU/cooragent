@@ -487,7 +487,7 @@ async def run_launch(ctx, user_id, task_type, message, debug, deep_thinking, sea
         deep_thinking_mode=deep_thinking,
         search_before_planning=search_before_planning,
         coor_agents=list(agents),
-        workmode="launch"
+        workmode="launch",
     )
     
     console.print(Panel.fit("[highlight]Workflow execution started[/highlight]", title="CoorAgent", border_style="cyan"))
