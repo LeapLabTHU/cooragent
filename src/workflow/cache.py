@@ -89,12 +89,15 @@ class WorkflowCache:
                             if agent["config"]["node_type"] == "execution_agent":
                                 self.queue[workflow_id].append(agent)
                         begin_node = {
-                            "node_name": "begin_node",
-                            "node_type": "execution_agent",
-                            "next_to": [
-                                self.queue[workflow_id][0]["node_name"]
-                            ],
-                            "condition": "supervised"
+                            "component_type": "agent",
+                            "label": "begin_node",
+                            "name": "begin_node",
+                            "config": {
+                                "node_name": "begin_node",
+                                "node_type": "execution_agent",
+                                "next_to": [self.queue[workflow_id][0]["config"]["node_name"]],
+                                "condition": "supervised"
+                            }
                         }
                         self.queue[workflow_id].appendleft(begin_node)
                     except Exception as e:
@@ -195,7 +198,38 @@ class WorkflowCache:
             return self.cache[workflow_id]["lap"]
         except Exception as e:
             logger.error(f"Error getting lap: {e}")
-                 
+
+    def restore_system_node(self, workflow_id: str, node: Union[Component, str], user_id: str):
+        try:
+            logger.info(f"restore_system_node node: {node}")
+            if isinstance(node, Component):
+                if user_id not in self._lock_pool:
+                    self._lock_pool[user_id] = threading.Lock()
+                with self._lock_pool[user_id]:
+                    if node.name not in self.cache[workflow_id]["nodes"]:
+                        self.cache[workflow_id]["nodes"][node.name] = node.model_dump_json()
+                    for existing_node in self.cache[workflow_id]["graph"]:
+                        if existing_node["name"] == node.name:
+                            return  # 节点已存在，不添加
+                    self.cache[workflow_id]["graph"].append({
+                        "component_type": node.component_type,
+                        "label": node.label,
+                        "name": node.name,
+                        "config": {
+                            "node_name": node.name,
+                            "node_type": node.config["type"],
+                            "next_to": [],
+                            "condition": {}
+                        }
+                    })
+            elif isinstance(node, str):
+                _next_to = node
+                if self.cache[workflow_id]["graph"][-1]["config"]["node_type"] == "system_agent":
+                    if not self.cache[workflow_id]["graph"][-1]["config"]["next_to"]:
+                        self.cache[workflow_id]["graph"][-1]["config"]["next_to"].append(_next_to)
+
+        except Exception as e:
+            logger.error(f"Error restore_system_node: {e}")
     def restore_node(self, workflow_id: str, node: Union[Agent, str], workflow_initialized: bool, user_id: str):
         try:
             logger.info(f"restore_node node: {node}")
@@ -204,7 +238,7 @@ class WorkflowCache:
                 if user_id not in self._lock_pool:
                     self._lock_pool[user_id] = threading.Lock()
                 with self._lock_pool[user_id]:
-                    if _agent.agent_name not in self.cache[workflow_id]["agent_nodes"]:
+                    if _agent.agent_name not in self.cache[workflow_id]["nodes"]:
                         tools = []
                         for tool in _agent.selected_tools:
                             tools.append({
@@ -222,9 +256,9 @@ class WorkflowCache:
                             "name": _agent.agent_name,
                             "config": {
                                 "name": _agent.agent_name,
-                                "tools":tools,
-                                "description":_agent.description,
-                                "prompt":_agent.prompt
+                                "tools": tools,
+                                "description": _agent.description,
+                                "prompt": _agent.prompt
                             }
                         }
                     self.cache[workflow_id]["graph"].append({
@@ -239,7 +273,7 @@ class WorkflowCache:
                         }
 
                     })
-                
+
             elif isinstance(node, str) and workflow_initialized:
                 _next_to = node
                 if _next_to == "__end__" :
@@ -251,8 +285,28 @@ class WorkflowCache:
         except Exception as e:
             logger.error(f"Error restore_node: {e}")
 
+    def __reduce__(self):
+        return super().__reduce__()
+
     def save_planning_steps(self, workflow_id, planning_steps, user_id: str):
         try:
+            workflow = self.cache[workflow_id]
+            user_id, polish_id = workflow["workflow_id"].split(":")
+            workflow_path = self.workflow_dir / user_id / f"{polish_id}.json"
+
+            if user_id not in self._lock_pool:
+                self._lock_pool[user_id] = threading.Lock()
+            with self._lock_pool[user_id]:
+                self.cache[workflow_id]["planning_steps"] = json.dumps(planning_steps, ensure_ascii=False)
+                workflow = self.cache[workflow_id]
+
+                with open(workflow_path, "w") as f:
+                    f.write(json.dumps(workflow, indent=2, ensure_ascii=False))
+        except Exception as e:
+            logger.error(f"Error dumping workflow: {e}")
+    def save_workflow(self, workflow_id, planning_steps, user_id: str):
+        try:
+            workflow = self.cache[workflow_id]
             user_id, polish_id = workflow["workflow_id"].split(":")
             workflow_path = self.workflow_dir / user_id / f"{polish_id}.json"
 
@@ -269,6 +323,8 @@ class WorkflowCache:
 
     def dump(self, workflow_id: str, mode: str):
         try:
+            workflow = self.cache[workflow_id]
+            user_id, polish_id = workflow["workflow_id"].split(":")
             if user_id not in self._lock_pool:
                 self._lock_pool[user_id] = threading.Lock()
             with self._lock_pool[user_id]:
@@ -288,11 +344,12 @@ class WorkflowCache:
         try:
             agents = []
             for node in self.cache[workflow_id]["graph"]:
-                agent_path = agents_dir / f"{node["config"]["node_name"]}.json"
-                with open(agent_path, "r") as f:
-                    json_str = f.read()
-                    _agent = Agent.model_validate_json(json_str)                
-                agents.append(_agent)
+                if node["config"]["node_type"] == "execution_agent":
+                    agent_path = agents_dir / f"{node["config"]["node_name"]}.json"
+                    with open(agent_path, "r") as f:
+                        json_str = f.read()
+                        _agent = Agent.model_validate_json(json_str)
+                    agents.append(_agent)
             return agents
         except Exception as e:
             logger.error(f"Error getting agents: {e}")

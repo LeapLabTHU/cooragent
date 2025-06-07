@@ -117,7 +117,7 @@ class AgentRequest(BaseModel):
     task_type: TaskType
     coor_agents: Optional[list[str]]
     workmode: WorkMode
-    workflow_id: str
+    workflow_id: Optional[str] = None
 
     
 class listAgentRequest(BaseModel):
