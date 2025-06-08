@@ -154,11 +154,18 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
             messages = deepcopy(messages)
             messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
         cache.restore_system_node(state["workflow_id"], PLANNER, state["user_id"])
-        response = await llm.ainvoke(messages)
-        content = response.content
+        response = llm.stream(messages)
+        content = ''
+        for chunk in response:
+            if chunk.content:
+                content += chunk.content
+
 
         if content.startswith("```json"):
             content = content.removeprefix("```json")
+
+        if content.startswith("```ts"):
+            content = content.removeprefix("```ts")
 
         if content.endswith("```"):
             content = content.removesuffix("```")

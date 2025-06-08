@@ -308,7 +308,9 @@ async def edit_agent_option(_agent: Agent,edit_option:list[str], original_config
                     prompt=modified_config['prompt'],
                     llm_type=original_config.get('llm_type', 'basic')
                 )
-
+                _agent.prompt = modified_config['prompt']
+                _agent.description = modified_config['description']
+                _agent.selected_tools = modified_config['selected_tools']
                 async for result in server._edit_agent(agent_request):
                     res = json.loads(result)
                     if res.get("result") == "success":
@@ -1179,7 +1181,6 @@ async def run_polish(ctx, user_id, match, interactive):
                                                         else:
                                                             stream_print(
                                                                 f"[danger]Update failed: {res.get('result', 'Unknown error')}[/danger]")
-                                                    return
                                                 except Exception as e:
                                                     stream_print(f"[danger]Error occurred during save: {str(e)}[/danger]")
                                             else:
@@ -1204,6 +1205,8 @@ async def run_polish(ctx, user_id, match, interactive):
                         if part_to_edit == "back":
                             stop_tools_or_prompt = True
                 if part_to_edit == "planning_steps":
+                    planning = json.loads(workflow.get("planning_steps", ""))
+                    steps = planning['steps']
                     planning_steps = [json.dumps(step, indent=2, ensure_ascii=False) for step in steps]
                     table = Table(title=f"Planning steps list for workflow [highlight]{workflow_id}[/highlight]", show_header=True,
                                   header_style="bold magenta", border_style="cyan")

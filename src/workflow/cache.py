@@ -288,7 +288,7 @@ class WorkflowCache:
     def __reduce__(self):
         return super().__reduce__()
 
-    def save_planning_steps(self, workflow_id, planning_steps, user_id: str):
+    def save_planning_steps(self, workflow_id, planning_steps):
         try:
             workflow = self.cache[workflow_id]
             user_id, polish_id = workflow["workflow_id"].split(":")
