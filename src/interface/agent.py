@@ -119,7 +119,6 @@ class AgentRequest(BaseModel):
     workmode: WorkMode
     workflow_id: Optional[str] = None
 
-    
 class listAgentRequest(BaseModel):
     user_id: Optional[str]
     match: Optional[str]

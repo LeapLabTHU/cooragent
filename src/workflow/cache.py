@@ -47,7 +47,7 @@ class WorkflowCache:
 
                 user_workflow_files = user_workflow_dir.glob("*.json")
                 for workflow_file in user_workflow_files:
-                    with open(workflow_file, "r") as f:
+                    with open(workflow_file, "r", encoding='utf-8') as f:
                         workflow = json.load(f)
                         self.cache[workflow["workflow_id"]] = workflow
         except Exception as e:
@@ -76,7 +76,7 @@ class WorkflowCache:
                             user_id, polish_id = workflow_id.split(":")
                             user_workflow_dir = self.workflow_dir / user_id
                             user_workflow_file = user_workflow_dir / polish_id
-                            with open(user_workflow_file, 'r') as f:
+                            with open(user_workflow_file, 'r', encoding='utf-8') as f:
                                 workflow = json.load(f)
                                 if workflow:
                                     self.cache[workflow["workflow_id"]] = workflow
@@ -143,7 +143,7 @@ class WorkflowCache:
                     if latest_file:
                         polish_id_to_set = latest_file.stem # filename without extension
                         try:
-                            with open(latest_file, "r") as f:
+                            with open(latest_file, "r", encoding='utf-8') as f:
                                 workflow_data = json.load(f)
                                 workflow_id = user_id + ":" + polish_id_to_set
                                 self.cache[workflow_id] = workflow_data
@@ -300,27 +300,24 @@ class WorkflowCache:
                 self.cache[workflow_id]["planning_steps"] = json.dumps(planning_steps, ensure_ascii=False)
                 workflow = self.cache[workflow_id]
 
-                with open(workflow_path, "w") as f:
+                with open(workflow_path, "w", encoding='utf-8') as f:
                     f.write(json.dumps(workflow, indent=2, ensure_ascii=False))
         except Exception as e:
             logger.error(f"Error dumping workflow: {e}")
-    def save_workflow(self, workflow_id, planning_steps, user_id: str):
+    def save_workflow(self, workflow):
         try:
-            workflow = self.cache[workflow_id]
+
             user_id, polish_id = workflow["workflow_id"].split(":")
             workflow_path = self.workflow_dir / user_id / f"{polish_id}.json"
 
             if user_id not in self._lock_pool:
                 self._lock_pool[user_id] = threading.Lock()
             with self._lock_pool[user_id]:
-                self.cache[workflow_id]["planning_steps"] = json.dumps(planning_steps, ensure_ascii=False)
-                workflow = self.cache[workflow_id]
-
-                with open(workflow_path, "w") as f:
+                with open(workflow_path, "w", encoding='utf-8') as f:
                     f.write(json.dumps(workflow, indent=2, ensure_ascii=False))
         except Exception as e:
             logger.error(f"Error dumping workflow: {e}")
-
+        logger.info(f"workflow {workflow["workflow_id"]} saved.")
     def dump(self, workflow_id: str, mode: str):
         try:
             workflow = self.cache[workflow_id]
@@ -332,7 +329,7 @@ class WorkflowCache:
                     workflow = self.cache[workflow_id]
                     user_id, polish_id = workflow["workflow_id"].split(":")
                     workflow_path = self.workflow_dir / user_id / f"{polish_id}.json"
-                    with open(workflow_path, "w") as f:
+                    with open(workflow_path, "w", encoding='utf-8') as f:
                         f.write(json.dumps(workflow, indent=2, ensure_ascii=False))
                     self.latest_polish_id[user_id] = polish_id
                 elif mode == "production":
