@@ -13,7 +13,7 @@ from src.manager import agent_manager
 from src.prompts.template import apply_prompt
 from langgraph.prebuilt import create_react_agent
 from src.workflow.graph import AgentWorkflow
-from src.service.env import RECURSION_LIMIT
+from src.service.env import MAX_STEPS
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from src.manager.mcp import mcp_client_config
 from src.workflow.cache import workflow_cache as cache
@@ -123,7 +123,7 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
         prompt=apply_prompt(state, _agent.prompt),
     )
 
-    response = await agent.ainvoke(state, {"recursion_limit": int(RECURSION_LIMIT)})
+    response = await agent.ainvoke(state, {"recursion_limit": int(MAX_STEPS)})
 
     if state["work_mode"] == "launch":
         cache.restore_node(state["workflow_id"], _agent, state["initialized"], state["user_id"])
