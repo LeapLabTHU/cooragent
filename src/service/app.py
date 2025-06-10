@@ -352,7 +352,7 @@ class Server:
                 workflows = await self._list_workflow_json(user_id, match)
                 return workflows
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
 
         @self.app.get("/v1/workflow_draft", status_code=status.HTTP_200_OK)
         async def workflow_draft(user_id: str, match: str):
@@ -360,7 +360,7 @@ class Server:
                 workflow = await self._workflow_draft(user_id, match)
                 return workflow
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
         @self.app.post("/v1/list_agents", status_code=status.HTTP_200_OK)
         async def list_agents_endpoint(request: listAgentRequest):
             return StreamingResponse(
@@ -383,14 +383,14 @@ class Server:
                 agents = self._list_agents_json(user_id, match)
                 return agents
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
         @self.app.get("/v1/list_user_all_agents", status_code=status.HTTP_200_OK)
         async def list_user_all_agents(user_id: str):
             try:
                 agents = await self._list_user_all_agents(user_id)
                 return agents
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
 
         @self.app.get("/v1/list_default_agents", status_code=status.HTTP_200_OK)
         async def list_default_agents_endpoint():
@@ -405,7 +405,7 @@ class Server:
                 agents = await self._list_default_agents_json()
                 return agents
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
 
         @self.app.get("/v1/list_default_tools", status_code=status.HTTP_200_OK)
         async def list_default_tools_endpoint():
@@ -442,7 +442,7 @@ class Server:
                 container_info = await self._get_browser_container_info(user_id)
                 return container_info
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
         
         @self.app.get("/v1/active_tools/{user_id}", status_code=status.HTTP_200_OK)
         async def get_active_tools(user_id: str):
@@ -451,7 +451,7 @@ class Server:
                 active_tools_info = await self._get_active_tools(user_id)
                 return active_tools_info
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
         
         @self.app.websocket("/ws/tools/{user_id}")
         async def websocket_endpoint(websocket: WebSocket, user_id: str):
