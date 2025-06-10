@@ -101,7 +101,7 @@ class Server:
     @staticmethod
     async def _list_agents_json(user_id: str, match: Optional[str] = None):
         try:
-            agents = agent_manager._list_agents(user_id, match)
+            agents = await agent_manager._list_agents(user_id, match)
             return [agent.model_dump() for agent in agents]
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
@@ -380,7 +380,7 @@ class Server:
         @self.app.get("/v1/list_agents_json", status_code=status.HTTP_200_OK)
         async def list_agents_json(user_id: str, match: Optional[str] = None):
             try:
-                agents = self._list_agents_json(user_id, match)
+                agents = await self._list_agents_json(user_id, match)
                 return agents
             except HTTPException as e:
                 raise e
