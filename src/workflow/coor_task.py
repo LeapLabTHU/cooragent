@@ -51,7 +51,7 @@ async def agent_factory_node(state: State) -> Command[Literal["publisher","__end
     elif state["work_mode"] == "polish":
         # this will be support soon
         pass
-    
+
 
     return Command(
         update={
