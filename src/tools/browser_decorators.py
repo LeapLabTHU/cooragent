@@ -173,14 +173,30 @@ class LoggedToolMixin:
         """Override invoke method to send notification before tool call."""
         # Get tool name and user ID
         tool_name = getattr(self, 'name', self.__class__.__name__.replace('Logged', '').lower())
+        
+        # Try to get user_id from multiple sources
         user_id = kwargs.get('user_id', None)
         
+        # If not in kwargs, try to get from config
+        if not user_id and config:
+            # LangChain passes user_id in config.configurable
+            if hasattr(config, 'configurable') and config.configurable:
+                user_id = config.configurable.get('user_id')
+            # Also try direct access if config is a dict
+            elif isinstance(config, dict):
+                user_id = config.get('user_id') or config.get('configurable', {}).get('user_id')
+        
+        # If still not found, try to get from input if it's a dict
+        if not user_id and isinstance(input, dict):
+            user_id = input.get('user_id')
         
         # Record tool usage and send start notification
         if user_id:
             tool_tracker.record_tool_usage(user_id, tool_name)
             # Send notification immediately
             self._send_tool_notification(tool_name, user_id)
+        else:
+            logger.debug(f"No user_id found for tool {tool_name}, skipping notification")
         
         # Call the original invoke method
         if hasattr(super(), 'invoke'):
@@ -193,13 +209,30 @@ class LoggedToolMixin:
         """Override ainvoke method to send notification before tool call."""
         # Get tool name and user ID
         tool_name = getattr(self, 'name', self.__class__.__name__.replace('Logged', '').lower())
+        
+        # Try to get user_id from multiple sources
         user_id = kwargs.get('user_id', None)
+        
+        # If not in kwargs, try to get from config
+        if not user_id and config:
+            # LangChain passes user_id in config.configurable
+            if hasattr(config, 'configurable') and config.configurable:
+                user_id = config.configurable.get('user_id')
+            # Also try direct access if config is a dict
+            elif isinstance(config, dict):
+                user_id = config.get('user_id') or config.get('configurable', {}).get('user_id')
+        
+        # If still not found, try to get from input if it's a dict
+        if not user_id and isinstance(input, dict):
+            user_id = input.get('user_id')
         
         # Record tool usage and send start notification
         if user_id:
             tool_tracker.record_tool_usage(user_id, tool_name)
             # Send asynchronous notification immediately
             await self._send_tool_notification_async(tool_name, user_id)
+        else:
+            logger.debug(f"No user_id found for tool {tool_name}, skipping notification")
         
         # Call the original ainvoke method
         if hasattr(super(), 'ainvoke'):
@@ -210,7 +243,6 @@ class LoggedToolMixin:
                 return await self._arun(**input if isinstance(input, dict) else {"input": input})
             else:
                 return self._run(**input if isinstance(input, dict) else {"input": input})
-            
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         """Override _run method to add logging and tool usage tracking."""

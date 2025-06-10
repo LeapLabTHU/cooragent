@@ -123,7 +123,14 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
         prompt=apply_prompt(state, _agent.prompt),
     )
 
-    response = await agent.ainvoke(state, {"recursion_limit": int(MAX_STEPS)})
+    # Create config with user_id for tool notifications
+    config = {
+        "configurable": {
+            "user_id": state.get("user_id")
+        }
+    }
+
+    response = await agent.ainvoke(state, config=config)
 
     if state["work_mode"] == "launch":
         cache.restore_node(state["workflow_id"], _agent, state["initialized"], state["user_id"])
@@ -151,7 +158,12 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
         if state.get("deep_thinking_mode"):
             llm = get_llm_by_type("reasoning")
         if state.get("search_before_planning"):
-            searched_content = tavily_tool.invoke({"query": [''.join(message["content"]) for message in state["messages"] if message["role"] == "user"][0]})
+            config = {
+                "configurable": {
+                    "user_id": state.get("user_id")
+                }
+            }
+            searched_content = tavily_tool.invoke({"query": [''.join(message["content"]) for message in state["messages"] if message["role"] == "user"][0]}, config=config)
             messages = deepcopy(messages)
             messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
         cache.restore_system_node(state["workflow_id"], PLANNER, state["user_id"])
@@ -188,7 +200,12 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
         if state.get("deep_thinking_mode"):
             llm = get_llm_by_type("reasoning")
         if state.get("search_before_planning"):
-            searched_content = tavily_tool.invoke({"query": [''.join(message["content"]) for message in state["messages"] if message["role"] == "user"][0]})
+            config = {
+                "configurable": {
+                    "user_id": state.get("user_id")
+                }
+            }
+            searched_content = tavily_tool.invoke({"query": [''.join(message["content"]) for message in state["messages"] if message["role"] == "user"][0]}, config=config)
             messages = deepcopy(messages)
             messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
 
