@@ -25,13 +25,12 @@ from src.workflow.cache import workflow_cache
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 session_manager = SessionManager()
-
-class Server:
-    def __init__(self, host="0.0.0.0", port="8001") -> None:
-        self.app = FastAPI()
-        self.app.add_middleware(
+app = FastAPI()
+app.add_middleware(
             CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"]
         )
+class Server:
+    def __init__(self, host="0.0.0.0", port="8001") -> None:
         self.host = host
         self.port = port
 
@@ -59,7 +58,8 @@ class Server:
             deep_thinking_mode=request.deep_thinking_mode,
             search_before_planning=request.search_before_planning,
             coor_agents=request.coor_agents,
-            workmode=request.workmode
+            workmode=request.workmode,
+            workflow_id=request.workflow_id,
         )
         async for res in response_stream:
             try:
@@ -324,7 +324,7 @@ class Server:
             raise HTTPException(status_code=500, detail=str(e))
 
     def launch(self):
-        @self.app.post("/v1/save_workflow", status_code=status.HTTP_200_OK)
+        @app.post("/v1/save_workflow", status_code=status.HTTP_200_OK)
         async def save_workflow_endpoint(request: WorkflowRequest):
             try:
                 workflow = json.loads(request.data)
@@ -335,7 +335,7 @@ class Server:
                 logger.error(f"Error saving workflow: {e}", exc_info=True)
                 raise HTTPException(status_code=500, detail=str(e))
 
-        @self.app.post("/v1/workflow", status_code=status.HTTP_200_OK)
+        @app.post("/v1/workflow", status_code=status.HTTP_200_OK)
         async def agent_workflow_endpoint(request: AgentRequest):
             async def response_generator():
                 async for chunk in self._run_agent_workflow(request):
@@ -346,7 +346,7 @@ class Server:
                 media_type="application/x-ndjson"
             )
 
-        @self.app.get("/v1/list_workflow_json", status_code=status.HTTP_200_OK)
+        @app.get("/v1/list_workflow_json", status_code=status.HTTP_200_OK)
         async def list_workflow_json(user_id: str, match: Optional[str] = None):
             try:
                 workflows = await self._list_workflow_json(user_id, match)
@@ -354,21 +354,21 @@ class Server:
             except HTTPException as e:
                 raise e
 
-        @self.app.get("/v1/workflow_draft", status_code=status.HTTP_200_OK)
+        @app.get("/v1/workflow_draft", status_code=status.HTTP_200_OK)
         async def workflow_draft(user_id: str, match: str):
             try:
                 workflow = await self._workflow_draft(user_id, match)
                 return workflow
             except HTTPException as e:
                 raise e
-        @self.app.post("/v1/list_agents", status_code=status.HTTP_200_OK)
+        @app.post("/v1/list_agents", status_code=status.HTTP_200_OK)
         async def list_agents_endpoint(request: listAgentRequest):
             return StreamingResponse(
                 self._list_agents(request),
                 media_type="application/x-ndjson"
             )
 
-        @self.app.get("/get_image/{image_name}")
+        @app.get("/get_image/{image_name}")
         async def get_image(image_name: str):
             root_dir = os.getcwd()  # Get current working directory, which is the root directory
             image_path = os.path.join(root_dir, image_name)
@@ -377,14 +377,14 @@ class Server:
                 raise HTTPException(status_code=404, detail="Image not found")
 
             return FileResponse(image_path)
-        @self.app.get("/v1/list_agents_json", status_code=status.HTTP_200_OK)
+        @app.get("/v1/list_agents_json", status_code=status.HTTP_200_OK)
         async def list_agents_json(user_id: str, match: Optional[str] = None):
             try:
                 agents = await self._list_agents_json(user_id, match)
                 return agents
             except HTTPException as e:
                 raise e
-        @self.app.get("/v1/list_user_all_agents", status_code=status.HTTP_200_OK)
+        @app.get("/v1/list_user_all_agents", status_code=status.HTTP_200_OK)
         async def list_user_all_agents(user_id: str):
             try:
                 agents = await self._list_user_all_agents(user_id)
@@ -392,14 +392,14 @@ class Server:
             except HTTPException as e:
                 raise e
 
-        @self.app.get("/v1/list_default_agents", status_code=status.HTTP_200_OK)
+        @app.get("/v1/list_default_agents", status_code=status.HTTP_200_OK)
         async def list_default_agents_endpoint():
             return StreamingResponse(
                 self._list_default_agents(),
                 media_type="application/x-ndjson"
             )
 
-        @self.app.get("/v1/list_default_agents_json", status_code=status.HTTP_200_OK)
+        @app.get("/v1/list_default_agents_json", status_code=status.HTTP_200_OK)
         async def list_default_agents_json():
             try:
                 agents = await self._list_default_agents_json()
@@ -407,35 +407,35 @@ class Server:
             except HTTPException as e:
                 raise e
 
-        @self.app.get("/v1/list_default_tools", status_code=status.HTTP_200_OK)
+        @app.get("/v1/list_default_tools", status_code=status.HTTP_200_OK)
         async def list_default_tools_endpoint():
             return StreamingResponse(
                 self._list_default_tools(),
                 media_type="application/x-ndjson"
             )
         
-        @self.app.post("/v1/edit_agent", status_code=status.HTTP_200_OK)
+        @app.post("/v1/edit_agent", status_code=status.HTTP_200_OK)
         async def edit_agent_endpoint(request: Agent):
             return StreamingResponse(
                 self._edit_agent(request),
                 media_type="application/x-ndjson"
             )
 
-        @self.app.post("/v1/edit_planning_steps", status_code=status.HTTP_200_OK)
+        @app.post("/v1/edit_planning_steps", status_code=status.HTTP_200_OK)
         async def edit_agent_endpoint(request: EditStepsRequest):
             return StreamingResponse(
                 self._edit_planning_steps(request),
                 media_type="application/x-ndjson"
             )
 
-        @self.app.post("/v1/remove_agent", status_code=status.HTTP_200_OK)
+        @app.post("/v1/remove_agent", status_code=status.HTTP_200_OK)
         async def remove_agent_endpoint(request: RemoveAgentRequest):
             return StreamingResponse(
                 self._remove_agent(request),
                 media_type="application/x-ndjson"
             )
         
-        @self.app.get("/v1/browser_container/{user_id}", status_code=status.HTTP_200_OK)
+        @app.get("/v1/browser_container/{user_id}", status_code=status.HTTP_200_OK)
         async def get_browser_container_info(user_id: str):
             """Get user's browser container information"""
             try:
@@ -444,7 +444,7 @@ class Server:
             except HTTPException as e:
                 raise e
         
-        @self.app.get("/v1/active_tools/{user_id}", status_code=status.HTTP_200_OK)
+        @app.get("/v1/active_tools/{user_id}", status_code=status.HTTP_200_OK)
         async def get_active_tools(user_id: str):
             """Get tools currently being used by the user"""
             try:
@@ -453,7 +453,7 @@ class Server:
             except HTTPException as e:
                 raise e
         
-        @self.app.websocket("/ws/tools/{user_id}")
+        @app.websocket("/ws/tools/{user_id}")
         async def websocket_endpoint(websocket: WebSocket, user_id: str):
             """WebSocket endpoint for real-time tool usage notifications"""
             await websocket_manager.connect(websocket, user_id)
@@ -479,10 +479,10 @@ class Server:
                 await websocket_manager.disconnect(websocket, user_id)
         
         uvicorn.run(
-            self.app,
+            "app:app",
             host=self.host,
             port=self.port,
-            workers=1
+            workers=os.cpu_count()
         )
 
 

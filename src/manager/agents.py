@@ -6,7 +6,6 @@ from src.prompts import apply_prompt_template, get_prompt_template
 from src.tools import (
     bash_tool,
     browser_tool,
-    crawl_tool,
     python_repl_tool,
     tavily_tool,
 )
@@ -92,7 +91,6 @@ class AgentManager:
         self.available_tools.update({
             bash_tool.name: bash_tool,
             browser_tool.name: browser_tool,
-            crawl_tool.name: crawl_tool,
             python_repl_tool.name: python_repl_tool,
             tavily_tool.name: tavily_tool,
         })
@@ -181,7 +179,7 @@ class AgentManager:
                                         name="researcher", 
                                         nick_name="researcher", 
                                         llm_type=AGENT_LLM_MAP["researcher"], 
-                                        tools=[tavily_tool, crawl_tool],
+                                        tools=[tavily_tool],
                                         prompt=get_prompt_template("researcher"),
                                        description="This agent specializes in research tasks by utilizing search engines and web crawling. It can search for information using keywords, crawl specific URLs to extract content, and synthesize findings into comprehensive reports. The agent excels at gathering information from multiple sources, verifying relevance and credibility, and presenting structured conclusions based on collected data."),
         
