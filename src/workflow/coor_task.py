@@ -13,6 +13,7 @@ from src.manager import agent_manager
 from src.prompts.template import apply_prompt
 from langgraph.prebuilt import create_react_agent
 from src.workflow.graph import AgentWorkflow
+from src.service.env import RECURSION_LIMIT
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from src.manager.mcp import mcp_client_config
 from src.workflow.cache import workflow_cache as cache
@@ -122,7 +123,7 @@ async def agent_proxy_node(state: State) -> Command[Literal["publisher","__end__
         prompt=apply_prompt(state, _agent.prompt),
     )
 
-    response = await agent.ainvoke(state)
+    response = await agent.ainvoke(state, {"recursion_limit": int(RECURSION_LIMIT)})
 
     if state["work_mode"] == "launch":
         cache.restore_node(state["workflow_id"], _agent, state["initialized"], state["user_id"])
@@ -154,11 +155,18 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
             messages = deepcopy(messages)
             messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
         cache.restore_system_node(state["workflow_id"], PLANNER, state["user_id"])
-        response = await llm.ainvoke(messages)
-        content = response.content
+        response = llm.stream(messages)
+        content = ''
+        for chunk in response:
+            if chunk.content:
+                content += chunk.content
+
 
         if content.startswith("```json"):
             content = content.removeprefix("```json")
+
+        if content.startswith("```ts"):
+            content = content.removeprefix("```ts")
 
         if content.endswith("```"):
             content = content.removesuffix("```")

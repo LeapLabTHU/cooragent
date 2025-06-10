@@ -33,6 +33,7 @@ USE_MCP_TOOLS = eval(os.getenv("USE_MCP_TOOLS", "True"))
 USE_BROWSER = eval(os.getenv("USE_BROWSER", "False"))
 DEBUG = eval(os.getenv("DEBUG", "False"))
 BROWSER_BACKEND = os.getenv("BROWSER_BACKEND")
+RECURSION_LIMIT = eval(os.getenv("RECURSION_LIMIT", "25"))
 
 if DEBUG != "True":
     logging.basicConfig(
