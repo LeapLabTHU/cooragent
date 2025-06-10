@@ -15,6 +15,7 @@ from src.manager import agent_manager
 from src.manager.agents import NotFoundAgentError
 from src.service.session import SessionManager
 from src.interface.agent import RemoveAgentRequest
+from src.interface.workflow import WorkflowRequest
 from fastapi.responses import FileResponse
 from src.service.tool_tracker import tool_tracker
 from src.tools.websocket_manager import websocket_manager
@@ -100,16 +101,33 @@ class Server:
     @staticmethod
     async def _list_agents_json(user_id: str, match: Optional[str] = None):
         try:
-            agents = agent_manager._list_agents(user_id, match)
+            agents = await agent_manager._list_agents(user_id, match)
             return [agent.model_dump() for agent in agents]
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
+    async def _workflow_draft(user_id: str, match: str):
+        try:
+            workflows = workflow_cache.list_workflows(user_id, match)
+            return workflows[0]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    @staticmethod
     async def _list_workflow_json(user_id: str, match: Optional[str] = None):
         try:
             workflows = workflow_cache.list_workflows(user_id, match)
-            return workflows.model_dump()
+            workflowJsons = []
+            for workflow in workflows:
+                workflowJsons.append({
+                    "workflow_id": workflow["workflow_id"],
+                    "version": workflow["version"],
+                    "lap": workflow["lap"],
+                    "user_input_messages": workflow["user_input_messages"],
+                    "deep_thinking_mode": workflow["deep_thinking_mode"],
+                    "search_before_planning": workflow["search_before_planning"]
+                })
+            return [workflowJson for workflowJson in workflowJsons]
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     @staticmethod
@@ -137,6 +155,64 @@ class Server:
         try:
             agents = agent_manager._list_default_agents()
             return [agent.model_dump() for agent in agents]
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    @staticmethod
+    async def _edit_workflow(user_id: str, workflow):
+        try:
+            nodes = workflow["nodes"]
+            for key, node in nodes.items():
+                if node["component_type"] == "agent" and node["config"]["type"] == "execution_agent":
+                    if "add" in node and node["add"] == "1":
+                        agent_name = node["name"]
+                        agents = agent_manager._list_user_all_agents(user_id)
+                        for agent in agents:
+                            if agent["agent_name"] == node["name"]:
+                                from datetime import datetime
+                                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                                agent_name = f"{node['name']}_{timestamp}"
+                                break
+                        _tools = []
+                        for tool in node["config"]["tools"]:
+                            _tools.append(Tool(
+                                name=tool["config"]["name"],
+                                description=tool["config"]["description"],
+                            ))
+                        agent = Agent(
+                            user_id=user_id,
+                            agent_name=agent_name,
+                            nick_name=node["label"],
+                            description=node["config"]["description"],
+                            llm_type=node["config"]["llm_type"],
+                            selected_tools=_tools,
+                            prompt=node["config"]["prompt"]
+                        )
+                        agent_manager._save_agent(agent, flush=True)
+                        for graph in workflow["graph"]:
+                            if graph["component_type"] == "agent" and graph["config"]["node_type"] == "execution_agent":
+                                if graph["name"] == node["name"]:
+                                    graph["name"] = agent_name
+                                    break
+                        workflow_cache.save_workflow(user_id, workflow)
+                    else:
+                        _tools = []
+                        for tool in node["config"]["tools"]:
+                            _tools.append(Tool(
+                                name=tool["config"]["name"],
+                                description=tool["config"]["description"],
+                            ))
+                        agent = Agent(
+                            user_id=user_id,
+                            agent_name=node["name"],
+                            nick_name=node["label"],
+                            description=node["config"]["description"],
+                            llm_type=node["config"]["llm_type"],
+                            selected_tools=_tools,
+                            prompt=node["config"]["prompt"]
+                        )
+                        agent_manager._edit_agent(agent)
+                        workflow_cache.save_workflow(user_id, workflow)
+            return workflow
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -248,6 +324,17 @@ class Server:
             raise HTTPException(status_code=500, detail=str(e))
 
     def launch(self):
+        @app.post("/v1/save_workflow", status_code=status.HTTP_200_OK)
+        async def save_workflow_endpoint(request: WorkflowRequest):
+            try:
+                workflow = json.loads(request.data)
+                await self._edit_workflow(request.user_id, workflow)
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=400, detail="Invalid JSON string")
+            except Exception as e:
+                logger.error(f"Error saving workflow: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail=str(e))
+
         @app.post("/v1/workflow", status_code=status.HTTP_200_OK)
         async def agent_workflow_endpoint(request: AgentRequest):
             async def response_generator():
@@ -260,12 +347,20 @@ class Server:
             )
 
         @app.get("/v1/list_workflow_json", status_code=status.HTTP_200_OK)
-        async def list_agents_json(user_id: str, match: Optional[str] = None):
+        async def list_workflow_json(user_id: str, match: Optional[str] = None):
             try:
-                agents = await self._list_workflow_json(user_id, match)
-                return agents
+                workflows = await self._list_workflow_json(user_id, match)
+                return workflows
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
+
+        @app.get("/v1/workflow_draft", status_code=status.HTTP_200_OK)
+        async def workflow_draft(user_id: str, match: str):
+            try:
+                workflow = await self._workflow_draft(user_id, match)
+                return workflow
+            except HTTPException as e:
+                raise e
         @app.post("/v1/list_agents", status_code=status.HTTP_200_OK)
         async def list_agents_endpoint(request: listAgentRequest):
             return StreamingResponse(
@@ -288,14 +383,14 @@ class Server:
                 agents = await self._list_agents_json(user_id, match)
                 return agents
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
         @app.get("/v1/list_user_all_agents", status_code=status.HTTP_200_OK)
         async def list_user_all_agents(user_id: str):
             try:
                 agents = await self._list_user_all_agents(user_id)
                 return agents
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
 
         @app.get("/v1/list_default_agents", status_code=status.HTTP_200_OK)
         async def list_default_agents_endpoint():
@@ -310,7 +405,7 @@ class Server:
                 agents = await self._list_default_agents_json()
                 return agents
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
 
         @app.get("/v1/list_default_tools", status_code=status.HTTP_200_OK)
         async def list_default_tools_endpoint():
@@ -347,7 +442,7 @@ class Server:
                 container_info = await self._get_browser_container_info(user_id)
                 return container_info
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
         
         @app.get("/v1/active_tools/{user_id}", status_code=status.HTTP_200_OK)
         async def get_active_tools(user_id: str):
@@ -356,7 +451,7 @@ class Server:
                 active_tools_info = await self._get_active_tools(user_id)
                 return active_tools_info
             except HTTPException as e:
-                return {"error": e.detail}, e.status_code
+                raise e
         
         @app.websocket("/ws/tools/{user_id}")
         async def websocket_endpoint(websocket: WebSocket, user_id: str):

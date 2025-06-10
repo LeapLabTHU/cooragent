@@ -138,7 +138,7 @@ class AgentManager:
         agent_path = self.agents_dir / f"{agent_name}.json"
         if not agent_path.exists():
             raise FileNotFoundError(f"agent {agent_name} not found.")
-        with open(agent_path, "r") as f:
+        with open(agent_path, "r", encoding="utf-8", errors="replace") as f:
             json_str = f.read()
             _agent = Agent.model_validate_json(json_str)
             if _agent.user_id == 'share':
