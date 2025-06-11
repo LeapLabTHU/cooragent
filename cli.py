@@ -716,18 +716,19 @@ async def run_production(ctx, user_id, messages, workflow_id):
         workflow = workflow_list[int(choice)]
         workflow_id = workflow["workflow_id"]
 
+    input_messages = []
     if messages:
         for i, msg in enumerate(messages):
             role = "user" if i % 2 == 0 else "assistant"
-            messages.append({"role": role, "content": msg})
+            input_messages.append({"role": role, "content": msg})
     else:
-        messages = workflow["user_input_messages"]
+        input_messages = workflow["user_input_messages"]
     
     request = AgentRequest(
         user_id=user_id,
         lang="en",
         task_type="agent_workflow",
-        messages=messages,
+        messages=input_messages,
         debug=False,
         deep_thinking_mode=True,
         search_before_planning=False,

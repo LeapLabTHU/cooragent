@@ -5,6 +5,7 @@ from .search import tavily_tool
 from .bash_tool import bash_tool
 from .browser import browser_tool
 from .avatar_tool import avatar_tool
+from .web_preview_tool import web_preview_tool
 
 
 
@@ -15,5 +16,6 @@ __all__ = [
     "python_repl_tool",
     "write_file_tool",
     "browser_tool",
-    "avatar_tool"
+    "avatar_tool",
+    "web_preview_tool"
 ]
