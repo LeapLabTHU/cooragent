@@ -360,6 +360,8 @@ async def agent_workflow_endpoint(request: AgentRequest):
 async def list_workflow_json(user_id: str, match: Optional[str] = None):
     try:
         workflows = await Server._list_workflow_json(user_id, match)
+        default_workflows = await Server._list_workflow_json('share')
+        workflows.extend(default_workflows)
         return workflows
     except HTTPException as e:
         raise e

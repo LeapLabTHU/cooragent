@@ -76,7 +76,7 @@ class WorkflowCache:
                             user_id, polish_id = workflow_id.split(":")
                             user_workflow_dir = self.workflow_dir / user_id
                             user_workflow_file = user_workflow_dir / polish_id
-                            with open(user_workflow_file, 'r', encoding='utf-8') as f:
+                            with open(str(user_workflow_file) + '.json', 'r', encoding='utf-8') as f:
                                 workflow = json.load(f)
                                 if workflow:
                                     self.cache[workflow["workflow_id"]] = workflow

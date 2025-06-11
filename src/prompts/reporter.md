@@ -52,7 +52,7 @@ x:[],
 y:[]}
 ```
 </echart>
-   Among them, selecting one of 'type' from 'bar' or 'line' is the type of chart you want to display, where 'x' represents the x-axis data and 'y' represents the y-axis data (when it is a line chart, the y-axis can be multiple sets of data).
+   Among them, selecting one of 'type' from 'bar' or 'line' is the type of chart you want to display, where 'x' represents the x-axis data and 'y' represents the y-axis data (when it is a line chart, the y-axis can be multiple sets of data), and Please note that no comments are allowed in the JSON format.
 
 # Data Integrity
 
