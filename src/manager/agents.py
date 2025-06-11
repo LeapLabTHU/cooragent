@@ -8,7 +8,6 @@ from src.tools import (
     browser_tool,
     python_repl_tool,
     tavily_tool,
-    web_preview_tool,
 )
 
 from src.llm.llm import get_llm_by_type
@@ -90,7 +89,6 @@ class AgentManager:
                     
     async def load_tools(self):        
         self.available_tools.update({
-            web_preview_tool.name: web_preview_tool,
             bash_tool.name: bash_tool,
             browser_tool.name: browser_tool,
             python_repl_tool.name: python_repl_tool,
@@ -208,15 +206,7 @@ class AgentManager:
                                         llm_type=AGENT_LLM_MAP["reporter"], 
                                         tools=[], 
                                         prompt=get_prompt_template("reporter"), 
-                                        description="This agent specializes in creating clear, comprehensive reports based solely on provided information and verifiable facts. It presents data objectively, organizes information logically, and highlights key findings using professional language. The agent structures reports with executive summaries, detailed analysis, and actionable conclusions while maintaining strict data integrity and never fabricating information."),
-
-        self._create_agent_by_prebuilt(user_id="share", 
-                                        name="html_generator", 
-                                        nick_name="html_generator", 
-                                        llm_type=AGENT_LLM_MAP["reporter"], 
-                                        tools=[web_preview_tool], 
-                                        prompt=get_prompt_template("html_generator"), 
-                                        description="This agent specializes EXCLUSIVELY in generating beautiful HTML previews using web_preview_tool. Its primary and only function is to take any content and convert it into visually appealing HTML format. This agent ALWAYS uses web_preview_tool for every task - it has no other purpose. Use this agent when you need guaranteed HTML output.")
+                                        description="This agent specializes in creating clear, comprehensive reports based solely on provided information and verifiable facts. It presents data objectively, organizes information logically, and highlights key findings using professional language. The agent structures reports with executive summaries, detailed analysis, and actionable conclusions while maintaining strict data integrity and never fabricating information.")
 
                     
     async def _load_agents(self, user_agent_flag):

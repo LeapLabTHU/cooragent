@@ -56,14 +56,7 @@ class DynamicWorkflow:
                     prompt=apply_prompt(state, _agent.prompt),
                 )
 
-                # Create config with user_id for tool notifications
-                config = {
-                    "configurable": {
-                        "user_id": state.get("user_id")
-                    }
-                }
-
-                response = await agent.ainvoke(state, config=config)
+                response = await agent.ainvoke(state)
             
             next = "publisher"
             proposed_next = node["next_to"]
