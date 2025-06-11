@@ -117,6 +117,8 @@ class Server:
     async def _list_workflow_json(user_id: str, match: Optional[str] = None):
         try:
             workflows = workflow_cache.list_workflows(user_id, match)
+            default_workflows = workflow_cache.list_workflows('share')
+            workflows.extend(default_workflows)
             workflowJsons = []
             for workflow in workflows:
                 workflowJsons.append({
