@@ -30,7 +30,7 @@ app.add_middleware(
             CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"]
         )
 class Server:
-    def __init__(self, host="0.0.0.0", port="8001") -> None:
+    def __init__(self, host="0.0.0.0", port=8001) -> None:
         self.host = host
         self.port = port
 
@@ -324,166 +324,186 @@ class Server:
             raise HTTPException(status_code=500, detail=str(e))
 
     def launch(self):
-        @app.post("/v1/save_workflow", status_code=status.HTTP_200_OK)
-        async def save_workflow_endpoint(request: WorkflowRequest):
-            try:
-                workflow = json.loads(request.data)
-                await self._edit_workflow(request.user_id, workflow)
-            except json.JSONDecodeError:
-                raise HTTPException(status_code=400, detail="Invalid JSON string")
-            except Exception as e:
-                logger.error(f"Error saving workflow: {e}", exc_info=True)
-                raise HTTPException(status_code=500, detail=str(e))
-
-        @app.post("/v1/workflow", status_code=status.HTTP_200_OK)
-        async def agent_workflow_endpoint(request: AgentRequest):
-            async def response_generator():
-                async for chunk in self._run_agent_workflow(request):
-                    yield json.dumps(chunk, ensure_ascii=False) + "\n"
-
-            return StreamingResponse(
-                response_generator(),
-                media_type="application/x-ndjson"
-            )
-
-        @app.get("/v1/list_workflow_json", status_code=status.HTTP_200_OK)
-        async def list_workflow_json(user_id: str, match: Optional[str] = None):
-            try:
-                workflows = await self._list_workflow_json(user_id, match)
-                return workflows
-            except HTTPException as e:
-                raise e
-
-        @app.get("/v1/workflow_draft", status_code=status.HTTP_200_OK)
-        async def workflow_draft(user_id: str, match: str):
-            try:
-                workflow = await self._workflow_draft(user_id, match)
-                return workflow
-            except HTTPException as e:
-                raise e
-        @app.post("/v1/list_agents", status_code=status.HTTP_200_OK)
-        async def list_agents_endpoint(request: listAgentRequest):
-            return StreamingResponse(
-                self._list_agents(request),
-                media_type="application/x-ndjson"
-            )
-
-        @app.get("/get_image/{image_name}")
-        async def get_image(image_name: str):
-            root_dir = os.getcwd()  # Get current working directory, which is the root directory
-            image_path = os.path.join(root_dir, image_name)
-
-            if not os.path.isfile(image_path):
-                raise HTTPException(status_code=404, detail="Image not found")
-
-            return FileResponse(image_path)
-        @app.get("/v1/list_agents_json", status_code=status.HTTP_200_OK)
-        async def list_agents_json(user_id: str, match: Optional[str] = None):
-            try:
-                agents = await self._list_agents_json(user_id, match)
-                return agents
-            except HTTPException as e:
-                raise e
-        @app.get("/v1/list_user_all_agents", status_code=status.HTTP_200_OK)
-        async def list_user_all_agents(user_id: str):
-            try:
-                agents = await self._list_user_all_agents(user_id)
-                return agents
-            except HTTPException as e:
-                raise e
-
-        @app.get("/v1/list_default_agents", status_code=status.HTTP_200_OK)
-        async def list_default_agents_endpoint():
-            return StreamingResponse(
-                self._list_default_agents(),
-                media_type="application/x-ndjson"
-            )
-
-        @app.get("/v1/list_default_agents_json", status_code=status.HTTP_200_OK)
-        async def list_default_agents_json():
-            try:
-                agents = await self._list_default_agents_json()
-                return agents
-            except HTTPException as e:
-                raise e
-
-        @app.get("/v1/list_default_tools", status_code=status.HTTP_200_OK)
-        async def list_default_tools_endpoint():
-            return StreamingResponse(
-                self._list_default_tools(),
-                media_type="application/x-ndjson"
-            )
-        
-        @app.post("/v1/edit_agent", status_code=status.HTTP_200_OK)
-        async def edit_agent_endpoint(request: Agent):
-            return StreamingResponse(
-                self._edit_agent(request),
-                media_type="application/x-ndjson"
-            )
-
-        @app.post("/v1/edit_planning_steps", status_code=status.HTTP_200_OK)
-        async def edit_agent_endpoint(request: EditStepsRequest):
-            return StreamingResponse(
-                self._edit_planning_steps(request),
-                media_type="application/x-ndjson"
-            )
-
-        @app.post("/v1/remove_agent", status_code=status.HTTP_200_OK)
-        async def remove_agent_endpoint(request: RemoveAgentRequest):
-            return StreamingResponse(
-                self._remove_agent(request),
-                media_type="application/x-ndjson"
-            )
-        
-        @app.get("/v1/browser_container/{user_id}", status_code=status.HTTP_200_OK)
-        async def get_browser_container_info(user_id: str):
-            """Get user's browser container information"""
-            try:
-                container_info = await self._get_browser_container_info(user_id)
-                return container_info
-            except HTTPException as e:
-                raise e
-        
-        @app.get("/v1/active_tools/{user_id}", status_code=status.HTTP_200_OK)
-        async def get_active_tools(user_id: str):
-            """Get tools currently being used by the user"""
-            try:
-                active_tools_info = await self._get_active_tools(user_id)
-                return active_tools_info
-            except HTTPException as e:
-                raise e
-        
-        @app.websocket("/ws/tools/{user_id}")
-        async def websocket_endpoint(websocket: WebSocket, user_id: str):
-            """WebSocket endpoint for real-time tool usage notifications"""
-            await websocket_manager.connect(websocket, user_id)
-            
-            try:
-                # Keep connection alive
-                while True:
-                    try:
-                        # Wait for client messages (heartbeat, etc.)
-                        data = await websocket.receive_text()
-                        # Simply ignore client messages, just keep connection alive
-                    except WebSocketDisconnect:
-                        break
-                    except Exception as e:
-                        logger.error(f"Error handling WebSocket message: {e}")
-                        break
-                        
-            except WebSocketDisconnect:
-                pass
-            except Exception as e:
-                logger.error(f"WebSocket connection error: {e}")
-            finally:
-                await websocket_manager.disconnect(websocket, user_id)
-        
         uvicorn.run(
             "app:app",
             host=self.host,
             port=self.port,
             workers=os.cpu_count()
         )
+
+
+@app.post("/v1/save_workflow", status_code=status.HTTP_200_OK)
+async def save_workflow_endpoint(request: WorkflowRequest):
+    try:
+        workflow = json.loads(request.data)
+        await Server._edit_workflow(request.user_id, workflow)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON string")
+    except Exception as e:
+        logger.error(f"Error saving workflow: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/v1/workflow", status_code=status.HTTP_200_OK)
+async def agent_workflow_endpoint(request: AgentRequest):
+    async def response_generator():
+        async for chunk in Server._run_agent_workflow(request):
+            yield json.dumps(chunk, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(
+        response_generator(),
+        media_type="application/x-ndjson"
+    )
+
+
+@app.get("/v1/list_workflow_json", status_code=status.HTTP_200_OK)
+async def list_workflow_json(user_id: str, match: Optional[str] = None):
+    try:
+        workflows = await Server._list_workflow_json(user_id, match)
+        return workflows
+    except HTTPException as e:
+        raise e
+
+
+@app.get("/v1/workflow_draft", status_code=status.HTTP_200_OK)
+async def workflow_draft(user_id: str, match: str):
+    try:
+        workflow = await Server._workflow_draft(user_id, match)
+        return workflow
+    except HTTPException as e:
+        raise e
+
+
+@app.post("/v1/list_agents", status_code=status.HTTP_200_OK)
+async def list_agents_endpoint(request: listAgentRequest):
+    return StreamingResponse(
+        Server._list_agents(request),
+        media_type="application/x-ndjson"
+    )
+
+
+@app.get("/get_image/{image_name}")
+async def get_image(image_name: str):
+    root_dir = os.getcwd()  # Get current working directory, which is the root directory
+    image_path = os.path.join(root_dir, image_name)
+
+    if not os.path.isfile(image_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    return FileResponse(image_path)
+
+
+@app.get("/v1/list_agents_json", status_code=status.HTTP_200_OK)
+async def list_agents_json(user_id: str, match: Optional[str] = None):
+    try:
+        agents = await Server._list_agents_json(user_id, match)
+        return agents
+    except HTTPException as e:
+        raise e
+
+
+@app.get("/v1/list_user_all_agents", status_code=status.HTTP_200_OK)
+async def list_user_all_agents(user_id: str):
+    try:
+        agents = await Server._list_user_all_agents(user_id)
+        return agents
+    except HTTPException as e:
+        raise e
+
+
+@app.get("/v1/list_default_agents", status_code=status.HTTP_200_OK)
+async def list_default_agents_endpoint():
+    return StreamingResponse(
+        Server._list_default_agents(),
+        media_type="application/x-ndjson"
+    )
+
+
+@app.get("/v1/list_default_agents_json", status_code=status.HTTP_200_OK)
+async def list_default_agents_json():
+    try:
+        agents = await Server._list_default_agents_json()
+        return agents
+    except HTTPException as e:
+        raise e
+
+
+@app.get("/v1/list_default_tools", status_code=status.HTTP_200_OK)
+async def list_default_tools_endpoint():
+    return StreamingResponse(
+        Server._list_default_tools(),
+        media_type="application/x-ndjson"
+    )
+
+
+@app.post("/v1/edit_agent", status_code=status.HTTP_200_OK)
+async def edit_agent_endpoint(request: Agent):
+    return StreamingResponse(
+        Server._edit_agent(request),
+        media_type="application/x-ndjson"
+    )
+
+
+@app.post("/v1/edit_planning_steps", status_code=status.HTTP_200_OK)
+async def edit_planning_steps_endpoint(request: EditStepsRequest):
+    return StreamingResponse(
+        Server._edit_planning_steps(request),
+        media_type="application/x-ndjson"
+    )
+
+
+@app.post("/v1/remove_agent", status_code=status.HTTP_200_OK)
+async def remove_agent_endpoint(request: RemoveAgentRequest):
+    return StreamingResponse(
+        Server._remove_agent(request),
+        media_type="application/x-ndjson"
+    )
+
+
+@app.get("/v1/browser_container/{user_id}", status_code=status.HTTP_200_OK)
+async def get_browser_container_info(user_id: str):
+    """Get user's browser container information"""
+    try:
+        container_info = await Server._get_browser_container_info(user_id)
+        return container_info
+    except HTTPException as e:
+        raise e
+
+
+@app.get("/v1/active_tools/{user_id}", status_code=status.HTTP_200_OK)
+async def get_active_tools(user_id: str):
+    """Get tools currently being used by the user"""
+    try:
+        active_tools_info = await Server._get_active_tools(user_id)
+        return active_tools_info
+    except HTTPException as e:
+        raise e
+
+
+@app.websocket("/ws/tools/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: str):
+    """WebSocket endpoint for real-time tool usage notifications"""
+    await websocket_manager.connect(websocket, user_id)
+
+    try:
+        # Keep connection alive
+        while True:
+            try:
+                # Wait for client messages (heartbeat, etc.)
+                data = await websocket.receive_text()
+                # Simply ignore client messages, just keep connection alive
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"Error handling WebSocket message: {e}")
+                break
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        logger.error(f"WebSocket connection error: {e}")
+    finally:
+        await websocket_manager.disconnect(websocket, user_id)
 
 
 def parse_arguments():
