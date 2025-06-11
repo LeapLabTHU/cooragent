@@ -86,12 +86,7 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
     if state.get("deep_thinking_mode"):
         llm = get_llm_by_type("reasoning")
     if state.get("search_before_planning"):
-        config = {
-            "configurable": {
-                "user_id": state.get("user_id")
-            }
-        }
-        searched_content = tavily_tool.invoke({"query": state["messages"][-1]["content"]}, config=config)
+        searched_content = tavily_tool.invoke({"query": state["messages"][-1]["content"]})
         messages = deepcopy(messages)
         messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
     
