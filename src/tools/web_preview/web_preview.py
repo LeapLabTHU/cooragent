@@ -79,7 +79,6 @@ class WebPreviewServer:
                 return {"message": "index.html does not exist", "exists": False}
             
             try:
-                # 获取文件修改时间
                 mtime = self.index_file.stat().st_mtime
                 return {
                     "message": "Page reloaded",
@@ -98,84 +97,84 @@ class WebPreviewServer:
     def _generate_default_page(self) -> str:
         """Generate default page (when index.html does not exist)"""
         return f"""
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Preview - index.html does not exist</title>
-    <style>
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }}
-        .container {{
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }}
-        .warning {{
-            color: #e74c3c;
-            font-size: 18px;
-            margin-bottom: 20px;
-        }}
-        .info {{
-            color: #666;
-            line-height: 1.6;
-        }}
-        .path {{
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            font-family: monospace;
-            margin: 10px 0;
-        }}
-        .status {{
-            margin-top: 30px;
-            padding: 20px;
-            background: #e8f4fd;
-            border-radius: 4px;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🌐 Web Preview Server</h1>
-        <div class="warning">⚠️ index.html file does not exist</div>
-        <div class="info">
-            <p>Current working directory:</p>
-            <div class="path">{self.current_dir}</div>
-            <p>Please create the <code>index.html</code> file in the current directory, then refresh the page.</p>
-        </div>
-        <div class="status">
-            <h3>Service status</h3>
-            <ul>
-                <li>Server running on: <strong>http://{self.host}:{self.port}</strong></li>
-                <li>Status check: <a href="/status">/status</a></li>
-                <li>Reload: <a href="/reload">/reload</a></li>
-            </ul>
-        </div>
-    </div>
-    <script>
-        // Check if the file exists every 5 seconds
-        setInterval(async () => {{
-            try {{
-                const response = await fetch('/status');
-                const data = await response.json();
-                if (data.index_file_exists) {{
-                    location.reload();
-                }}
-            }} catch (e) {{
-                console.log('Failed to check file status:', e);
-            }}
-        }}, 5000);
-    </script>
-</body>
-</html>
+            <!DOCTYPE html>
+            <html lang="zh-CN">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Web Preview - index.html does not exist</title>
+                <style>
+                    body {{
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        max-width: 800px;
+                        margin: 50px auto;
+                        padding: 20px;
+                        background-color: #f5f5f5;
+                    }}
+                    .container {{
+                        background: white;
+                        padding: 40px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    }}
+                    .warning {{
+                        color: #e74c3c;
+                        font-size: 18px;
+                        margin-bottom: 20px;
+                    }}
+                    .info {{
+                        color: #666;
+                        line-height: 1.6;
+                    }}
+                    .path {{
+                        background: #f8f9fa;
+                        padding: 10px;
+                        border-radius: 4px;
+                        font-family: monospace;
+                        margin: 10px 0;
+                    }}
+                    .status {{
+                        margin-top: 30px;
+                        padding: 20px;
+                        background: #e8f4fd;
+                        border-radius: 4px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>🌐 Web Preview Server</h1>
+                    <div class="warning">⚠️ index.html file does not exist</div>
+                    <div class="info">
+                        <p>Current working directory:</p>
+                        <div class="path">{self.current_dir}</div>
+                        <p>Please create the <code>index.html</code> file in the current directory, then refresh the page.</p>
+                    </div>
+                    <div class="status">
+                        <h3>Service status</h3>
+                        <ul>
+                            <li>Server running on: <strong>http://{self.host}:{self.port}</strong></li>
+                            <li>Status check: <a href="/status">/status</a></li>
+                            <li>Reload: <a href="/reload">/reload</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <script>
+                    // Check if the file exists every 5 seconds
+                    setInterval(async () => {{
+                        try {{
+                            const response = await fetch('/status');
+                            const data = await response.json();
+                            if (data.index_file_exists) {{
+                                location.reload();
+                            }}
+                        }} catch (e) {{
+                            console.log('Failed to check file status:', e);
+                        }}
+                    }}, 5000);
+                </script>
+            </body>
+            </html>
         """
     
     def run(self):
@@ -193,9 +192,9 @@ class WebPreviewServer:
                 log_level="info"
             )
         except KeyboardInterrupt:
-            logger.info("服务器已停止")
+            logger.info("Server stopped")
         except Exception as e:
-            logger.error(f"服务器启动失败: {e}")
+            logger.error(f"Server startup failed: {e}")
             sys.exit(1)
 
 

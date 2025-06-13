@@ -13,17 +13,17 @@ model = "flux-merged"
 avatar_prompt = """ 
 "Generate a high-quality avatar/character portrait for an AI agent based on the following description. Follow these guidelines carefully:  
 
-1. **Style**: [卡通, 3D渲染, 极简]  
+1. **Style**: [Cartoon, 3D Rendering, Minimalist]  
 2. **Key Features**:  
-   - 友好专业
-   - 科技元素强
-   - 拟人化程度高  
+   - Friendly and Professional
+   - Strong Technological Elements
+   - High Degree of Anthropomorphism  
 4. **Personality Reflection**: 
-    - 具备智慧感，幽默感，权威性 
+    - Possess Wisdom, Humor, and Authority 
 5. **Technical Specs**:  
-   - Resolution: [建议分辨率，如 70*70]  
-   - Background: [透明/渐变/科技网格等]  
-   - Lighting: [柔光/霓虹灯效/双色调对比]  
+   - Resolution: [Recommended resolution, e.g. 70*70]  
+   - Background: [Transparent/Gradient/Tech Grid]  
+   - Lighting: [Soft Light/Neon Effect/Dual-tone Contrast]  
 
 description:
 {description}
@@ -77,4 +77,3 @@ def sample_async_call(input_prompt):
 
 if __name__ == '__main__':
     sample_block_call(prompt)
-    # sample_async_call(prompt)

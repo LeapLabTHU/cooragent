@@ -29,7 +29,7 @@ def get_project_root():
             return current_path
         current_path = current_path.parent
     
-    # Strategy 3: Use installation path (适用于打包后的情况)
+    # Strategy 3: Use installation path
     return Path(__file__).parent.parent.parent
 
 
