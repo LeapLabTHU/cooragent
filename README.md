@@ -36,6 +36,10 @@ Streamlining workflow construction is crucial for leveraging Agents effectively 
 - Production mode is used for production scenarios, pursuing stable operation
 
 
+<div align="center" style="display: flex; gap: 20px;">
+    <img src="assets/polish.png" alt="Cooragent polish" />
+</div>
+
 # Quick Installation
 
 1. Installation using conda

@@ -35,6 +35,10 @@ Cooragent 可以在两种模式下不断演进，从而创造出无限可能。
 **最佳实践**，Launch 模式用于自动化快速构建可运行的 Workflow。Polish 模式用于 Workflow 的精细化打磨。Production 模式用于生产场景，追求稳定运行。
 
 
+<div align="center" style="display: flex; gap: 20px;">
+    <img src="assets/polish.png" alt="Cooragent polish" />
+</div>
+
 
 # 快速安装
 
