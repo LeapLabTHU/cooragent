@@ -69,6 +69,7 @@ interface PlanWithAgents {
 # Notes
 
 - Ensure the plan is clear and reasonable, assigning tasks to the correct agents based on their capabilities.
+- Ensure that each agent name in the steps list remains unique. Do not duplicate agent names across different planning steps to maintain clear responsibility assignment
 - If existing agents are insufficient to complete the task, provide detailed specifications for the needed new agent.
 - The capabilities of the various agents are limited; you need to carefully read the agent descriptions to ensure you don't assign tasks beyond their abilities.
 - Always use the "code agent" for mathematical calculations, chart drawing.

@@ -17,6 +17,8 @@ from src.service.env import MAX_STEPS
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from src.manager.mcp import mcp_client_config
 from src.workflow.cache import workflow_cache as cache
+from src.interface.agent import WorkMode
+from src.utils.content_process import clean_response_tags
 
 
 logger = logging.getLogger(__name__)
@@ -173,23 +175,15 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
         for chunk in response:
             if chunk.content:
                 content += chunk.content
+        content = clean_response_tags(content)
 
-
-        if content.startswith("```json"):
-            content = content.removeprefix("```json")
-
-        if content.startswith("```ts"):
-            content = content.removeprefix("```ts")
-
-        if content.endswith("```"):
-            content = content.removesuffix("```")
-
-
-        cache.restore_planning_steps(state["workflow_id"], content, state["user_id"])
+        # cache.restore_planning_steps(state["workflow_id"], content, state["user_id"])
         
     elif state["work_mode"] == "production":
         # watch out the json style
-        content = cache.get_planning_steps(state["workflow_id"])
+        content = json.dumps(cache.get_planning_steps(state["workflow_id"]), 
+                             indent=4, 
+                             ensure_ascii=False)
     
     elif state["work_mode"] == "polish" and state['polish_target'] == "planner":
         # this will be support soon
@@ -211,24 +205,20 @@ async def planner_node(state: State) -> Command[Literal["publisher", "__end__"]]
             messages[-1]["content"] += f"\n\n# Relative Search Results\n\n{json.dumps([{'titile': elem['title'], 'content': elem['content']} for elem in searched_content], ensure_ascii=False)}"
 
         response = await llm.ainvoke(messages)
-        content = response.content
+        content = clean_response_tags(response.content)
 
-        if content.startswith("```json"):
-            content = content.removeprefix("```json")
-
-        if content.endswith("```"):
-            content = content.removesuffix("```")
-
-        cache.restore_planning_steps(state["workflow_id"], content, state["user_id"])
-
-
+    print("Planner response: \n", content)
     goto = "publisher"
-    try:
-        json.loads(content)
-    except json.JSONDecodeError:
-        logger.warning("Planner response is not a valid JSON \n")
-        goto = "__end__"
-    if state["work_mode"] == "launch":
+
+    # steps need to be stored in cache
+    if state["work_mode"] in ["launch", "polish"]:
+        try:
+            steps_obj = json.loads(content)
+            steps = steps_obj.get("steps", [])
+            cache.restore_planning_steps(state["workflow_id"], steps, state["user_id"])
+        except json.JSONDecodeError:
+            logger.warning("Planner response is not a valid JSON \n")
+            goto = "__end__"
         cache.restore_system_node(state["workflow_id"], goto, state["user_id"])
     return Command(
         update={

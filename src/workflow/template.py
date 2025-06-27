@@ -7,7 +7,7 @@ WORKFLOW_TEMPLATE = {
     "deep_thinking_mode": "false",
     "search_before_planning": "false",
     "coor_agents": [],
-    "plannig_steps": [],
+    "planing_steps": [],
     "global_variables": {
         "has_lauched":"",
         "user_input":"",

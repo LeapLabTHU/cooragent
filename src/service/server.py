@@ -55,8 +55,9 @@ class Server:
         async for res in response_stream:
             try:
                 event_type = res.get("event")
+                # replace agent_obj with agent_json 
                 if event_type == "new_agent_created" and "data" in res and "agent_obj" in res["data"]:
-                    agent_obj = res["data"]["agent_obj"]
+                    agent_obj: BaseModel = res["data"]["agent_obj"]
                     agent_json = agent_obj.model_dump_json(indent=2) if agent_obj else None
                     if agent_json:
                         res["data"]["agent_obj"] = agent_json

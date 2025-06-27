@@ -1,7 +1,7 @@
 import json
 import logging
 from src.workflow.template import WORKFLOW_TEMPLATE
-from typing import Union
+from typing import Union, List
 from src.interface.agent import Agent
 from config.global_variables import agents_dir
 from src.interface.agent import Component
@@ -23,7 +23,7 @@ class WorkflowCache:
         return cls._instance
     
 
-    def __init__(self, workflow_dir):
+    def __init__(self, workflow_dir: Path):
         if not hasattr(self, 'initialized'): 
             if not workflow_dir.exists():
                 logger.info(f"path {workflow_dir} does not exist when workflow cache initializing, gona to create...")
@@ -74,6 +74,7 @@ class WorkflowCache:
                 else:
                     try:
                         if workflow_id not in self.cache:
+                            #todo: user workflow.json file not exist, how to handle?
                             user_id, polish_id = workflow_id.split(":")
                             user_workflow_dir = self.workflow_dir / user_id
                             user_workflow_file = user_workflow_dir / polish_id
@@ -172,10 +173,7 @@ class WorkflowCache:
                 self.cache[workflow_id]["planning_steps"] = []
 
     def get_planning_steps(self, workflow_id: str):
-        try:
-            return self.cache[workflow_id]["planning_steps"]
-        except Exception as e:
-            logger.error(f"Error getting planning steps: {e}")
+        return self.cache[workflow_id].get("planning_steps", [])
             
     def update_stack(self, workflow_id: str, user_id: str):
         if user_id not in self._lock_pool:
@@ -232,6 +230,7 @@ class WorkflowCache:
         except Exception as e:
             logger.error(f"Error restore_system_node: {e}")
     def restore_node(self, workflow_id: str, node: Union[Agent, str], workflow_initialized: bool, user_id: str):
+        # todo: restore_node and restore_system_node can be merged
         try:
             logger.info(f"restore_node node: {node}")
             if isinstance(node, Agent):
@@ -338,7 +337,7 @@ class WorkflowCache:
         except Exception as e:
             logger.error(f"Error dumping workflow: {e}")
             
-    def get_editable_agents(self, workflow_id: str):
+    def get_editable_agents(self, workflow_id: str) -> List[Agent]:
         try:
             agents = []
             for node in self.cache[workflow_id]["graph"]:

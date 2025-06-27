@@ -20,8 +20,10 @@ import shlex
 import platform
 import atexit
 import logging
+import signal
 from config.global_variables import agents_dir
 from src.workflow.polish_task import polish_agent
+import traceback
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
@@ -394,6 +396,11 @@ def async_command(f):
         return asyncio.run(f(*args, **kwargs))
     return wrapper
 
+def handle_sigint(signal, frame):
+    console.print("[success]Goodbye![/]")
+    flush_pending()  # Flush buffer before exiting
+    sys.exit(0)
+
 
 def init_server(ctx):
     """global init function"""
@@ -409,6 +416,8 @@ def init_server(ctx):
 @click.pass_context
 def cli(ctx):
     """CoorAgent command-line tool"""
+
+    signal.signal(signal.SIGINT, handle_sigint)
     ctx.ensure_object(dict)
     init_server(ctx)
     
@@ -454,7 +463,7 @@ def cli(ctx):
 @async_command
 async def run_launch(ctx, user_id, task_type, message, debug, deep_thinking, search_before_planning, agents,):
     """Run the agent workflow"""
-    server = ctx.obj['server']
+    server: Server = ctx.obj['server']
     
     config_table = Table(title="Run Launch Configuration", show_header=True, header_style="bold magenta")
     config_table.add_column("Parameter", style="cyan")
@@ -651,7 +660,7 @@ async def run_launch(ctx, user_id, task_type, message, debug, deep_thinking, sea
 @async_command
 async def run_production(ctx, user_id, messages, workflow_id):
     """Run the agent workflow"""
-    server = ctx.obj['server']
+    server: Server = ctx.obj['server']
  
     with Progress(
         SpinnerColumn(),
@@ -674,8 +683,7 @@ async def run_production(ctx, user_id, messages, workflow_id):
         workflow_list = server._list_workflow(request)
         for workflow in workflow_list:
             try:
-                planning = json.loads(workflow.get("planning_steps", ""))
-                steps = planning['steps']
+                steps = workflow.get("planning_steps", [])
                 if workflow_id:
                     if workflow.get("workflow_id") == workflow_id:
                         table.add_row(str(count), workflow.get("workflow_id", ""), str(workflow.get("lap", "")), str(workflow.get("version", "")), json.dumps(workflow.get("graph", ""), indent=2, ensure_ascii=False), json.dumps(steps, indent=2, ensure_ascii=False))
@@ -684,7 +692,8 @@ async def run_production(ctx, user_id, messages, workflow_id):
                 else:   
                     table.add_row(str(count), workflow.get("workflow_id", ""), str(workflow.get("lap", "")), str(workflow.get("version", "")), json.dumps(workflow.get("graph", ""), indent=2, ensure_ascii=False), json.dumps(steps, indent=2, ensure_ascii=False))
                     count += 1
-            except:
+            except Exception as e:
+                logging.error(f"Error parsing workflow: {traceback.format_exc()}")
                 stream_print(f"[danger]Parsing error: {workflow}[/danger]")
         
         progress.update(task, description=f"[success]Fetched {count} workflow!")
