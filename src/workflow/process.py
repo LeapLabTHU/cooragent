@@ -10,6 +10,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from src.interface.agent import State
 from src.service.env import USE_BROWSER
 from src.workflow.cache import workflow_cache as cache
+from src.workflow.graph import CompiledWorkflow
 from src.interface.agent import WorkMode
 
 logging.basicConfig(
@@ -160,7 +161,7 @@ async def run_agent_workflow(
                 yield event_data
 
 async def _process_workflow(
-    workflow, 
+    workflow: CompiledWorkflow, 
     initial_state: Dict[str, Any] 
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """处理自定义工作流的事件流"""

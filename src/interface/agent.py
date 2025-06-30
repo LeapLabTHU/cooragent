@@ -27,6 +27,7 @@ class Component(BaseModel):
     name: str
     description: str
     config: dict
+
 COORDINATOR = Component(
     component_type="agent",
     label="coordinator",

@@ -6,7 +6,7 @@ import re
 import logging
 
 @lru_cache(maxsize=None)
-def get_project_root():
+def get_project_root() -> Path:
     """
     Determine the project root directory by searching for project identification files (e.g., .git, .project-root, etc.)
     Supports multiple strategies to ensure reliability

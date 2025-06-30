@@ -10,6 +10,9 @@ def clean_response_tags(content: str) -> str:
     if content.startswith("```json"):
         content = content.removeprefix("```json")
 
+    if content.startswith("```ts"):
+        content = content.removeprefix("```ts")
+
     if content.endswith("```"):
         content = content.removesuffix("```")
 
