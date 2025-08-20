@@ -1530,6 +1530,41 @@ async def remove_agent(ctx, agent_name, user_id):
         stream_print(Panel.fit(f"[danger]Error occurred during deletion: {str(e)}[/danger]", border_style="red"))
 
 
+@cli.command(name="evaluate")
+@click.pass_context
+@click.option('--benchmark', '-b', default="gaia", help='Benchmark to run (default: gaia)')
+@click.option('--subset', '-s', default=None, help='Dataset subset or split')
+@click.option('--limit', '-l', default=None, type=int, help='Limit number of tasks to run')
+@click.option('--max-concurrent', default=5, type=int, help='Max concurrent tasks')
+@click.option('--timeout', default=300, type=int, help='Per-task timeout (seconds)')
+@async_command
+async def evaluate(ctx, benchmark, subset, limit, max_concurrent, timeout):
+    """Run benchmark evaluation"""
+    from src.evaluation import EvaluationManager
+    from src.interface.evaluation import EvaluationConfig
+
+    manager = EvaluationManager()
+    config = EvaluationConfig(
+        benchmark=benchmark,
+        subset=subset,
+        limit=limit,
+        max_concurrent_tasks=max_concurrent,
+        timeout_per_task=timeout,
+    )
+
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+        task = progress.add_task(f"[green]Running evaluation: {benchmark}...", total=None)
+        result = await manager.run_evaluation(benchmark, config)
+        progress.update(task, description=f"[success]Completed: {benchmark} ({result.num_tasks} tasks)")
+
+    table = Table(title=f"Evaluation Results - {result.benchmark}", show_header=True, header_style="bold magenta", border_style="cyan")
+    table.add_column("Run ID", style="tool_desc")
+    table.add_column("Tasks", style="tool_desc")
+    table.add_column("Aggregate Score", style="tool_desc")
+    table.add_row(result.run_id, str(result.num_tasks), f"{result.metrics.aggregate_score:.3f}")
+    stream_print(table)
+
+
 @cli.command()
 def help():
     """Display help information"""
@@ -1579,7 +1614,14 @@ def help():
     help_table.add_row("  -u/--user-id", "User ID (required)")
     help_table.add_row()
 
-    help_table.add_row("[Interactive Mode]", "Run cli.py directly to enter")
+        help_table.add_row("[Command] evaluate", "Run benchmark evaluation (e.g., GAIA)")
+    help_table.add_row("  -b/--benchmark", "Benchmark name (default: gaia)")
+    help_table.add_row("  -s/--subset", "Dataset subset or split")
+    help_table.add_row("  -l/--limit", "Limit number of tasks")
+    help_table.add_row("  --max-concurrent", "Max concurrent tasks")
+    help_table.add_row("  --timeout", "Per-task timeout (seconds)")
+    help_table.add_row()
+help_table.add_row("[Interactive Mode]", "Run cli.py directly to enter")
     help_table.add_row("  exit/quit", "Exit interactive mode")
     
     console.print(help_table)
