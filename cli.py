@@ -1614,14 +1614,14 @@ def help():
     help_table.add_row("  -u/--user-id", "User ID (required)")
     help_table.add_row()
 
-        help_table.add_row("[Command] evaluate", "Run benchmark evaluation (e.g., GAIA)")
+    help_table.add_row("[Command] evaluate", "Run benchmark evaluation (e.g., GAIA)")
     help_table.add_row("  -b/--benchmark", "Benchmark name (default: gaia)")
     help_table.add_row("  -s/--subset", "Dataset subset or split")
     help_table.add_row("  -l/--limit", "Limit number of tasks")
     help_table.add_row("  --max-concurrent", "Max concurrent tasks")
     help_table.add_row("  --timeout", "Per-task timeout (seconds)")
     help_table.add_row()
-help_table.add_row("[Interactive Mode]", "Run cli.py directly to enter")
+    help_table.add_row("[Interactive Mode]", "Run cli.py directly to enter")
     help_table.add_row("  exit/quit", "Exit interactive mode")
     
     console.print(help_table)
