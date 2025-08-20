@@ -1,0 +1,1 @@
+from .gaia_benchmark import GAIABenchmark  # noqa: F401 
