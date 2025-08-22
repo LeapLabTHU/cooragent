@@ -10,6 +10,9 @@ The api key client option must be set either by passing api key to the client or
 ```
 Please check the `REASONING_MODEL`, `BASIC_MODEL`, `TAVILY_API_KEY` configurations in the `.env` file. These three keys are required.
 
+⚙️ To configure `TAVILY_API_KEY`? please visit [Tavily Console](https://app.tavily.com/home) to obtain your key.  
+
+
 ## Planner Execution Error
 
 If you encounter the following error:

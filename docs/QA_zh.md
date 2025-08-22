@@ -10,6 +10,8 @@ The api key client option must be set either by passing api key to the client or
 ```
 请检查 `.env` 文件中的 `REASONING_MODEL`, `BASIC_MODEL`, `TAVILY_API_KEY` 配置。这三个 key 是必需的。
 
+⚙️ 获取`TAVILY_API_KEY` ？ 请前往 [Tavily 控制台](https://app.tavily.com/home) 。
+
 ## Planner 执行错误
 
 如果您遇到以下错误：
