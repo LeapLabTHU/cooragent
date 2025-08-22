@@ -12,7 +12,6 @@ Please check the `REASONING_MODEL`, `BASIC_MODEL`, `TAVILY_API_KEY` configuratio
 
 ⚙️ To configure `TAVILY_API_KEY`? please visit [Tavily Console](https://app.tavily.com/home) to obtain your key.  
 
-
 ## Planner Execution Error
 
 If you encounter the following error:
