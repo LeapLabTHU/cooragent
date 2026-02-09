@@ -18,10 +18,6 @@ cooragent 的核心目标是：帮助用户快速构建智能体，快速构建�
 <video src="https://github.com/user-attachments/assets/9af611e3-aed6-4a2f-8663-428a7707fe8d" width="70%" alt="introduce cooragent" controls></video>
 </h5>
 
-# Cooragent Agent Studio
-
-Cooragent Agent Studio 是一款在线智能体工作室，能快速生成可完成各类场景任务的智能体。它支持随时随地使用，同时还允许你对自己创建的智能体进行管理与分享。 免费试用 [Cooragent Agent Studio](www.cooragent.com)
-
 # 自动创建 Agent，创造无限可能
 Cooragent 有两种任务模式：**Agent Factory** 和 **Agent Workflow**。
 - **Agent Factory** 模式下，你只需要你对智能体做出描述，Cooragent 就会根据你的需求生成一个智能体。Agent Factory 模式下，系统的会自动分析用户需求，通过记忆和扩展深入理解用户，省去纷繁复杂的 Prompt 设计。Planner 会在深入理解用户需求的基础上，挑选合适的工具，自动打磨 Prompt，逐步完成智能体构建。智能体构建完成后，可以立即投入使用，但你仍然可以对智能体进行编辑，优化其行为和功能。
