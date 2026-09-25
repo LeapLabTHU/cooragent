@@ -9,11 +9,10 @@
           "AWS_REGION": "YOUR_AWS_REGION_HERE"
         }
       },
-      "AMAP": {
-        "url": "https://mcp.amap.com/sse",
-        "env": {
-          "AMAP_MAPS_API_KEY": "AMAP_MAPS_API_KEY"
-        }
+      "example-remote": {
+        "url": "https://mcp.example.com/mcp",
+        "transport": "streamable_http",
+        "bearerTokenEnv": "EXAMPLE_MCP_TOKEN"
       }
     }
 

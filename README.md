@@ -171,11 +171,10 @@ Enhance your Agents by integrating external services and tools via the Model Con
               "AWS_REGION": "YOUR_AWS_REGION_HERE"
             }
           },
-          "AMAP": {
-            "url": "https://mcp.amap.com/sse",
-            "env": {
-              "AMAP_MAPS_API_KEY": "AMAP_MAPS_API_KEY"
-            }
+          "example-remote": {
+            "url": "https://mcp.example.com/mcp",
+            "transport": "streamable_http",
+            "bearerTokenEnv": "EXAMPLE_MCP_TOKEN"
           }
         }
     }
@@ -185,11 +184,22 @@ Enhance your Agents by integrating external services and tools via the Model Con
 
 **How it Works:**
 
-Once configured, Cooragent registers these MCP services as available tools. Agents can then select and use these tools during task planning and execution, enabling more complex functionalities.
-After configuration of AMAP mcpServers (GaoDe Map) as the example, you may be able to run the case below: 
-```
-Create a navigation agent that focuses on navigation and uses map-related tools to plan the route from Beijing West Railway Station to the Forbidden City.
-```
+Replace `mcp.example.com` with your server's real endpoint and set `EXAMPLE_MCP_TOKEN`
+in your environment or local `.env` file. Do not commit credentials. Remote servers
+support `transport: "streamable_http"` or `"sse"`; omitting `transport` for an existing
+URL still selects SSE. For a different authentication scheme, configure per-server
+`headers`, for example `"Authorization": "Bearer ${EXAMPLE_MCP_TOKEN}"`.
+`bearerTokenEnv` and an explicit Authorization header cannot be combined. Stdio
+servers continue to use `command`, `args`, and their child-process `env` block.
+Never put a credential in any URL component. Remote URLs with a query string or
+fragment are rejected; configure non-URL metadata and credentials in headers.
+
+Older remote configurations that put a token in `env` are rejected: that block is
+only for stdio and is no longer appended as `?key=` to remote URLs. Migrate to
+headers when the server supports them. A server that only accepts a query-string
+key is not supported by this remote credential path. Cooragent registers discovered
+MCP tools for agents to select and invoke; access still depends on the server and
+the configured credentials.
 
 ## Documentation & Support
 - [Frequently Asked Questions (FAQ)](./docs/QA.md)

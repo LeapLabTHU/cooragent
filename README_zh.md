@@ -175,11 +175,10 @@ run-l -t agent_workflow -u test -m '综合运用任务规划智能体，爬虫�
               "AWS_REGION": "YOUR_AWS_REGION_HERE"
             }
           },
-          "AMAP": {
-            "url": "https://mcp.amap.com/sse",
-            "env": {
-              "AMAP_MAPS_API_KEY": "AMAP_MAPS_API_KEY"
-            }
+          "example-remote": {
+            "url": "https://mcp.example.com/mcp",
+            "transport": "streamable_http",
+            "bearerTokenEnv": "EXAMPLE_MCP_TOKEN"
           }
         }
     }
@@ -187,11 +186,19 @@ run-l -t agent_workflow -u test -m '综合运用任务规划智能体，爬虫�
 
 **工作原理：**
 
-配置完成后，Cooragent 会自动将您在 `mcp.json` 中定义的这些 MCP 服务注册为可用工具。之后，智能体 (Agent) 在规划和执行任务时便可以选择和使用这些工具，从而实现更复杂的功能。
-如上配置好高德地图相关工具后，你可以尝试如下的使用案例：
-```
-创建一个导航智能体，专注于导航，使用地图相关工具，规划如何从北京西站到故宫。
-```
+把 `mcp.example.com` 换成实际服务地址，并在本机环境或未提交的 `.env` 中设置
+`EXAMPLE_MCP_TOKEN`。远端服务可显式选择 `"streamable_http"` 或 `"sse"`；已有
+URL 配置不写 `transport` 时仍按 SSE 处理。其他鉴权方式可在每个服务的 `headers`
+中设置，例如 `"Authorization": "Bearer ${EXAMPLE_MCP_TOKEN}"`；不可同时设置
+`bearerTokenEnv` 和 Authorization Header。stdio 服务继续使用 `command`、`args`
+及子进程 `env`。
+不要把凭据写进 URL 的任何部分。远端 URL 含查询参数或片段时会被拒绝；
+请把非 URL 元数据及凭据放在 Header 中。
+
+旧远端配置如果把 Key 写在 `env` 中，现在会被拒绝；`env` 只用于 stdio，客户端不再
+把它追加到 URL 的 `?key=`。服务端支持 Header 时请迁移到 Header；只支持 URL 查询参数
+Key 的服务不适用这条远端凭据路径。配置后 Cooragent 会注册发现到的 MCP 工具，实际
+调用仍取决于服务端和所配置的凭据。
 
 
 ## 文档 & 支持
@@ -226,4 +233,3 @@ Core contributors: Zheng Wang,  Shenzhi Wang, Yue Wu, Shiji Song, Gao Huang
 
 ## 致谢
 特别感谢所有让 cooragent 成为可能的开源项目和贡献者。我们站在巨人的肩膀上。
-
